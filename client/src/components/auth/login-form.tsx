@@ -27,7 +27,7 @@ export function LoginForm() {
 
   const onSubmit = async (data: z.infer<typeof loginSchema>) => {
     setIsLoading(true);
-    // Simulate API
+    // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000));
     setIsLoading(false);
     
@@ -36,8 +36,8 @@ export function LoginForm() {
       description: "Successfully logged in.",
     });
     
-    // In a real app, this would redirect to dashboard
-    // For now we just show success
+    // Redirect to dashboard
+    setLocation("/dashboard");
   };
 
   return (
