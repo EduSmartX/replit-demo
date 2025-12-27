@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { LogOut, Menu, X, BarChart3, Settings, Users, BookOpen, Calendar, FileText, CheckCircle2, Building2, Briefcase } from "lucide-react";
+import { Menu, X, BarChart3, Settings, Users, BookOpen, Calendar, FileText, CheckCircle2, Building2, Briefcase } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -23,17 +23,10 @@ const menuItems = [
 interface SidebarProps {
   activeMenu: string;
   onMenuChange: (menuId: string) => void;
-  onLogout: () => void;
 }
 
-export function Sidebar({ activeMenu, onMenuChange, onLogout }: SidebarProps) {
+export function Sidebar({ activeMenu, onMenuChange }: SidebarProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [, setLocation] = useLocation();
-
-  const handleLogout = () => {
-    onLogout();
-    setLocation("/auth");
-  };
 
   return (
     <>
@@ -59,20 +52,20 @@ export function Sidebar({ activeMenu, onMenuChange, onLogout }: SidebarProps) {
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed left-0 top-0 h-screen w-64 bg-card border-r border-border flex flex-col transition-transform duration-300 z-40 md:z-0 md:translate-x-0",
+          "fixed left-0 top-0 h-screen w-64 bg-gradient-to-b from-blue-50 to-green-50 border-r border-blue-200 flex flex-col transition-transform duration-300 z-40 md:z-0 md:translate-x-0",
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
         data-testid="sidebar-admin"
       >
         {/* Header */}
-        <div className="p-6 border-b border-border">
+        <div className="p-6 border-b border-blue-200 bg-gradient-to-r from-blue-600 to-teal-600">
           <div className="flex items-center space-x-2">
-            <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-lg">S</span>
+            <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-lg">
+              <span className="text-blue-600 font-bold text-lg">S</span>
             </div>
             <div>
-              <h1 className="text-lg font-bold text-foreground">School App</h1>
-              <p className="text-xs text-muted-foreground">Admin Portal</p>
+              <h1 className="text-lg font-bold text-white">School App</h1>
+              <p className="text-xs text-blue-100">Admin Portal</p>
             </div>
           </div>
         </div>
@@ -83,14 +76,14 @@ export function Sidebar({ activeMenu, onMenuChange, onLogout }: SidebarProps) {
             if ("divider" in item && item.divider) {
               return (
                 <div key={index} className="py-4 mt-2">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3 mb-3">
+                  <p className="text-xs font-semibold text-blue-700 uppercase tracking-wider px-3 mb-3">
                     {item.label}
                   </p>
                 </div>
               );
             }
 
-            const menuItem = item as typeof menuItems[number] & { id: string; icon: typeof LogOut };
+            const menuItem = item as typeof menuItems[number] & { id: string; icon: typeof BarChart3 };
             const Icon = menuItem.icon;
             const isActive = activeMenu === menuItem.id;
 
@@ -104,8 +97,8 @@ export function Sidebar({ activeMenu, onMenuChange, onLogout }: SidebarProps) {
                 className={cn(
                   "w-full flex items-center space-x-3 px-4 py-2.5 rounded-lg transition-colors text-sm font-medium",
                   isActive
-                    ? "bg-primary text-primary-foreground"
-                    : "text-foreground hover:bg-muted"
+                    ? "bg-gradient-to-r from-blue-500 to-teal-500 text-white shadow-md"
+                    : "text-blue-900 hover:bg-blue-100"
                 )}
                 data-testid={`menu-${menuItem.id}`}
               >
@@ -117,21 +110,12 @@ export function Sidebar({ activeMenu, onMenuChange, onLogout }: SidebarProps) {
         </nav>
 
         {/* Footer */}
-        <div className="p-4 border-t border-border space-y-2">
+        <div className="p-4 border-t border-blue-200 bg-gradient-to-r from-green-50 to-blue-50 space-y-2">
           <div className="text-sm space-y-1">
-            <p className="text-xs text-muted-foreground">Logged in as</p>
-            <p className="font-semibold text-foreground" data-testid="sidebar-username">John Doe</p>
-            <p className="text-xs text-muted-foreground">Principal</p>
+            <p className="text-xs text-blue-600 font-semibold">Logged in as</p>
+            <p className="font-semibold text-blue-900" data-testid="sidebar-username">John Doe</p>
+            <p className="text-xs text-green-700">Principal</p>
           </div>
-          <Button
-            variant="destructive"
-            className="w-full mt-4"
-            onClick={handleLogout}
-            data-testid="button-logout"
-          >
-            <LogOut className="h-4 w-4 mr-2" />
-            Logout
-          </Button>
         </div>
       </aside>
     </>

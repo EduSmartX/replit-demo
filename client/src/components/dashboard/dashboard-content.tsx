@@ -23,20 +23,23 @@ const stats = [
     change: "+12",
     icon: Users,
     color: "text-blue-600",
+    bg: "bg-gradient-to-br from-blue-50 to-blue-100",
   },
   {
     label: "Total Teachers",
     value: "85",
     change: "+2",
     icon: Users,
-    color: "text-purple-600",
+    color: "text-green-600",
+    bg: "bg-gradient-to-br from-green-50 to-green-100",
   },
   {
     label: "Active Classes",
     value: "42",
     change: "=",
     icon: BookOpen,
-    color: "text-green-600",
+    color: "text-teal-600",
+    bg: "bg-gradient-to-br from-teal-50 to-teal-100",
   },
   {
     label: "Today's Attendance",
@@ -44,6 +47,7 @@ const stats = [
     change: "+1.2%",
     icon: TrendingUp,
     color: "text-orange-600",
+    bg: "bg-gradient-to-br from-orange-50 to-orange-100",
   },
 ];
 
@@ -66,8 +70,10 @@ export function DashboardContent() {
     <div className="space-y-8">
       {/* Welcome Section */}
       <div className="space-y-2">
-        <h1 className="text-3xl font-bold text-foreground">Welcome back, John</h1>
-        <p className="text-muted-foreground">Here's what's happening at your school today.</p>
+        <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent">
+          Welcome back, John
+        </h1>
+        <p className="text-gray-600">Here's what's happening at your school today.</p>
       </div>
 
       {/* Stats Grid */}
@@ -75,14 +81,20 @@ export function DashboardContent() {
         {stats.map((stat, index) => {
           const Icon = stat.icon;
           return (
-            <Card key={index} data-testid={`stat-card-${index}`}>
+            <Card 
+              key={index} 
+              data-testid={`stat-card-${index}`}
+              className={`${stat.bg} border-0 shadow-lg hover:shadow-xl transition-shadow`}
+            >
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{stat.label}</CardTitle>
-                <Icon className={`h-4 w-4 ${stat.color}`} />
+                <CardTitle className="text-sm font-medium text-gray-700">{stat.label}</CardTitle>
+                <Icon className={`h-5 w-5 ${stat.color}`} />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{stat.value}</div>
-                <p className="text-xs text-green-600 mt-1">{stat.change} from last week</p>
+                <div className={`text-2xl font-bold bg-gradient-to-r ${stat.color === "text-blue-600" ? "from-blue-600 to-teal-600" : stat.color === "text-green-600" ? "from-green-600 to-emerald-600" : "from-teal-600 to-green-600"} bg-clip-text text-transparent`}>
+                  {stat.value}
+                </div>
+                <p className="text-xs text-green-600 mt-1 font-semibold">{stat.change} from last week</p>
               </CardContent>
             </Card>
           );
@@ -92,34 +104,34 @@ export function DashboardContent() {
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Attendance Chart */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Weekly Attendance</CardTitle>
-            <CardDescription>Daily attendance overview for this week</CardDescription>
+        <Card className="lg:col-span-2 shadow-lg border-0 bg-white/80 backdrop-blur">
+          <CardHeader className="bg-gradient-to-r from-blue-50 to-green-50 border-b border-blue-100">
+            <CardTitle className="text-blue-900">Weekly Attendance</CardTitle>
+            <CardDescription className="text-blue-700">Daily attendance overview for this week</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-6">
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={attendanceData}>
-                <CartesianGrid strokeDasharray="3 3" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e0e7ff" />
                 <XAxis dataKey="day" />
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="present" fill="#10b981" name="Present" />
-                <Bar dataKey="absent" fill="#ef4444" name="Absent" />
-                <Bar dataKey="late" fill="#f59e0b" name="Late" />
+                <Bar dataKey="present" fill="#10b981" name="Present" radius={[8, 8, 0, 0]} />
+                <Bar dataKey="absent" fill="#ef4444" name="Absent" radius={[8, 8, 0, 0]} />
+                <Bar dataKey="late" fill="#f59e0b" name="Late" radius={[8, 8, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
 
         {/* Leave Status Pie Chart */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Leave Requests</CardTitle>
-            <CardDescription>Current status of leave applications</CardDescription>
+        <Card className="shadow-lg border-0 bg-white/80 backdrop-blur">
+          <CardHeader className="bg-gradient-to-r from-green-50 to-teal-50 border-b border-green-100">
+            <CardTitle className="text-green-900">Leave Requests</CardTitle>
+            <CardDescription className="text-green-700">Current status of leave applications</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-6">
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
@@ -146,14 +158,14 @@ export function DashboardContent() {
       {/* Bottom Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Activities */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Activities</CardTitle>
-            <CardDescription>Latest updates in your school</CardDescription>
+        <Card className="shadow-lg border-0 bg-white/80 backdrop-blur">
+          <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100">
+            <CardTitle className="text-blue-900">Recent Activities</CardTitle>
+            <CardDescription className="text-blue-700">Latest updates in your school</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="pt-6 space-y-4">
             {recentActivities.map((activity, index) => (
-              <div key={index} className="flex items-start space-x-3 pb-4 border-b border-border last:border-0" data-testid={`activity-${index}`}>
+              <div key={index} className="flex items-start space-x-3 pb-4 border-b border-gray-100 last:border-0" data-testid={`activity-${index}`}>
                 <div className="mt-1">
                   {activity.status === "pending" ? (
                     <AlertCircle className="h-5 w-5 text-yellow-500" />
@@ -162,8 +174,8 @@ export function DashboardContent() {
                   )}
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-foreground">{activity.description}</p>
-                  <p className="text-xs text-muted-foreground mt-1">{activity.time}</p>
+                  <p className="text-sm font-medium text-gray-900">{activity.description}</p>
+                  <p className="text-xs text-gray-500 mt-1">{activity.time}</p>
                 </div>
               </div>
             ))}
@@ -171,19 +183,19 @@ export function DashboardContent() {
         </Card>
 
         {/* Upcoming Events */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Upcoming Events</CardTitle>
-            <CardDescription>Important dates and activities</CardDescription>
+        <Card className="shadow-lg border-0 bg-white/80 backdrop-blur">
+          <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 border-b border-green-100">
+            <CardTitle className="text-green-900">Upcoming Events</CardTitle>
+            <CardDescription className="text-green-700">Important dates and activities</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="pt-6 space-y-4">
             {upcomingEvents.map((event, index) => (
-              <div key={index} className="flex items-start space-x-4 pb-4 border-b border-border last:border-0" data-testid={`event-${index}`}>
+              <div key={index} className="flex items-start space-x-4 pb-4 border-b border-gray-100 last:border-0" data-testid={`event-${index}`}>
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-foreground">{event.title}</p>
-                  <p className="text-xs text-muted-foreground mt-1">{event.date}</p>
+                  <p className="text-sm font-medium text-gray-900">{event.title}</p>
+                  <p className="text-xs text-gray-500 mt-1">{event.date}</p>
                 </div>
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gradient-to-r from-blue-100 to-green-100 text-teal-700">
                   {event.type}
                 </span>
               </div>
