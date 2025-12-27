@@ -7,22 +7,32 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
+import { useUser } from "@/context/user-context";
 
 const loginSchema = z.object({
   username: z.string().min(1, "Username is required"),
   password: z.string().min(1, "Password is required"),
+  role: z.string().min(1, "Please select a role"),
 });
+
+const demoUsers = {
+  admin: { name: "John Doe", email: "admin@school.edu", password: "admin123" },
+  teacher: { name: "Sarah Johnson", email: "teacher@school.edu", password: "teacher123" },
+  parent: { name: "Michael Smith", email: "parent@school.edu", password: "parent123" },
+};
 
 export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const { setUser } = useUser();
 
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { username: "", password: "" }
+    defaultValues: { username: "", password: "", role: "" }
   });
 
   const onSubmit = async (data: z.infer<typeof loginSchema>) => {
@@ -30,14 +40,33 @@ export function LoginForm() {
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000));
     setIsLoading(false);
+
+    const role = data.role as "admin" | "teacher" | "parent";
+    const demoUser = demoUsers[role];
     
     toast({
       title: "Welcome back!",
-      description: "Successfully logged in.",
+      description: `Successfully logged in as ${role}.`,
+    });
+
+    // Set user context
+    setUser({
+      id: role,
+      name: demoUser.name,
+      email: demoUser.email,
+      role: role,
+      institution: "Green Valley High School"
     });
     
     // Redirect to dashboard
     setLocation("/dashboard");
+  };
+
+  const autofillRole = (role: string) => {
+    const demoUser = demoUsers[role as keyof typeof demoUsers];
+    form.setValue("username", demoUser.email);
+    form.setValue("password", demoUser.password);
+    form.setValue("role", role);
   };
 
   return (
@@ -47,6 +76,26 @@ export function LoginForm() {
         <CardDescription>Enter your credentials to access the dashboard.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="role">Select Your Role</Label>
+          <Select onValueChange={(val) => {
+            form.setValue("role", val);
+            autofillRole(val);
+          }}>
+            <SelectTrigger data-testid="select-role">
+              <SelectValue placeholder="Choose your role" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="admin">🎓 School Admin</SelectItem>
+              <SelectItem value="teacher">👨‍🏫 Teacher</SelectItem>
+              <SelectItem value="parent">👨‍👩‍👧 Parent</SelectItem>
+            </SelectContent>
+          </Select>
+          {form.formState.errors.role && (
+            <p className="text-sm text-destructive">{form.formState.errors.role.message}</p>
+          )}
+        </div>
+
         <div className="space-y-2">
           <Label htmlFor="username">Username or Email</Label>
           <div className="relative">
@@ -83,6 +132,15 @@ export function LoginForm() {
           {form.formState.errors.password && (
             <p className="text-sm text-destructive">{form.formState.errors.password.message}</p>
           )}
+        </div>
+
+        <div className="text-xs text-muted-foreground">
+          <p className="font-semibold mb-2">Demo Credentials:</p>
+          <ul className="space-y-1">
+            <li>Admin: admin@school.edu / admin123</li>
+            <li>Teacher: teacher@school.edu / teacher123</li>
+            <li>Parent: parent@school.edu / parent123</li>
+          </ul>
         </div>
       </CardContent>
       <CardFooter>
