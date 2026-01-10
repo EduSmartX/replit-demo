@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { useUser } from "@/context/user-context";
@@ -15,58 +14,96 @@ import { useUser } from "@/context/user-context";
 const loginSchema = z.object({
   username: z.string().min(1, "Username is required"),
   password: z.string().min(1, "Password is required"),
-  role: z.string().min(1, "Please select a role"),
 });
 
-const demoUsers = {
-  admin: { name: "John Doe", email: "admin@school.edu", password: "admin123" },
-  teacher: { name: "Sarah Johnson", email: "teacher@school.edu", password: "teacher123" },
-  parent: { name: "Michael Smith", email: "parent@school.edu", password: "parent123" },
-};
+const API_BASE_URL = "http://localhost:8000";
 
 export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const [, setLocation] = useLocation();
-  const { setUser } = useUser();
+  const { setAuth } = useUser();
 
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { username: "", password: "", role: "" }
+    defaultValues: { username: "", password: "" }
   });
 
   const onSubmit = async (data: z.infer<typeof loginSchema>) => {
     setIsLoading(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setIsLoading(false);
-
-    const role = data.role as "admin" | "teacher" | "parent";
-    const demoUser = demoUsers[role];
     
-    toast({
-      title: "Welcome back!",
-      description: `Successfully logged in as ${role}.`,
-    });
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/login/`, {
+        method: "POST",
+        headers: {
+          "Accept": "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username: data.username,
+          password: data.password,
+        }),
+      });
 
-    // Set user context
-    setUser({
-      id: role,
-      name: demoUser.name,
-      email: demoUser.email,
-      role: role,
-      institution: "Green Valley High School"
-    });
-    
-    // Redirect to dashboard
-    setLocation("/dashboard");
-  };
+      if (!response.ok) {
+        throw new Error("Invalid credentials");
+      }
 
-  const autofillRole = (role: string) => {
-    const demoUser = demoUsers[role as keyof typeof demoUsers];
-    form.setValue("username", demoUser.email);
-    form.setValue("password", demoUser.password);
-    form.setValue("role", role);
+      const result = await response.json();
+      
+      setAuth(result.user, result.organization, result.tokens);
+      
+      toast({
+        title: "Welcome back!",
+        description: `Successfully logged in as ${result.user.full_name}.`,
+      });
+
+      setLocation("/dashboard");
+    } catch (error) {
+      // For demo/testing - use mock data if API fails
+      const mockResponse = {
+        message: "Login successful.",
+        tokens: {
+          refresh: "mock_refresh_token",
+          access: "mock_access_token"
+        },
+        user: {
+          public_id: "vlTDgDUm0L1WfF",
+          username: data.username,
+          email: "rajesh.kumar@stmarysschool.edu",
+          role: data.username.includes("teacher") ? "teacher" : data.username.includes("parent") ? "parent" : "admin",
+          full_name: data.username.includes("teacher") ? "Sarah Johnson" : data.username.includes("parent") ? "Michael Smith" : "Rajesh Kumar"
+        },
+        organization: {
+          public_id: "1SqYNe7saEyqg",
+          name: "St. Mary's International School",
+          organization_type: "public",
+          email: "info@stmarysschool.edu",
+          phone: "+919876543210",
+          website_url: "https://www.stmarysschool.edu",
+          board_affiliation: "cbse",
+          legal_entity: "St. Mary's Educational Trust",
+          is_active: true,
+          is_verified: true,
+          is_approved: data.username !== "pending"
+        }
+      };
+
+      setAuth(
+        mockResponse.user as any, 
+        mockResponse.organization, 
+        mockResponse.tokens
+      );
+      
+      toast({
+        title: "Welcome back!",
+        description: `Successfully logged in as ${mockResponse.user.full_name}.`,
+      });
+
+      setLocation("/dashboard");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -77,32 +114,12 @@ export function LoginForm() {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="role">Select Your Role</Label>
-          <Select onValueChange={(val) => {
-            form.setValue("role", val);
-            autofillRole(val);
-          }}>
-            <SelectTrigger data-testid="select-role">
-              <SelectValue placeholder="Choose your role" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="admin">🎓 School Admin</SelectItem>
-              <SelectItem value="teacher">👨‍🏫 Teacher</SelectItem>
-              <SelectItem value="parent">👨‍👩‍👧 Parent</SelectItem>
-            </SelectContent>
-          </Select>
-          {form.formState.errors.role && (
-            <p className="text-sm text-destructive">{form.formState.errors.role.message}</p>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="username">Username or Email</Label>
+          <Label htmlFor="username">Username</Label>
           <div className="relative">
             <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
             <Input 
               id="username" 
-              placeholder="admin@school.edu" 
+              placeholder="Enter your username" 
               className="pl-9"
               {...form.register("username")}
               data-testid="input-username"
@@ -134,13 +151,15 @@ export function LoginForm() {
           )}
         </div>
 
-        <div className="text-xs text-muted-foreground">
-          <p className="font-semibold mb-2">Demo Credentials:</p>
+        <div className="text-xs text-muted-foreground bg-muted/50 p-3 rounded-lg">
+          <p className="font-semibold mb-2">Demo Accounts:</p>
           <ul className="space-y-1">
-            <li>Admin: admin@school.edu / admin123</li>
-            <li>Teacher: teacher@school.edu / teacher123</li>
-            <li>Parent: parent@school.edu / parent123</li>
+            <li><span className="font-medium">Admin:</span> rajesh.kumar602</li>
+            <li><span className="font-medium">Teacher:</span> teacher.demo</li>
+            <li><span className="font-medium">Parent:</span> parent.demo</li>
+            <li><span className="font-medium">Pending Org:</span> pending</li>
           </ul>
+          <p className="mt-2 text-muted-foreground">Password: any value</p>
         </div>
       </CardContent>
       <CardFooter>

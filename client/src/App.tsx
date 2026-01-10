@@ -7,6 +7,7 @@ import { UserProvider } from "@/context/user-context";
 import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
 import DashboardPage from "@/pages/dashboard-page";
+import OrganizationPendingPage from "@/pages/organization-pending";
 
 function Router() {
   return (
@@ -14,6 +15,7 @@ function Router() {
       <Route path="/" component={() => <Redirect to="/auth" />} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/dashboard" component={DashboardPage} />
+      <Route path="/organization-pending" component={OrganizationPendingPage} />
       <Route component={NotFound} />
     </Switch>
   );

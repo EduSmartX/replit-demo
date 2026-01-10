@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { LogOut } from "lucide-react";
+import { LogOut, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@/context/user-context";
@@ -13,10 +13,24 @@ export default function DashboardPage() {
   const [activeMenu, setActiveMenu] = useState("overview");
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { user, logout } = useUser();
+  const { user, organization, logout } = useUser();
 
-  if (!user) {
-    setLocation("/auth");
+  useEffect(() => {
+    if (!user) {
+      setLocation("/auth");
+      return;
+    }
+    
+    if (organization && !organization.is_approved) {
+      setLocation("/organization-pending");
+    }
+  }, [user, organization, setLocation]);
+
+  if (!user || !organization) {
+    return null;
+  }
+
+  if (!organization.is_approved) {
     return null;
   }
 
@@ -72,22 +86,34 @@ export default function DashboardPage() {
       <main className="flex-1 overflow-auto md:ml-64 pt-20 md:pt-0">
         {/* Top Bar */}
         <div className={`fixed top-0 right-0 left-0 md:left-64 h-16 bg-gradient-to-r ${getRoleColor()} shadow-lg z-30 flex items-center justify-between px-4 md:px-8`}>
-          <div className="text-white font-bold text-lg">Dashboard</div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleLogout}
-            className="text-white hover:bg-white/20 rounded-full"
-            data-testid="button-logout-top"
-            title="Logout"
-          >
-            <LogOut className="h-5 w-5" />
-          </Button>
+          <div className="flex items-center space-x-3">
+            <Building2 className="h-5 w-5 text-white/80" />
+            <div>
+              <p className="text-white font-bold text-lg leading-tight">{organization.name}</p>
+              <p className="text-white/70 text-xs">{organization.board_affiliation.toUpperCase()} • {organization.organization_type}</p>
+            </div>
+          </div>
+          <div className="flex items-center space-x-4">
+            <div className="text-right hidden sm:block">
+              <p className="text-white text-sm font-medium">{user.full_name}</p>
+              <p className="text-white/70 text-xs capitalize">{user.role}</p>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleLogout}
+              className="text-white hover:bg-white/20 rounded-full"
+              data-testid="button-logout-top"
+              title="Logout"
+            >
+              <LogOut className="h-5 w-5" />
+            </Button>
+          </div>
         </div>
 
         {/* Content */}
         <div className="p-4 md:p-8 pt-8">
-          {activeMenu === "overview" && <RoleDashboard role={user.role} username={user.name} />}
+          {activeMenu === "overview" && <RoleDashboard role={user.role} username={user.full_name} />}
           
           {/* Placeholder for other menu items */}
           {activeMenu !== "overview" && (

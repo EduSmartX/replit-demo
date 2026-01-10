@@ -2,17 +2,38 @@ import { createContext, useContext, useState, ReactNode } from "react";
 
 export type UserRole = "admin" | "teacher" | "parent";
 
-export interface User {
-  id: string;
+export interface Organization {
+  public_id: string;
   name: string;
+  organization_type: string;
+  email: string;
+  phone: string;
+  website_url: string;
+  board_affiliation: string;
+  legal_entity: string;
+  is_active: boolean;
+  is_verified: boolean;
+  is_approved: boolean;
+}
+
+export interface User {
+  public_id: string;
+  username: string;
   email: string;
   role: UserRole;
-  institution: string;
+  full_name: string;
+}
+
+export interface AuthTokens {
+  access: string;
+  refresh: string;
 }
 
 interface UserContextType {
   user: User | null;
-  setUser: (user: User) => void;
+  organization: Organization | null;
+  tokens: AuthTokens | null;
+  setAuth: (user: User, organization: Organization, tokens: AuthTokens) => void;
   logout: () => void;
 }
 
@@ -20,13 +41,27 @@ const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [organization, setOrganization] = useState<Organization | null>(null);
+  const [tokens, setTokens] = useState<AuthTokens | null>(null);
+
+  const setAuth = (user: User, organization: Organization, tokens: AuthTokens) => {
+    setUser(user);
+    setOrganization(organization);
+    setTokens(tokens);
+    localStorage.setItem("accessToken", tokens.access);
+    localStorage.setItem("refreshToken", tokens.refresh);
+  };
 
   const logout = () => {
     setUser(null);
+    setOrganization(null);
+    setTokens(null);
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
   };
 
   return (
-    <UserContext.Provider value={{ user, setUser, logout }}>
+    <UserContext.Provider value={{ user, organization, tokens, setAuth, logout }}>
       {children}
     </UserContext.Provider>
   );
