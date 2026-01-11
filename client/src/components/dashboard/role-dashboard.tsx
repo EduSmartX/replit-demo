@@ -1,7 +1,7 @@
-import { UserRole } from "@/context/user-context";
 import { DashboardContent as AdminDashboard } from "./dashboard-content";
-import { TeacherDashboardContent } from "./teacher-dashboard";
 import { ParentDashboardContent } from "./parent-dashboard";
+import { TeacherDashboardContent } from "./teacher-dashboard";
+import { UserRole } from "@/context/user-context";
 
 interface RoleDashboardProps {
   role: UserRole;
