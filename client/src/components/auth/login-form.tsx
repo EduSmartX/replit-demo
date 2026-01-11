@@ -18,10 +18,11 @@ import { Label } from "@/components/ui/label";
 import { useUser, type User } from "@/context/user-context";
 import { useToast } from "@/hooks/use-toast";
 import { api, API_ENDPOINTS, saveTokens } from "@/lib/api";
+import { ErrorMessages, SuccessMessages, ValidationErrorMessages } from "@/lib/constants";
 
 const loginSchema = z.object({
-  username: z.string().min(1, "Username is required"),
-  password: z.string().min(1, "Password is required"),
+  username: z.string().min(1, ValidationErrorMessages.USERNAME_REQUIRED),
+  password: z.string().min(1, ValidationErrorMessages.PASSWORD_REQUIRED),
 });
 
 interface LoginFormProps {
@@ -57,7 +58,7 @@ export function LoginForm({ onForgotPassword }: LoginFormProps) {
 
       toast({
         title: "Welcome back!",
-        description: `Successfully logged in as ${result.user.full_name}.`,
+        description: `${SuccessMessages.Auth.LOGIN_SUCCESS} Welcome, ${result.user.full_name}!`,
       });
 
       setLocation("/dashboard");

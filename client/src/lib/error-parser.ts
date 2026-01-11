@@ -1,10 +1,15 @@
+import { ErrorMessages } from "./constants";
+
 /**
  * Parse API error response and extract meaningful error message
  * @param error - The error object from API call
  * @param defaultMessage - Default message if parsing fails
  * @returns Extracted error message
  */
-export function parseApiError(error: unknown, defaultMessage: string = "An error occurred"): string {
+export function parseApiError(
+  error: unknown,
+  defaultMessage: string = ErrorMessages.Network.SERVER_ERROR
+): string {
   let errorMessage = defaultMessage;
 
   try {
