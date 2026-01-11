@@ -1,6 +1,18 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { Users, BookOpen, Clock, TrendingUp } from "lucide-react";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 const classPerformance = [
   { class: "Class 9A", avg: 78, present: 38, absent: 2 },
@@ -61,31 +73,35 @@ export function TeacherDashboardContent({ username }: { username: string }) {
   return (
     <div className="space-y-8">
       <div className="space-y-2">
-        <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+        <h1 className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-4xl font-bold text-transparent">
           Welcome, {username}
         </h1>
         <p className="text-gray-600">Manage your classes and track student progress.</p>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat, index) => {
           const Icon = stat.icon;
           return (
-            <Card 
-              key={index} 
+            <Card
+              key={index}
               data-testid={`stat-card-${index}`}
-              className={`${stat.bg} border-0 shadow-lg hover:shadow-xl transition-shadow`}
+              className={`${stat.bg} border-0 shadow-lg transition-shadow hover:shadow-xl`}
             >
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-gray-700">{stat.label}</CardTitle>
                 <Icon className={`h-5 w-5 ${stat.color}`} />
               </CardHeader>
               <CardContent>
-                <div className={`text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent`}>
+                <div
+                  className={`bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-2xl font-bold text-transparent`}
+                >
                   {stat.value}
                 </div>
-                <p className="text-xs text-purple-600 mt-1 font-semibold">{stat.change} this month</p>
+                <p className="mt-1 text-xs font-semibold text-purple-600">
+                  {stat.change} this month
+                </p>
               </CardContent>
             </Card>
           );
@@ -93,9 +109,9 @@ export function TeacherDashboardContent({ username }: { username: string }) {
       </div>
 
       {/* Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2 shadow-lg border-0 bg-white/80 backdrop-blur">
-          <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 border-b border-purple-100">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <Card className="border-0 bg-white/80 shadow-lg backdrop-blur lg:col-span-2">
+          <CardHeader className="border-b border-purple-100 bg-gradient-to-r from-purple-50 to-pink-50">
             <CardTitle className="text-purple-900">Class Performance</CardTitle>
             <CardDescription className="text-purple-700">Average scores by class</CardDescription>
           </CardHeader>
@@ -114,10 +130,12 @@ export function TeacherDashboardContent({ username }: { username: string }) {
           </CardContent>
         </Card>
 
-        <Card className="shadow-lg border-0 bg-white/80 backdrop-blur">
-          <CardHeader className="bg-gradient-to-r from-pink-50 to-purple-50 border-b border-pink-100">
+        <Card className="border-0 bg-white/80 shadow-lg backdrop-blur">
+          <CardHeader className="border-b border-pink-100 bg-gradient-to-r from-pink-50 to-purple-50">
             <CardTitle className="text-pink-900">Student Progress</CardTitle>
-            <CardDescription className="text-pink-700">Overall performance distribution</CardDescription>
+            <CardDescription className="text-pink-700">
+              Overall performance distribution
+            </CardDescription>
           </CardHeader>
           <CardContent className="pt-6">
             <ResponsiveContainer width="100%" height={300}>
@@ -144,20 +162,27 @@ export function TeacherDashboardContent({ username }: { username: string }) {
       </div>
 
       {/* Upcoming Classes */}
-      <Card className="shadow-lg border-0 bg-white/80 backdrop-blur">
-        <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 border-b border-purple-100">
-          <CardTitle className="text-purple-900">Today's Classes</CardTitle>
-          <CardDescription className="text-purple-700">Your scheduled classes for today</CardDescription>
+      <Card className="border-0 bg-white/80 shadow-lg backdrop-blur">
+        <CardHeader className="border-b border-purple-100 bg-gradient-to-r from-purple-50 to-pink-50">
+          <CardTitle className="text-purple-900">Today&apos;s Classes</CardTitle>
+          <CardDescription className="text-purple-700">
+            Your scheduled classes for today
+          </CardDescription>
         </CardHeader>
         <CardContent className="pt-6">
           <div className="space-y-4">
             {upcomingClasses.map((cls, index) => (
-              <div key={index} className="flex items-start space-x-4 pb-4 border-b border-gray-100 last:border-0">
+              <div
+                key={index}
+                className="flex items-start space-x-4 border-b border-gray-100 pb-4 last:border-0"
+              >
                 <div className="flex-1">
                   <p className="text-sm font-medium text-gray-900">{cls.class}</p>
-                  <p className="text-xs text-gray-500 mt-1">{cls.time} • {cls.room}</p>
+                  <p className="mt-1 text-xs text-gray-500">
+                    {cls.time} • {cls.room}
+                  </p>
                 </div>
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700">
+                <span className="inline-flex items-center rounded-full bg-gradient-to-r from-purple-100 to-pink-100 px-2.5 py-0.5 text-xs font-medium text-purple-700">
                   Scheduled
                 </span>
               </div>

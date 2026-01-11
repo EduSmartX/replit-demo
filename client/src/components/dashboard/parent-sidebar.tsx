@@ -1,5 +1,5 @@
-import { useState } from "react";
 import { Menu, X, BarChart3, User, Calendar, FileText, MessageSquare, Heart } from "lucide-react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -27,7 +27,7 @@ export function ParentSidebar({ activeMenu, onMenuChange }: ParentSidebarProps) 
       <Button
         variant="ghost"
         size="icon"
-        className="fixed top-4 left-4 md:hidden z-40"
+        className="fixed top-4 left-4 z-40 md:hidden"
         onClick={() => setIsOpen(!isOpen)}
         data-testid="button-mobile-menu"
       >
@@ -36,21 +36,25 @@ export function ParentSidebar({ activeMenu, onMenuChange }: ParentSidebarProps) 
 
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black/50 md:hidden z-30"
+          className="fixed inset-0 z-30 bg-black/50 md:hidden"
           onClick={() => setIsOpen(false)}
+          onKeyDown={(e) => e.key === "Escape" && setIsOpen(false)}
+          role="button"
+          tabIndex={0}
+          aria-label="Close menu"
         />
       )}
 
       <aside
         className={cn(
-          "fixed left-0 top-0 h-screen w-64 bg-gradient-to-b from-amber-50 to-orange-50 border-r border-amber-200 flex flex-col transition-transform duration-300 z-40 md:z-0 md:translate-x-0",
+          "fixed top-0 left-0 z-40 flex h-screen w-64 flex-col border-r border-amber-200 bg-gradient-to-b from-amber-50 to-orange-50 transition-transform duration-300 md:z-0 md:translate-x-0",
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
         data-testid="sidebar-parent"
       >
-        <div className="p-6 border-b border-amber-200 bg-gradient-to-r from-amber-600 to-orange-600">
+        <div className="border-b border-amber-200 bg-gradient-to-r from-amber-600 to-orange-600 p-6">
           <div className="flex items-center space-x-2">
-            <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-lg">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white shadow-lg">
               <Heart className="h-6 w-6 text-amber-600" />
             </div>
             <div>
@@ -60,19 +64,22 @@ export function ParentSidebar({ activeMenu, onMenuChange }: ParentSidebarProps) 
           </div>
         </div>
 
-        <nav className="flex-1 overflow-y-auto p-4 space-y-1">
+        <nav className="flex-1 space-y-1 overflow-y-auto p-4">
           {parentMenuItems.map((item, index) => {
             if ("divider" in item && item.divider) {
               return (
-                <div key={index} className="py-4 mt-2">
-                  <p className="text-xs font-semibold text-amber-700 uppercase tracking-wider px-3 mb-3">
+                <div key={index} className="mt-2 py-4">
+                  <p className="mb-3 px-3 text-xs font-semibold tracking-wider text-amber-700 uppercase">
                     {item.label}
                   </p>
                 </div>
               );
             }
 
-            const menuItem = item as typeof parentMenuItems[number] & { id: string; icon: typeof BarChart3 };
+            const menuItem = item as (typeof parentMenuItems)[number] & {
+              id: string;
+              icon: typeof BarChart3;
+            };
             const Icon = menuItem.icon;
             const isActive = activeMenu === menuItem.id;
 
@@ -84,7 +91,7 @@ export function ParentSidebar({ activeMenu, onMenuChange }: ParentSidebarProps) 
                   setIsOpen(false);
                 }}
                 className={cn(
-                  "w-full flex items-center space-x-3 px-4 py-2.5 rounded-lg transition-colors text-sm font-medium",
+                  "flex w-full items-center space-x-3 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors",
                   isActive
                     ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md"
                     : "text-amber-900 hover:bg-amber-100"
@@ -98,10 +105,12 @@ export function ParentSidebar({ activeMenu, onMenuChange }: ParentSidebarProps) 
           })}
         </nav>
 
-        <div className="p-4 border-t border-amber-200 bg-gradient-to-r from-orange-50 to-amber-50 space-y-2">
-          <div className="text-sm space-y-1">
-            <p className="text-xs text-amber-600 font-semibold">Logged in as</p>
-            <p className="font-semibold text-amber-900" data-testid="sidebar-username">Michael Smith</p>
+        <div className="space-y-2 border-t border-amber-200 bg-gradient-to-r from-orange-50 to-amber-50 p-4">
+          <div className="space-y-1 text-sm">
+            <p className="text-xs font-semibold text-amber-600">Logged in as</p>
+            <p className="font-semibold text-amber-900" data-testid="sidebar-username">
+              Michael Smith
+            </p>
             <p className="text-xs text-orange-700">Parent</p>
           </div>
         </div>

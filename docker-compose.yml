@@ -1,0 +1,25 @@
+services:
+  frontend:
+    build:
+      context: .
+      target: development
+    container_name: educard-frontend
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./client:/app/client
+      - ./attached_assets:/app/attached_assets
+      - ./.env:/app/.env
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - VITE_API_BASE_URL=${VITE_API_BASE_URL:-http://localhost:8000}
+    stdin_open: true
+    tty: true
+    networks:
+      - educard-network
+
+networks:
+  educard-network:
+    name: educard-network
+    external: true

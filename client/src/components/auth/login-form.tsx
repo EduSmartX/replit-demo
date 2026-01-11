@@ -1,24 +1,34 @@
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Loader2, User as UserIcon, Lock, ArrowRight } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useLocation } from "wouter";
 import * as z from "zod";
-import { Loader2, User, Lock, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { useUser, type User } from "@/context/user-context";
 import { useToast } from "@/hooks/use-toast";
-import { useLocation } from "wouter";
-import { useUser } from "@/context/user-context";
+import { api, API_ENDPOINTS, saveTokens } from "@/lib/api";
 
 const loginSchema = z.object({
   username: z.string().min(1, "Username is required"),
   password: z.string().min(1, "Password is required"),
 });
 
-const API_BASE_URL = "http://localhost:8000";
+interface LoginFormProps {
+  onForgotPassword?: () => void;
+}
 
-export function LoginForm() {
+export function LoginForm({ onForgotPassword }: LoginFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const [, setLocation] = useLocation();
@@ -26,33 +36,25 @@ export function LoginForm() {
 
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { username: "", password: "" }
+    defaultValues: { username: "", password: "" },
   });
 
   const onSubmit = async (data: z.infer<typeof loginSchema>) => {
     setIsLoading(true);
-    
+
     try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/login/`, {
-        method: "POST",
-        headers: {
-          "Accept": "application/json",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          username: data.username,
-          password: data.password,
-        }),
+      const result = await api.post(API_ENDPOINTS.auth.login, {
+        username: data.username,
+        password: data.password,
       });
 
-      if (!response.ok) {
-        throw new Error("Invalid credentials");
+      // Save tokens to localStorage
+      if (result.tokens) {
+        saveTokens(result.tokens.access, result.tokens.refresh);
       }
 
-      const result = await response.json();
-      
       setAuth(result.user, result.organization, result.tokens);
-      
+
       toast({
         title: "Welcome back!",
         description: `Successfully logged in as ${result.user.full_name}.`,
@@ -65,14 +67,22 @@ export function LoginForm() {
         message: "Login successful.",
         tokens: {
           refresh: "mock_refresh_token",
-          access: "mock_access_token"
+          access: "mock_access_token",
         },
         user: {
           public_id: "vlTDgDUm0L1WfF",
           username: data.username,
           email: "rajesh.kumar@stmarysschool.edu",
-          role: data.username.includes("teacher") ? "teacher" : data.username.includes("parent") ? "parent" : "admin",
-          full_name: data.username.includes("teacher") ? "Sarah Johnson" : data.username.includes("parent") ? "Michael Smith" : "Rajesh Kumar"
+          role: data.username.includes("teacher")
+            ? "teacher"
+            : data.username.includes("parent")
+              ? "parent"
+              : "admin",
+          full_name: data.username.includes("teacher")
+            ? "Sarah Johnson"
+            : data.username.includes("parent")
+              ? "Michael Smith"
+              : "Rajesh Kumar",
         },
         organization: {
           public_id: "1SqYNe7saEyqg",
@@ -85,16 +95,12 @@ export function LoginForm() {
           legal_entity: "St. Mary's Educational Trust",
           is_active: true,
           is_verified: true,
-          is_approved: data.username !== "pending"
-        }
+          is_approved: data.username !== "pending",
+        },
       };
 
-      setAuth(
-        mockResponse.user as any, 
-        mockResponse.organization, 
-        mockResponse.tokens
-      );
-      
+      setAuth(mockResponse.user, mockResponse.organization, mockResponse.tokens);
+
       toast({
         title: "Welcome back!",
         description: `Successfully logged in as ${mockResponse.user.full_name}.`,
@@ -107,7 +113,7 @@ export function LoginForm() {
   };
 
   return (
-    <Card className="w-full max-w-md mx-auto shadow-none border-0 sm:border sm:shadow-sm">
+    <Card className="mx-auto w-full max-w-md border-0 shadow-none sm:border sm:shadow-sm">
       <CardHeader>
         <CardTitle className="text-2xl">Welcome Back</CardTitle>
         <CardDescription>Enter your credentials to access the dashboard.</CardDescription>
@@ -116,55 +122,50 @@ export function LoginForm() {
         <div className="space-y-2">
           <Label htmlFor="username">Username</Label>
           <div className="relative">
-            <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input 
-              id="username" 
-              placeholder="Enter your username" 
+            <UserIcon className="text-muted-foreground absolute top-3 left-3 h-4 w-4" />
+            <Input
+              id="username"
+              placeholder="Enter your username"
               className="pl-9"
               {...form.register("username")}
               data-testid="input-username"
             />
           </div>
           {form.formState.errors.username && (
-            <p className="text-sm text-destructive">{form.formState.errors.username.message}</p>
+            <p className="text-destructive text-sm">{form.formState.errors.username.message}</p>
           )}
         </div>
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <Label htmlFor="password">Password</Label>
-            <Button variant="link" className="px-0 h-auto text-xs text-primary" data-testid="link-forgot-password">
+            <Button
+              variant="link"
+              className="text-primary h-auto px-0 text-xs"
+              data-testid="link-forgot-password"
+              onClick={onForgotPassword}
+              type="button"
+            >
               Forgot password?
             </Button>
           </div>
           <div className="relative">
-            <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input 
-              id="password" 
-              type="password" 
+            <Lock className="text-muted-foreground absolute top-3 left-3 h-4 w-4" />
+            <Input
+              id="password"
+              type="password"
               className="pl-9"
               {...form.register("password")}
               data-testid="input-password"
             />
           </div>
           {form.formState.errors.password && (
-            <p className="text-sm text-destructive">{form.formState.errors.password.message}</p>
+            <p className="text-destructive text-sm">{form.formState.errors.password.message}</p>
           )}
-        </div>
-
-        <div className="text-xs text-muted-foreground bg-muted/50 p-3 rounded-lg">
-          <p className="font-semibold mb-2">Demo Accounts:</p>
-          <ul className="space-y-1">
-            <li><span className="font-medium">Admin:</span> rajesh.kumar602</li>
-            <li><span className="font-medium">Teacher:</span> teacher.demo</li>
-            <li><span className="font-medium">Parent:</span> parent.demo</li>
-            <li><span className="font-medium">Pending Org:</span> pending</li>
-          </ul>
-          <p className="mt-2 text-muted-foreground">Password: any value</p>
         </div>
       </CardContent>
       <CardFooter>
-        <Button 
-          className="w-full" 
+        <Button
+          className="w-full"
           onClick={form.handleSubmit(onSubmit)}
           disabled={isLoading}
           data-testid="button-login"
