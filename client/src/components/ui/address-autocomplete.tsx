@@ -39,8 +39,18 @@ export function AddressAutocomplete({
   const [isLoading, setIsLoading] = useState(true);
   const [scriptError, setScriptError] = useState(false);
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
+  
+  // Check if Google API is available (only in development with API key)
+  const isGoogleApiEnabled = import.meta.env.VITE_GOOGLE_API_KEY && import.meta.env.DEV;
 
   useEffect(() => {
+    // Skip Google API initialization if disabled
+    if (!isGoogleApiEnabled) {
+      setIsLoading(false);
+      setScriptError(false);
+      return;
+    }
+
     let mounted = true;
 
     const initAutocomplete = async () => {
@@ -81,7 +91,7 @@ export function AddressAutocomplete({
         google.maps.event.clearInstanceListeners(autocompleteRef.current);
       }
     };
-  }, [onAddressSelect, onChange]);
+  }, [onAddressSelect, onChange, isGoogleApiEnabled]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (onChange) {
@@ -114,12 +124,17 @@ export function AddressAutocomplete({
         )}
       </div>
       {error && <p className="text-destructive text-sm">{error}</p>}
+      {!isGoogleApiEnabled && (
+        <p className="text-muted-foreground text-xs">
+          Enter your complete address manually
+        </p>
+      )}
       {scriptError && (
         <p className="text-destructive text-sm">
           Failed to load address autocomplete. Please enter address manually.
         </p>
       )}
-      {!isLoading && !scriptError && (
+      {isGoogleApiEnabled && !isLoading && !scriptError && (
         <p className="text-muted-foreground text-xs">
           Start typing and select from the suggestions
         </p>

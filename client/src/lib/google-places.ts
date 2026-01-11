@@ -1,10 +1,15 @@
 /**
  * Google Places API Integration
  * Provides address autocomplete functionality using the new PlaceAutocompleteElement
+ * 
+ * NOTE: Google API is disabled for production deployments (Vercel, etc.)
+ * Only enable for local development by setting VITE_GOOGLE_API_KEY
  */
 
-const GOOGLE_API_KEY = "AIzaSyBXFfKU7RKINdttMGInxWzAs97VTG8fy0w";
+// Only load Google API in local development with explicit API key
+const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_API_KEY || "";
 const GOOGLE_MAPS_SCRIPT_ID = "google-maps-script";
+const GOOGLE_API_ENABLED = !!GOOGLE_API_KEY && import.meta.env.DEV;
 
 export interface AddressComponents {
   streetAddress: string;
@@ -22,6 +27,12 @@ export interface AddressComponents {
  */
 export function loadGoogleMapsScript(): Promise<void> {
   return new Promise((resolve, reject) => {
+    // Reject if Google API is disabled
+    if (!GOOGLE_API_ENABLED) {
+      reject(new Error("Google Places API is disabled for this environment"));
+      return;
+    }
+
     // Check if script is already loaded
     if (window.google && window.google.maps) {
       resolve();
