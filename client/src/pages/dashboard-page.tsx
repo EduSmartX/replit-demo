@@ -1,6 +1,7 @@
 import { LogOut, Building2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { AdminSidebar } from "@/components/dashboard/admin-sidebar";
 import { ParentSidebar } from "@/components/dashboard/parent-sidebar";
 import { RoleDashboard } from "@/components/dashboard/role-dashboard";
@@ -8,12 +9,144 @@ import { TeacherSidebar } from "@/components/dashboard/teacher-sidebar";
 import { Button } from "@/components/ui/button";
 import { useUser } from "@/context/user-context";
 import { useToast } from "@/hooks/use-toast";
+import { LeaveAllocationForm, LeaveAllocationsList } from "@/components/leave";
+import type { LeaveAllocation } from "@/lib/api/leave-api";
+import { deleteLeaveAllocation, apiRequest, API_ENDPOINTS } from "@/lib/api/leave-api";
+
+type ViewMode = "list" | "create" | "view" | "edit";
 
 export default function DashboardPage() {
-  const [activeMenu, setActiveMenu] = useState("overview");
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const { toast } = useToast();
   const { user, organization, logout } = useUser();
+  const queryClient = useQueryClient();
+  const [viewMode, setViewMode] = useState<ViewMode>("list");
+  const [selectedAllocation, setSelectedAllocation] = useState<LeaveAllocation | null>(null);
+
+  // Get active menu from URL path
+  const getActiveMenuFromPath = () => {
+    const path = location.replace('/', '');
+    return path === 'dashboard' || path === '' ? 'overview' : path.split('/')[0];
+  };
+
+  const [activeMenu, setActiveMenu] = useState(getActiveMenuFromPath());
+
+  // Extract allocation ID from URL
+  const getAllocationIdFromPath = () => {
+    const match = location.match(/\/allocations\/([a-zA-Z0-9]+)$/);
+    return match ? match[1] : null;
+  };
+
+  const allocationId = getAllocationIdFromPath();
+
+  // Fetch allocation detail when URL contains an ID
+  const { data: allocationDetail, isLoading: isLoadingDetail } = useQuery({
+    queryKey: ["leave-allocation-detail", allocationId],
+    queryFn: async () => {
+      if (!allocationId) return null;
+      const response = await apiRequest<any>(API_ENDPOINTS.leave.allocationDetail(allocationId), {
+        method: "GET",
+      });
+      
+      // Transform API response to match LeaveAllocation interface
+      return {
+        public_id: response.public_id,
+        leave_type_id: response.leave_type.id,
+        leave_type_name: response.leave_type.name,
+        name: response.name || "",
+        description: response.description || "",
+        total_days: response.total_days,
+        max_carry_forward_days: response.max_carry_forward_days,
+        roles: response.roles_details.map((r: any) => r.name).join(', '),
+        effective_from: response.effective_from,
+        effective_to: response.effective_to,
+        created_at: response.created_at,
+        updated_at: response.updated_at,
+        created_by_public_id: response.created_by_public_id,
+        created_by_name: response.created_by_name,
+        updated_by_public_id: response.updated_by_public_id,
+        updated_by_name: response.updated_by_name,
+      } as LeaveAllocation;
+    },
+    enabled: !!allocationId && activeMenu === "allocations",
+    staleTime: 0,
+    refetchOnMount: true,
+  });
+
+  // Update viewMode and selectedAllocation when URL changes
+  useEffect(() => {
+    if (allocationId && allocationDetail) {
+      setSelectedAllocation(allocationDetail);
+    } else if (!allocationId && activeMenu === "allocations") {
+      setViewMode("list");
+      setSelectedAllocation(null);
+    }
+  }, [allocationId, allocationDetail, activeMenu]);
+
+  // Update activeMenu when location changes
+  useEffect(() => {
+    const menu = getActiveMenuFromPath();
+    setActiveMenu(menu);
+  }, [location]);
+
+  // Handle menu change with URL update
+  const handleMenuChange = (menuId: string) => {    
+    setViewMode("list");
+    setSelectedAllocation(null);
+    
+    if (menuId === 'overview') {
+      setLocation('/dashboard');
+    } else {
+      setLocation(`/${menuId}`);
+    }
+  };
+
+  const handleView = (allocation: LeaveAllocation) => {
+    setSelectedAllocation(allocation);
+    setViewMode("view");
+    setLocation(`/allocations/${allocation.public_id}`);
+  };
+
+  const handleEdit = (allocation: LeaveAllocation) => {
+    setSelectedAllocation(allocation);
+    setViewMode("edit");
+    setLocation(`/allocations/${allocation.public_id}`);
+  };
+
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: (publicId: string) => deleteLeaveAllocation(publicId),
+    onSuccess: async () => {
+      // Invalidate and refetch allocations - use exact: false to match all variations
+      await queryClient.invalidateQueries({ 
+        queryKey: ["leave-allocations"],
+        exact: false,
+        refetchType: 'active'
+      });
+      // Force refetch
+      await queryClient.refetchQueries({ 
+        queryKey: ["leave-allocations"],
+        exact: false 
+      });
+      toast({
+        title: "Success",
+        description: "Leave allocation policy has been deleted successfully",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to delete leave allocation policy",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleDelete = async (allocation: LeaveAllocation) => {
+    if (confirm(`Are you sure you want to delete the ${allocation.leave_type_name} policy?`)) {
+      deleteMutation.mutate(allocation.public_id);
+    }
+  };
 
   useEffect(() => {
     if (!user) {
@@ -73,13 +206,13 @@ export default function DashboardPage() {
     <div className={`flex h-screen ${getRoleBackground()}`}>
       {/* Sidebar based on role */}
       {user.role === "admin" && (
-        <AdminSidebar activeMenu={activeMenu} onMenuChange={setActiveMenu} />
+        <AdminSidebar activeMenu={activeMenu} onMenuChange={handleMenuChange} />
       )}
       {user.role === "teacher" && (
-        <TeacherSidebar activeMenu={activeMenu} onMenuChange={setActiveMenu} />
+        <TeacherSidebar activeMenu={activeMenu} onMenuChange={handleMenuChange} />
       )}
       {user.role === "parent" && (
-        <ParentSidebar activeMenu={activeMenu} onMenuChange={setActiveMenu} />
+        <ParentSidebar activeMenu={activeMenu} onMenuChange={handleMenuChange} />
       )}
 
       {/* Main Content */}
@@ -116,13 +249,63 @@ export default function DashboardPage() {
         </div>
 
         {/* Content */}
-        <div className="p-4 pt-8 md:p-8">
+        <div className="p-4 pt-24 md:p-8 md:pt-8">
           {activeMenu === "overview" && (
             <RoleDashboard role={user.role} username={user.full_name} />
           )}
 
+          {/* Leave Allocations */}
+          {activeMenu === "allocations" && user.role === "admin" && (
+            <>
+              {viewMode === "list" ? (
+                <LeaveAllocationsList 
+                  onCreateNew={() => {
+                    setSelectedAllocation(null);
+                    setViewMode("create");
+                  }}
+                  onView={handleView}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                />
+              ) : (
+                <LeaveAllocationForm 
+                  mode={viewMode}
+                  initialData={selectedAllocation}
+                  onEdit={() => setViewMode("edit")}
+                  onSuccess={async () => {
+                    const message = viewMode === "create" 
+                      ? "Leave allocation policy has been created successfully"
+                      : "Leave allocation policy has been updated successfully";
+                    toast({
+                      title: "Success",
+                      description: message,
+                    });
+                    
+                    if (viewMode === "edit" && selectedAllocation) {
+                      // After update, stay on same URL and switch to view mode
+                      await queryClient.invalidateQueries({ 
+                        queryKey: ["leave-allocation-detail", selectedAllocation.public_id] 
+                      });
+                      setViewMode("view");
+                    } else {
+                      // After create, go back to list
+                      setViewMode("list");
+                      setSelectedAllocation(null);
+                      setLocation("/allocations");
+                    }
+                  }}
+                  onCancel={() => {
+                    setViewMode("list");
+                    setSelectedAllocation(null);
+                    setLocation("/allocations");
+                  }}
+                />
+              )}
+            </>
+          )}
+
           {/* Placeholder for other menu items */}
-          {activeMenu !== "overview" && (
+          {activeMenu !== "overview" && activeMenu !== "allocations" && (
             <div className="py-20 text-center">
               <div className="mb-6 inline-block rounded-full bg-gradient-to-br from-blue-100 to-green-100 p-12">
                 <div className="text-4xl">🚀</div>

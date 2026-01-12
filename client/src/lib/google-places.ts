@@ -1,12 +1,7 @@
 /**
  * Google Places API Integration
  * Provides address autocomplete functionality using the new PlaceAutocompleteElement
- * 
- * NOTE: Google API is disabled for production deployments (Vercel, etc.)
- * Only enable for local development by setting VITE_GOOGLE_API_KEY
- */
-
-// Only load Google API in local development with explicit API key
+  */
 const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_API_KEY || "";
 const GOOGLE_MAPS_SCRIPT_ID = "google-maps-script";
 const GOOGLE_API_ENABLED = !!GOOGLE_API_KEY && import.meta.env.DEV;

@@ -17,6 +17,16 @@ function Router() {
       <Route path="/auth" component={AuthPage} />
       <Route path="/registration-success" component={RegistrationSuccess} />
       <Route path="/dashboard" component={DashboardPage} />
+      <Route path="/allocations" component={DashboardPage} />
+      <Route path="/allocations/:id" component={DashboardPage} />
+      <Route path="/organization" component={DashboardPage} />
+      <Route path="/preferences" component={DashboardPage} />
+      <Route path="/teachers" component={DashboardPage} />
+      <Route path="/classes" component={DashboardPage} />
+      <Route path="/subjects" component={DashboardPage} />
+      <Route path="/students" component={DashboardPage} />
+      <Route path="/attendance" component={DashboardPage} />
+      <Route path="/requests" component={DashboardPage} />
       <Route path="/organization-pending" component={OrganizationPendingPage} />
       <Route component={NotFound} />
     </Switch>

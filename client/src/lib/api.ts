@@ -29,6 +29,14 @@ export const API_ENDPOINTS = {
     list: `${API_BASE_URL}/api/users/`,
     detail: (id: string) => `${API_BASE_URL}/api/users/${id}/`,
   },
+  core: {
+    leaveTypes: `${API_BASE_URL}/api/core/leave-types/`,
+    organizationRoles: `${API_BASE_URL}/api/core/organization-role-types/`,
+  },
+  leave: {
+    allocations: `${API_BASE_URL}/api/leave/leave-allocations/`,
+    allocationDetail: (publicId: string) => `${API_BASE_URL}/api/leave/leave-allocations/${publicId}/`,
+  },
   // Add more endpoints as needed
 } as const;
 
@@ -117,6 +125,11 @@ export async function apiRequest<T = unknown>(url: string, options: RequestInit 
   if (!response.ok) {
     const errorText = await response.text();
     throw new Error(`HTTP ${response.status}: ${errorText || response.statusText}`);
+  }
+
+  // Handle 204 No Content - no body to parse
+  if (response.status === 204) {
+    return {} as T;
   }
 
   return await response.json();

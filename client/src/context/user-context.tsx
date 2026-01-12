@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 
 export type UserRole = "admin" | "teacher" | "parent";
 
@@ -43,11 +43,38 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [organization, setOrganization] = useState<Organization | null>(null);
   const [tokens, setTokens] = useState<AuthTokens | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Restore auth state from localStorage on mount
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    const storedOrg = localStorage.getItem("organization");
+    const accessToken = localStorage.getItem("accessToken");
+    const refreshToken = localStorage.getItem("refreshToken");
+
+    if (storedUser && storedOrg && accessToken && refreshToken) {
+      try {
+        setUser(JSON.parse(storedUser));
+        setOrganization(JSON.parse(storedOrg));
+        setTokens({ access: accessToken, refresh: refreshToken });
+      } catch (error) {
+        console.error("Failed to restore auth state:", error);
+        // Clear corrupted data
+        localStorage.removeItem("user");
+        localStorage.removeItem("organization");
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+      }
+    }
+    setIsInitialized(true);
+  }, []);
 
   const setAuth = (user: User, organization: Organization, tokens: AuthTokens) => {
     setUser(user);
     setOrganization(organization);
     setTokens(tokens);
+    localStorage.setItem("user", JSON.stringify(user));
+    localStorage.setItem("organization", JSON.stringify(organization));
     localStorage.setItem("accessToken", tokens.access);
     localStorage.setItem("refreshToken", tokens.refresh);
   };
@@ -56,9 +83,16 @@ export function UserProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setOrganization(null);
     setTokens(null);
+    localStorage.removeItem("user");
+    localStorage.removeItem("organization");
     localStorage.removeItem("accessToken");
     localStorage.removeItem("refreshToken");
   };
+
+  // Don't render children until we've checked localStorage
+  if (!isInitialized) {
+    return null;
+  }
 
   return (
     <UserContext.Provider value={{ user, organization, tokens, setAuth, logout }}>
