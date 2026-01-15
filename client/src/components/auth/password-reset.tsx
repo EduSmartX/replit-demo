@@ -17,21 +17,22 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { api, API_ENDPOINTS } from "@/lib/api";
+import { ErrorMessages, SuccessMessages, ValidationErrorMessages } from "@/lib/constants";
 
 // Schema for Step 1 - Request Reset
 const step1Schema = z.object({
-  identifier: z.string().min(1, "Please enter your username or email"),
+  identifier: z.string().min(1, ValidationErrorMessages.USERNAME_REQUIRED),
 });
 
 // Schema for Step 2 - Verify OTP and Reset Password
 const step2Schema = z
   .object({
     otp: z.string().min(1, "OTP is required"),
-    newPassword: z.string().min(8, "Password must be at least 8 characters"),
+    newPassword: z.string().min(8, ValidationErrorMessages.PASSWORD_TOO_SHORT),
     confirmPassword: z.string(),
   })
   .refine((data) => data.newPassword === data.confirmPassword, {
-    message: "Passwords don't match",
+    message: ValidationErrorMessages.PASSWORDS_DO_NOT_MATCH,
     path: ["confirmPassword"],
   });
 
@@ -77,7 +78,7 @@ export function PasswordReset({ onBack, onSuccess }: PasswordResetProps) {
         setStep(2);
       }
     } catch (error: unknown) {
-      let errorMessage = "Failed to send reset code. Please try again.";
+      let errorMessage = ErrorMessages.Auth.RESET_CODE_SEND_FAILED;
 
       try {
         const errorText = (error as { message?: string })?.message || "";
@@ -122,8 +123,8 @@ export function PasswordReset({ onBack, onSuccess }: PasswordResetProps) {
 
       if (response.message) {
         toast({
-          title: "Password Reset Successful",
-          description: response.message,
+          title: "Success",
+          description: SuccessMessages.Auth.PASSWORD_RESET_SUCCESS,
         });
 
         // Redirect to login after a short delay
@@ -132,7 +133,7 @@ export function PasswordReset({ onBack, onSuccess }: PasswordResetProps) {
         }, 1500);
       }
     } catch (error: unknown) {
-      let errorMessage = "Failed to reset password. Please try again.";
+      let errorMessage = ErrorMessages.Auth.PASSWORD_RESET_FAILED;
 
       try {
         const errorText = (error as { message?: string })?.message || "";

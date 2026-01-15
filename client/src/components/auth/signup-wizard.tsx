@@ -38,14 +38,15 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { api, API_ENDPOINTS } from "@/lib/api";
+import { ErrorMessages, SuccessMessages, ValidationErrorMessages } from "@/lib/constants";
 import { parseApiError } from "@/lib/error-parser";
 import { AddressComponents } from "@/lib/google-places";
 import { verifyOtp, sendOtps } from "@/lib/otp-service";
 
 // Schema for Step 1
 const step1Schema = z.object({
-  adminEmail: z.string().email({ message: "Invalid admin email address" }),
-  orgEmail: z.string().email({ message: "Invalid organization email address" }),
+  adminEmail: z.string().email({ message: ValidationErrorMessages.INVALID_EMAIL }),
+  orgEmail: z.string().email({ message: ValidationErrorMessages.INVALID_EMAIL }),
 });
 
 // Schema for Step 2
@@ -58,9 +59,9 @@ const step2Schema = z.object({
 const step3Schema = z
   .object({
     // Organization Info
-    orgName: z.string().min(2, "Organization name is required"),
+    orgName: z.string().min(2, ValidationErrorMessages.ORG_NAME_REQUIRED),
     orgType: z.string().min(1, "Organization type is required"),
-    orgPhoneNumber: z.string().min(10, "Phone number must be at least 10 digits"),
+    orgPhoneNumber: z.string().min(10, ValidationErrorMessages.INVALID_PHONE),
     orgWebsite: z.string().optional(),
     boardAffiliation: z.string().optional(),
     legalEntity: z.string().optional(),
@@ -79,12 +80,12 @@ const step3Schema = z
     // Admin Info
     firstName: z.string().min(2, "First name is required"),
     lastName: z.string().min(2, "Last name is required"),
-    password: z.string().min(8, "Password must be at least 8 characters"),
+    password: z.string().min(8, ValidationErrorMessages.PASSWORD_TOO_SHORT),
     confirmPassword: z.string(),
     notificationOptIn: z.boolean().default(true),
   })
   .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords don't match",
+    message: ValidationErrorMessages.PASSWORDS_DO_NOT_MATCH,
     path: ["confirmPassword"],
   });
 
