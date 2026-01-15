@@ -9,7 +9,8 @@ import { TeacherSidebar } from "@/components/dashboard/teacher-sidebar";
 import { Button } from "@/components/ui/button";
 import { useUser } from "@/context/user-context";
 import { useToast } from "@/hooks/use-toast";
-import { LeaveAllocationForm, LeaveAllocationsList } from "@/components/leave";
+import { LeaveAllocationForm, LeaveAllocationsList, OrganizationHolidayCalendar } from "@/components/leave";
+import { OrganizationPreferences } from "@/components/preferences/organization-preferences";
 import type { LeaveAllocation } from "@/lib/api/leave-api";
 import { deleteLeaveAllocation, apiRequest, API_ENDPOINTS } from "@/lib/api/leave-api";
 
@@ -48,24 +49,31 @@ export default function DashboardPage() {
         method: "GET",
       });
       
+      // Handle standardized API response
+      if (!response.success || response.code < 200 || response.code >= 300) {
+        throw new Error(response.message || "Failed to fetch allocation details");
+      }
+      
+      const data = response.data;
+      
       // Transform API response to match LeaveAllocation interface
       return {
-        public_id: response.public_id,
-        leave_type_id: response.leave_type.id,
-        leave_type_name: response.leave_type.name,
-        name: response.name || "",
-        description: response.description || "",
-        total_days: response.total_days,
-        max_carry_forward_days: response.max_carry_forward_days,
-        roles: response.roles_details.map((r: any) => r.name).join(', '),
-        effective_from: response.effective_from,
-        effective_to: response.effective_to,
-        created_at: response.created_at,
-        updated_at: response.updated_at,
-        created_by_public_id: response.created_by_public_id,
-        created_by_name: response.created_by_name,
-        updated_by_public_id: response.updated_by_public_id,
-        updated_by_name: response.updated_by_name,
+        public_id: data.public_id,
+        leave_type_id: data.leave_type.id,
+        leave_type_name: data.leave_type.name,
+        name: data.name || "",
+        description: data.description || "",
+        total_days: data.total_days,
+        max_carry_forward_days: data.max_carry_forward_days,
+        roles: data.roles_details.map((r: any) => r.name).join(', '),
+        effective_from: data.effective_from,
+        effective_to: data.effective_to,
+        created_at: data.created_at,
+        updated_at: data.updated_at,
+        created_by_public_id: data.created_by_public_id,
+        created_by_name: data.created_by_name,
+        updated_by_public_id: data.updated_by_public_id,
+        updated_by_name: data.updated_by_name,
       } as LeaveAllocation;
     },
     enabled: !!allocationId && activeMenu === "allocations",
@@ -216,10 +224,10 @@ export default function DashboardPage() {
       )}
 
       {/* Main Content */}
-      <main className="flex-1 overflow-auto pt-20 md:ml-64 md:pt-0">
-        {/* Top Bar */}
+      <main className="flex-1 flex flex-col h-screen">
+        {/* Top Bar - Fixed */}
         <div
-          className={`fixed top-0 right-0 left-0 h-16 bg-gradient-to-r md:left-64 ${getRoleColor()} z-30 flex items-center justify-between px-4 shadow-lg md:px-8`}
+          className={`fixed top-0 right-0 left-0 md:left-0 h-16 bg-gradient-to-r ${getRoleColor()} z-50 flex items-center justify-between px-4 shadow-lg md:px-8`}
         >
           <div className="flex items-center space-x-3">
             <Building2 className="h-5 w-5 text-white/80" />
@@ -248,11 +256,12 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Content */}
-        <div className="p-4 pt-24 md:p-8 md:pt-8">
-          {activeMenu === "overview" && (
-            <RoleDashboard role={user.role} username={user.full_name} />
-          )}
+        {/* Scrollable Content Area */}
+        <div className="flex-1 overflow-auto mt-16">
+          <div className="p-4 md:p-8">
+            {activeMenu === "overview" && (
+              <RoleDashboard role={user.role} username={user.full_name} />
+            )}
 
           {/* Leave Allocations */}
           {activeMenu === "allocations" && user.role === "admin" && (
@@ -304,8 +313,18 @@ export default function DashboardPage() {
             </>
           )}
 
+          {/* Organization Holiday Calendar */}
+          {activeMenu === "organization" && user.role === "admin" && (
+            <OrganizationHolidayCalendar />
+          )}
+
+          {/* Organization Preferences */}
+          {activeMenu === "preferences" && user.role === "admin" && (
+            <OrganizationPreferences />
+          )}
+
           {/* Placeholder for other menu items */}
-          {activeMenu !== "overview" && activeMenu !== "allocations" && (
+          {activeMenu !== "overview" && activeMenu !== "allocations" && activeMenu !== "organization" && activeMenu !== "preferences" && (
             <div className="py-20 text-center">
               <div className="mb-6 inline-block rounded-full bg-gradient-to-br from-blue-100 to-green-100 p-12">
                 <div className="text-4xl">🚀</div>
@@ -322,6 +341,7 @@ export default function DashboardPage() {
             </div>
           )}
         </div>
+      </div>
       </main>
     </div>
   );

@@ -3,6 +3,10 @@
  * Centralizes all API endpoint configurations and request utilities
  */
 
+// Re-export standard types
+export type { ApiResponse, ApiListResponse, ApiErrorResponse, Pagination } from "./api/types";
+export { isSuccessResponse, isPaginatedResponse } from "./api/types";
+
 // Get API base URL from environment variables
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
@@ -36,6 +40,10 @@ export const API_ENDPOINTS = {
   leave: {
     allocations: `${API_BASE_URL}/api/leave/leave-allocations/`,
     allocationDetail: (publicId: string) => `${API_BASE_URL}/api/leave/leave-allocations/${publicId}/`,
+  },
+  attendance: {
+    holidayCalendar: `${API_BASE_URL}/api/attendance/admin/holiday-calendar/`,
+    workingDayPolicy: `${API_BASE_URL}/api/attendance/admin/working-day-policy/`,
   },
   // Add more endpoints as needed
 } as const;
@@ -94,45 +102,94 @@ export async function apiRequest<T = unknown>(url: string, options: RequestInit 
     headers["Authorization"] = `Bearer ${accessToken}`;
   }
 
-  const response = await fetch(url, {
-    ...options,
-    headers,
-  });
+  try {
+    const response = await fetch(url, {
+      ...options,
+      headers,
+    });
 
-  // Handle 401 Unauthorized - try to refresh token
-  if (response.status === 401 && accessToken) {
-    const refreshed = await refreshAccessToken();
-    if (refreshed) {
-      // Retry the original request with new token
-      headers["Authorization"] = `Bearer ${getAccessToken()}`;
-      const retryResponse = await fetch(url, {
-        ...options,
-        headers,
-      });
+    // Handle 401 Unauthorized - try to refresh token
+    if (response.status === 401 && accessToken) {
+      const refreshed = await refreshAccessToken();
+      if (refreshed) {
+        // Retry the original request with new token
+        headers["Authorization"] = `Bearer ${getAccessToken()}`;
+        const retryResponse = await fetch(url, {
+          ...options,
+          headers,
+        });
 
-      if (!retryResponse.ok) {
-        throw new Error(`HTTP ${retryResponse.status}: ${retryResponse.statusText}`);
+        if (!retryResponse.ok) {
+          const errorData = await retryResponse.json().catch(() => null);
+          throw errorData || new Error(`HTTP ${retryResponse.status}: ${retryResponse.statusText}`);
+        }
+
+        return await retryResponse.json();
+      } else {
+        // Refresh failed, clear tokens and throw error
+        clearTokens();
+        throw new Error("Authentication failed. Please log in again.");
       }
-
-      return await retryResponse.json();
-    } else {
-      // Refresh failed, clear tokens and throw error
-      clearTokens();
-      throw new Error("Authentication failed. Please log in again.");
     }
-  }
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`HTTP ${response.status}: ${errorText || response.statusText}`);
-  }
+    // Handle 204 No Content - no body to parse (check before trying to parse body)
+    if (response.status === 204) {
+      return {
+        success: true,
+        message: "Success",
+        code: 204,
+        data: null,
+      } as T;
+    }
 
-  // Handle 204 No Content - no body to parse
-  if (response.status === 204) {
-    return {} as T;
-  }
+    // Try to parse response body (even for errors)
+    let responseData;
+    const contentType = response.headers.get("content-type");
+    
+    if (contentType && contentType.includes("application/json")) {
+      responseData = await response.json();
+    } else {
+      const text = await response.text();
+      // Try to parse as JSON if possible
+      try {
+        responseData = JSON.parse(text);
+      } catch {
+        responseData = text;
+      }
+    }
 
-  return await response.json();
+    // If response is not ok, throw the parsed response data
+    if (!response.ok) {
+      // If we have a structured error response, throw it as is
+      if (responseData && typeof responseData === "object") {
+        throw responseData;
+      }
+      // Otherwise create a structured error
+      throw {
+        success: false,
+        message: responseData || response.statusText || "Request failed",
+        code: response.status,
+        errors: null,
+        data: null,
+      };
+    }
+
+    return responseData;
+  } catch (error) {
+    // If it's already a structured error, re-throw it
+    if (error && typeof error === "object" && "code" in error) {
+      throw error;
+    }
+    
+    // For network errors or other exceptions, wrap them
+    throw {
+      success: false,
+      message: error instanceof Error ? error.message : "Network error occurred",
+      code: 0,
+      errors: error,
+      data: null,
+    };
+  }
 }
 
 /**

@@ -4,6 +4,7 @@
  */
 
 import { apiRequest, getAccessToken, API_ENDPOINTS } from "@/lib/api";
+import type { ApiResponse, ApiListResponse } from "./types";
 
 // Re-export for convenience
 export { apiRequest, API_ENDPOINTS };
@@ -22,20 +23,8 @@ export interface LeaveType {
   updated_at: string;
 }
 
-export interface LeaveTypesResponse {
-  success: boolean;
-  data: LeaveType[];
-  pagination: {
-    current_page: number;
-    total_pages: number;
-    count: number;
-    page_size: number;
-    has_next: boolean;
-    has_previous: boolean;
-    next_page: number | null;
-    previous_page: number | null;
-  };
-}
+// Using standard API response types
+export type LeaveTypesResponse = ApiListResponse<LeaveType>;
 
 export interface OrganizationRole {
   id: number;
@@ -47,20 +36,8 @@ export interface OrganizationRole {
   updated_at: string;
 }
 
-export interface OrganizationRolesResponse {
-  success: boolean;
-  data: OrganizationRole[];
-  pagination: {
-    current_page: number;
-    total_pages: number;
-    count: number;
-    page_size: number;
-    has_next: boolean;
-    has_previous: boolean;
-    next_page: number | null;
-    previous_page: number | null;
-  };
-}
+// Using standard API response types
+export type OrganizationRolesResponse = ApiListResponse<OrganizationRole>;
 
 export interface LeaveAllocationPayload {
   leave_type: number;
@@ -92,48 +69,9 @@ export interface LeaveAllocation {
   updated_by_name: string | null;
 }
 
-export interface LeaveAllocationsResponse {
-  success: boolean;
-  data: LeaveAllocation[];
-  pagination: {
-    current_page: number;
-    total_pages: number;
-    count: number;
-    page_size: number;
-    has_next: boolean;
-    has_previous: boolean;
-    next_page: number | null;
-    previous_page: number | null;
-  };
-}
-
-export interface LeaveAllocationResponse {
-  status: string;
-  message: string;
-  data: {
-    public_id: string;
-    leave_type_name: string;
-    total_days: string;
-    max_carry_forward_days: string;
-    roles: string;
-    created_at: string;
-    updated_at: string;
-    created_by_public_id: string;
-    created_by_name: string;
-    updated_by_public_id: string;
-    updated_by_name: string;
-  };
-  errors: null | Record<string, string[]>;
-  code: number;
-}
-
-export interface LeaveAllocationErrorResponse {
-  status: string;
-  message: string;
-  data: null;
-  errors: Record<string, string[]>;
-  code: number;
-}
+// Using standard API response types
+export type LeaveAllocationsResponse = ApiListResponse<LeaveAllocation>;
+export type LeaveAllocationResponse = ApiResponse<LeaveAllocation>;
 
 // ============================================================================
 // API Functions
@@ -143,18 +81,30 @@ export interface LeaveAllocationErrorResponse {
  * Fetch all leave types from the system
  */
 export async function fetchLeaveTypes(): Promise<LeaveTypesResponse> {
-  return apiRequest<LeaveTypesResponse>(API_ENDPOINTS.core.leaveTypes, {
+  const response = await apiRequest<LeaveTypesResponse>(API_ENDPOINTS.core.leaveTypes, {
     method: "GET",
   });
+  
+  if (!response.success || response.code < 200 || response.code >= 300) {
+    throw new Error(response.message || "Failed to fetch leave types");
+  }
+  
+  return response;
 }
 
 /**
  * Fetch all organization role types
  */
 export async function fetchOrganizationRoles(): Promise<OrganizationRolesResponse> {
-  return apiRequest<OrganizationRolesResponse>(API_ENDPOINTS.core.organizationRoles, {
+  const response = await apiRequest<OrganizationRolesResponse>(API_ENDPOINTS.core.organizationRoles, {
     method: "GET",
   });
+  
+  if (!response.success || response.code < 200 || response.code >= 300) {
+    throw new Error(response.message || "Failed to fetch organization roles");
+  }
+  
+  return response;
 }
 
 /**
@@ -163,40 +113,29 @@ export async function fetchOrganizationRoles(): Promise<OrganizationRolesRespons
 export async function createLeaveAllocation(
   payload: LeaveAllocationPayload
 ): Promise<LeaveAllocationResponse> {
-  const accessToken = getAccessToken();
-  if (!accessToken) {
-    throw new Error("Authentication required");
-  }
-
-  const response = await fetch(API_ENDPOINTS.leave.allocations, {
+  const response = await apiRequest<LeaveAllocationResponse>(API_ENDPOINTS.leave.allocations, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${accessToken}`,
-    },
     body: JSON.stringify(payload),
   });
 
-  const data = await response.json();
-
-  if (!response.ok) {
+  if (!response.success || response.code < 200 || response.code >= 300) {
     // Format error message for better display
-    let errorMessage = data.message || "Failed to create leave allocation";
+    let errorMessage = response.message || "Failed to create leave allocation";
     
-    if (data.errors) {
-      const errorFields = Object.keys(data.errors);
+    if (response.errors) {
+      const errorFields = Object.keys(response.errors);
       if (errorFields.length > 0) {
-        const firstError = data.errors[errorFields[0]];
+        const firstError = response.errors[errorFields[0]];
         if (Array.isArray(firstError) && firstError.length > 0) {
           errorMessage = `${errorFields[0]}: ${firstError[0]}`;
         }
       }
     }
     
-    throw new Error(JSON.stringify(data));
+    throw new Error(errorMessage);
   }
 
-  return data;
+  return response;
 }
 
 /**
@@ -221,18 +160,33 @@ export async function fetchLeaveAllocations(params?: {
     queryParams.toString() ? `?${queryParams.toString()}` : ""
   }`;
   
-  return apiRequest<LeaveAllocationsResponse>(url, {
+  const response = await apiRequest<LeaveAllocationsResponse>(url, {
     method: "GET",
   });
+  
+  if (!response.success || response.code < 200 || response.code >= 300) {
+    throw new Error(response.message || "Failed to fetch leave allocations");
+  }
+  
+  return response;
 }
 
 /**
  * Fetch a specific leave allocation by public ID
  */
-export async function fetchLeaveAllocation(publicId: string): Promise<any> {
-  return apiRequest(API_ENDPOINTS.leave.allocationDetail(publicId), {
-    method: "GET",
-  });
+export async function fetchLeaveAllocation(publicId: string): Promise<LeaveAllocationResponse> {
+  const response = await apiRequest<LeaveAllocationResponse>(
+    API_ENDPOINTS.leave.allocationDetail(publicId),
+    {
+      method: "GET",
+    }
+  );
+  
+  if (!response.success || response.code < 200 || response.code >= 300) {
+    throw new Error(response.message || "Failed to fetch leave allocation");
+  }
+  
+  return response;
 }
 
 /**
@@ -242,34 +196,47 @@ export async function updateLeaveAllocation(
   publicId: string,
   payload: Partial<LeaveAllocationPayload>
 ): Promise<LeaveAllocationResponse> {
-  const accessToken = getAccessToken();
-  if (!accessToken) {
-    throw new Error("Authentication required");
+  const response = await apiRequest<LeaveAllocationResponse>(
+    API_ENDPOINTS.leave.allocationDetail(publicId),
+    {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    }
+  );
+
+  if (!response.success || response.code < 200 || response.code >= 300) {
+    let errorMessage = response.message || "Failed to update leave allocation";
+    
+    if (response.errors) {
+      const errorFields = Object.keys(response.errors);
+      if (errorFields.length > 0) {
+        const firstError = response.errors[errorFields[0]];
+        if (Array.isArray(firstError) && firstError.length > 0) {
+          errorMessage = `${errorFields[0]}: ${firstError[0]}`;
+        }
+      }
+    }
+    
+    throw new Error(errorMessage);
   }
 
-  const response = await fetch(API_ENDPOINTS.leave.allocationDetail(publicId), {
-    method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${accessToken}`,
-    },
-    body: JSON.stringify(payload),
-  });
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(JSON.stringify(data));
-  }
-
-  return data;
+  return response;
 }
 
 /**
  * Delete a leave allocation (soft delete)
  */
-export async function deleteLeaveAllocation(publicId: string): Promise<any> {
-  return apiRequest(API_ENDPOINTS.leave.allocationDetail(publicId), {
-    method: "DELETE",
-  });
+export async function deleteLeaveAllocation(publicId: string): Promise<ApiResponse<null>> {
+  const response = await apiRequest<ApiResponse<null>>(
+    API_ENDPOINTS.leave.allocationDetail(publicId),
+    {
+      method: "DELETE",
+    }
+  );
+  
+  if (!response.success || response.code < 200 || response.code >= 300) {
+    throw new Error(response.message || "Failed to delete leave allocation");
+  }
+  
+  return response;
 }
