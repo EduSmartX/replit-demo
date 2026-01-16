@@ -71,11 +71,20 @@ export function LoginForm({ onForgotPassword }: LoginFormProps) {
       setLocation(redirectUrl);
     } catch (error: unknown) {
       // Handle authentication errors properly
-      const err = error as { message?: string; detail?: string; non_field_errors?: string[] };
+      const err = error as {
+        message?: string;
+        detail?: string;
+        non_field_errors?: string[];
+        errors?: {
+          non_field_errors?: string[];
+          [key: string]: any;
+        };
+      };
       const errorMessage =
-        err?.message ||
-        err?.detail ||
+        err?.errors?.non_field_errors?.[0] ||
         err?.non_field_errors?.[0] ||
+        err?.detail ||
+        err?.message ||
         ErrorMessages.Auth.LOGIN_FAILED;
 
       toast({

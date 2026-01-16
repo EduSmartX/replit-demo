@@ -90,10 +90,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       )}
 
       {/* Main Content */}
-      <main className="flex flex-1 flex-col">
+      <main className="flex flex-1 flex-col overflow-x-hidden md:ml-64">
         {/* Top Bar - Fixed */}
         <div
-          className={`fixed top-0 right-0 left-0 h-16 bg-gradient-to-r md:left-0 ${getRoleColor()} z-50 flex items-center justify-between px-4 shadow-lg md:px-8`}
+          className={`fixed top-0 right-0 left-0 h-16 bg-gradient-to-r md:left-64 ${getRoleColor()} z-50 flex items-center justify-between px-4 shadow-lg md:px-8`}
         >
           <div className="flex items-center space-x-3">
             <Building2 className="h-5 w-5 text-white/80" />

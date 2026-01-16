@@ -258,13 +258,19 @@ export function SignupWizard({ onComplete: _onComplete }: { onComplete: () => vo
 
     setVerifying(true);
     try {
-      const response = await verifyOtp(email, otpCode, "organization_registration");
+      const response = (await verifyOtp(email, otpCode, "organization_registration")) as any;
 
-      if (response.status === "success") {
+      if (response.success === true || response.success === "true") {
         setVerified(true);
         toast({
           title: "Verified",
           description: successMessage,
+        });
+      } else {
+        toast({
+          title: "Verification Failed",
+          description: response.message || "Failed to verify OTP. Please try again.",
+          variant: "destructive",
         });
       }
     } catch (error: any) {
