@@ -1,9 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
 import { Plus, Filter, X, Eye, Edit, Trash2 } from "lucide-react";
+import { useState } from "react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { DataTable, type Column } from "@/components/ui/data-table";
 import {
   Select,
   SelectContent,
@@ -11,9 +12,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { DataTable, type Column } from "@/components/ui/data-table";
 import { TablePagination } from "@/components/ui/table-pagination";
-import { fetchLeaveAllocations, fetchLeaveTypes, fetchOrganizationRoles, type LeaveAllocation } from "@/lib/api/leave-api";
+import {
+  fetchLeaveAllocations,
+  fetchLeaveTypes,
+  fetchOrganizationRoles,
+  type LeaveAllocation,
+} from "@/lib/api/leave-api";
+import { formatDateForDisplay } from "@/lib/utils/date-utils";
 
 interface LeaveAllocationsListProps {
   onCreateNew: () => void;
@@ -22,7 +28,12 @@ interface LeaveAllocationsListProps {
   onDelete?: (allocation: LeaveAllocation) => void;
 }
 
-export function LeaveAllocationsList({ onCreateNew, onView, onEdit, onDelete }: LeaveAllocationsListProps) {
+export function LeaveAllocationsList({
+  onCreateNew,
+  onView,
+  onEdit,
+  onDelete,
+}: LeaveAllocationsListProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [filterLeaveType, setFilterLeaveType] = useState<string>("all");
   const [filterRole, setFilterRole] = useState<string>("all");
@@ -41,13 +52,19 @@ export function LeaveAllocationsList({ onCreateNew, onView, onEdit, onDelete }: 
   });
 
   // Fetch allocations with filters (fetch all without pagination for client-side filtering)
-  const { data: allocationsData, isLoading, error, refetch } = useQuery({
+  const {
+    data: allocationsData,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
     queryKey: ["leave-allocations", filterLeaveType],
-    queryFn: () => fetchLeaveAllocations({ 
-      page: 1, 
-      page_size: 100, // Fetch more records for client-side pagination
-      leave_type: filterLeaveType !== "all" ? parseInt(filterLeaveType) : undefined
-    }),
+    queryFn: () =>
+      fetchLeaveAllocations({
+        page: 1,
+        page_size: 100, // Fetch more records for client-side pagination
+        leave_type: filterLeaveType !== "all" ? parseInt(filterLeaveType) : undefined,
+      }),
     refetchOnMount: "always",
     refetchOnWindowFocus: true,
   });
@@ -57,14 +74,13 @@ export function LeaveAllocationsList({ onCreateNew, onView, onEdit, onDelete }: 
   const allAllocations = allocationsData?.data || [];
 
   // Apply client-side role filtering
-  const filteredAllocations = filterRole !== "all" 
-    ? allAllocations.filter(allocation => {
-        const rolesArray = allocation.roles
-          .split(',')
-          .map(role => role.trim());
-        return rolesArray.includes(filterRole);
-      })
-    : allAllocations;
+  const filteredAllocations =
+    filterRole !== "all"
+      ? allAllocations.filter((allocation) => {
+          const rolesArray = allocation.roles.split(",").map((role) => role.trim());
+          return rolesArray.includes(filterRole);
+        })
+      : allAllocations;
 
   // Calculate client-side pagination
   const totalRecords = filteredAllocations.length;
@@ -97,58 +113,47 @@ export function LeaveAllocationsList({ onCreateNew, onView, onEdit, onDelete }: 
 
   const hasActiveFilters = filterLeaveType !== "all" || filterRole !== "all";
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
-  };
-
   // Define table columns
   const columns: Column<LeaveAllocation>[] = [
     {
       header: "Leave Type",
-      accessor: (row) => (
-        <div className="font-medium text-gray-900">{row.leave_type_name}</div>
-      ),
+      accessor: (row) => <div className="font-medium text-gray-900">{row.leave_type_name}</div>,
+      sortable: true,
+      sortKey: "leave_type_name",
     },
     {
       header: "Total Days",
-      accessor: (row) => (
-        <span className="font-semibold text-blue-600">{row.total_days}</span>
-      ),
+      accessor: (row) => <span className="font-semibold text-blue-600">{row.total_days}</span>,
+      sortable: true,
+      sortKey: "total_days",
     },
     {
       header: "Carry Forward",
-      accessor: (row) => (
-        <span className="text-gray-700">{row.max_carry_forward_days} days</span>
-      ),
+      accessor: (row) => <span className="text-gray-700">{row.max_carry_forward_days} days</span>,
+      sortable: true,
+      sortKey: "max_carry_forward_days",
     },
     {
       header: "Applicable Roles",
       accessor: (row) => {
         const rolesArray = row.roles
-          .split(',')
-          .map(role => role.trim())
-          .filter(role => role.length > 0);
-        
+          .split(",")
+          .map((role) => role.trim())
+          .filter((role) => role.length > 0);
+
         return (
-          <div className="flex flex-wrap gap-1 max-w-xs">
+          <div className="flex max-w-xs flex-wrap gap-1">
             {rolesArray.slice(0, 3).map((role, index) => (
               <Badge
                 key={index}
                 variant="secondary"
-                className="text-xs bg-blue-50 text-blue-700 border-blue-200"
+                className="border-blue-200 bg-blue-50 text-xs text-blue-700"
               >
                 {role}
               </Badge>
             ))}
             {rolesArray.length > 3 && (
-              <Badge
-                variant="secondary"
-                className="text-xs bg-gray-100 text-gray-600"
-              >
+              <Badge variant="secondary" className="bg-gray-100 text-xs text-gray-600">
                 +{rolesArray.length - 3} more
               </Badge>
             )}
@@ -160,22 +165,20 @@ export function LeaveAllocationsList({ onCreateNew, onView, onEdit, onDelete }: 
       header: "Created By",
       accessor: (row) => (
         <div className="text-sm">
-          <div className="text-gray-700">
-            {row.created_by_name || "System"}
-          </div>
-          <div className="text-gray-500 text-xs">
-            {formatDate(row.created_at)}
-          </div>
+          <div className="text-gray-700">{row.created_by_name || "System"}</div>
+          <div className="text-xs text-gray-500">{formatDateForDisplay(row.created_at)}</div>
         </div>
       ),
+      sortable: true,
+      sortKey: "created_by_name",
     },
     {
       header: "Last Updated",
       accessor: (row) => (
-        <div className="text-sm text-gray-500">
-          {formatDate(row.updated_at)}
-        </div>
+        <div className="text-sm text-gray-500">{formatDateForDisplay(row.updated_at)}</div>
       ),
+      sortable: true,
+      sortKey: "updated_at",
     },
     {
       header: "Actions",
@@ -188,7 +191,7 @@ export function LeaveAllocationsList({ onCreateNew, onView, onEdit, onDelete }: 
               e.stopPropagation();
               onView?.(row);
             }}
-            className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+            className="h-8 w-8 p-0 text-blue-600 hover:bg-blue-50 hover:text-blue-700"
             title="View"
           >
             <Eye className="h-4 w-4" />
@@ -200,7 +203,7 @@ export function LeaveAllocationsList({ onCreateNew, onView, onEdit, onDelete }: 
               e.stopPropagation();
               onEdit?.(row);
             }}
-            className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
+            className="h-8 w-8 p-0 text-green-600 hover:bg-green-50 hover:text-green-700"
             title="Edit"
           >
             <Edit className="h-4 w-4" />
@@ -212,7 +215,7 @@ export function LeaveAllocationsList({ onCreateNew, onView, onEdit, onDelete }: 
               e.stopPropagation();
               onDelete?.(row);
             }}
-            className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+            className="h-8 w-8 p-0 text-red-600 hover:bg-red-50 hover:text-red-700"
             title="Delete"
           >
             <Trash2 className="h-4 w-4" />
@@ -223,21 +226,16 @@ export function LeaveAllocationsList({ onCreateNew, onView, onEdit, onDelete }: 
   ];
 
   return (
-    <div className="max-w-7xl mx-auto">
+    <div className="mx-auto max-w-7xl">
       {/* Page Header */}
-      <div className="mb-8 mt-10 flex items-center justify-between">
+      <div className="mt-10 mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-3">
-            Leave Allocation Policies
-          </h1>
-          <p className="text-gray-600 text-base">
+          <h1 className="mb-3 text-3xl font-bold text-gray-900">Leave Allocation Policies</h1>
+          <p className="text-base text-gray-600">
             Manage leave policies and allocations for your organization
           </p>
         </div>
-        <Button
-          onClick={onCreateNew}
-          className="bg-blue-600 hover:bg-blue-700"
-        >
+        <Button onClick={onCreateNew} className="bg-blue-600 hover:bg-blue-700">
           <Plus className="mr-2 h-4 w-4" />
           Create Policy
         </Button>
@@ -258,23 +256,18 @@ export function LeaveAllocationsList({ onCreateNew, onView, onEdit, onDelete }: 
                 onClick={handleClearFilters}
                 className="text-gray-600 hover:text-gray-900"
               >
-                <X className="h-4 w-4 mr-1" />
+                <X className="mr-1 h-4 w-4" />
                 Clear Filters
               </Button>
             )}
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             {/* Leave Type Filter */}
             <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">
-                Leave Type
-              </label>
-              <Select
-                value={filterLeaveType}
-                onValueChange={handleLeaveTypeChange}
-              >
+              <span className="mb-2 block text-sm font-medium text-gray-700">Leave Type</span>
+              <Select value={filterLeaveType} onValueChange={handleLeaveTypeChange}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="All Leave Types" />
                 </SelectTrigger>
@@ -291,9 +284,7 @@ export function LeaveAllocationsList({ onCreateNew, onView, onEdit, onDelete }: 
 
             {/* Role Filter */}
             <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">
-                Role
-              </label>
+              <span className="mb-2 block text-sm font-medium text-gray-700">Role</span>
               <Select value={filterRole} onValueChange={handleRoleChange}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="All Roles" />

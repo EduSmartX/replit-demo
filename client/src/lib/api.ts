@@ -36,14 +36,20 @@ export const API_ENDPOINTS = {
   core: {
     leaveTypes: `${API_BASE_URL}/api/core/leave-types/`,
     organizationRoles: `${API_BASE_URL}/api/core/organization-role-types/`,
+    subjects: `${API_BASE_URL}/api/core/subjects/`,
   },
   leave: {
     allocations: `${API_BASE_URL}/api/leave/leave-allocations/`,
-    allocationDetail: (publicId: string) => `${API_BASE_URL}/api/leave/leave-allocations/${publicId}/`,
+    allocationDetail: (publicId: string) =>
+      `${API_BASE_URL}/api/leave/leave-allocations/${publicId}/`,
   },
   attendance: {
     holidayCalendar: `${API_BASE_URL}/api/attendance/admin/holiday-calendar/`,
     workingDayPolicy: `${API_BASE_URL}/api/attendance/admin/working-day-policy/`,
+  },
+  teacher: {
+    list: `${API_BASE_URL}/api/teacher/admin/`,
+    detail: (publicId: string) => `${API_BASE_URL}/api/teacher/admin/${publicId}/`,
   },
   // Add more endpoints as needed
 } as const;
@@ -145,7 +151,7 @@ export async function apiRequest<T = unknown>(url: string, options: RequestInit 
     // Try to parse response body (even for errors)
     let responseData;
     const contentType = response.headers.get("content-type");
-    
+
     if (contentType && contentType.includes("application/json")) {
       responseData = await response.json();
     } else {
@@ -180,7 +186,7 @@ export async function apiRequest<T = unknown>(url: string, options: RequestInit 
     if (error && typeof error === "object" && "code" in error) {
       throw error;
     }
-    
+
     // For network errors or other exceptions, wrap them
     throw {
       success: false,

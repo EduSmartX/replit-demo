@@ -44,10 +44,11 @@ RUN apk add --no-cache git
 COPY package.json package-lock.json ./
 
 # Install dependencies (includes dev dependencies for linting)
-RUN npm install
-
-# Copy source code
-COPY . .
+    # Increase timeout and use retries for better reliability
+    RUN npm config set fetch-timeout 600000 && \
+        npm config set fetch-retry-maxtimeout 120000 && \
+        npm config set fetch-retry-mintimeout 10000 && \
+        npm install || npm install || npm install
 
 # Expose port
 EXPOSE 5000

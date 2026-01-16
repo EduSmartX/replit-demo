@@ -1,4 +1,7 @@
-import { ReactNode } from "react";
+import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
+import { ReactNode, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -7,14 +10,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
 
 export interface Column<T> {
   header: string;
   accessor: keyof T | ((row: T) => ReactNode);
   className?: string;
   headerClassName?: string;
+  sortable?: boolean;
+  sortKey?: string; // Optional: custom key for sorting if different from display
 }
 
 interface DataTableProps<T> {
@@ -39,6 +42,79 @@ export function DataTable<T>({
   getRowKey,
   onRowClick,
 }: DataTableProps<T>) {
+  const [sortField, setSortField] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+
+  const sortedData = [...data].sort((rowA, rowB) => {
+    if (!sortField) return 0;
+
+    // Find the column configuration
+    const column = columns.find(
+      (col) => (col.sortKey || col.header.toLowerCase().replace(/\s+/g, "_")) === sortField
+    );
+
+    if (!column || !column.sortable) return 0;
+
+    let aValue: unknown;
+    let bValue: unknown;
+
+    // Get values based on accessor
+    if (typeof column.accessor === "function") {
+      // For function accessors, we can't easily sort
+      // User should provide sortKey that maps to an actual property
+      const sortKey = column.sortKey as keyof T;
+      aValue = sortKey ? rowA[sortKey] : "";
+      bValue = sortKey ? rowB[sortKey] : "";
+    } else {
+      aValue = rowA[column.accessor];
+      bValue = rowB[column.accessor];
+    }
+
+    // Handle null/undefined
+    if (aValue == null) aValue = "";
+    if (bValue == null) bValue = "";
+
+    // Convert to lowercase for string comparison
+    if (typeof aValue === "string") aValue = aValue.toLowerCase();
+    if (typeof bValue === "string") bValue = bValue.toLowerCase();
+
+    // Type assertion for comparison after normalization
+    const normalizedA = aValue as string | number;
+    const normalizedB = bValue as string | number;
+
+    if (normalizedA < normalizedB) return sortDirection === "asc" ? -1 : 1;
+    if (normalizedA > normalizedB) return sortDirection === "asc" ? 1 : -1;
+    return 0;
+  });
+
+  const handleSort = (column: Column<T>) => {
+    if (!column.sortable) return;
+
+    const field = column.sortKey || column.header.toLowerCase().replace(/\s+/g, "_");
+
+    if (sortField === field) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
+    }
+  };
+
+  const getSortIcon = (column: Column<T>) => {
+    if (!column.sortable) return null;
+
+    const field = column.sortKey || column.header.toLowerCase().replace(/\s+/g, "_");
+
+    if (sortField !== field) {
+      return <ArrowUpDown className="ml-1 h-4 w-4 text-gray-400" />;
+    }
+    return sortDirection === "asc" ? (
+      <ArrowUp className="ml-1 h-4 w-4 text-blue-600" />
+    ) : (
+      <ArrowDown className="ml-1 h-4 w-4 text-blue-600" />
+    );
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -51,8 +127,8 @@ export function DataTable<T>({
 
   if (data.length === 0) {
     return (
-      <div className="text-center py-12">
-        <p className="text-gray-500 mb-4">{emptyMessage}</p>
+      <div className="py-12 text-center">
+        <p className="mb-4 text-gray-500">{emptyMessage}</p>
         {emptyAction && (
           <Button onClick={emptyAction.onClick} variant="outline">
             {emptyAction.label}
@@ -64,10 +140,10 @@ export function DataTable<T>({
 
   return (
     <div className="w-full">
-      <div 
-        className="overflow-auto w-full custom-scrollbar max-h-[500px]"
+      <div
+        className="custom-scrollbar max-h-[500px] w-full overflow-auto"
         style={{
-          paddingBottom: '4px',
+          paddingBottom: "4px",
         }}
       >
         <Table className="min-w-[1200px]">
@@ -76,22 +152,35 @@ export function DataTable<T>({
               {columns.map((column, index) => (
                 <TableHead
                   key={index}
-                  className={`font-semibold whitespace-nowrap bg-gray-50 ${column.headerClassName || ""}`}
+                  className={`bg-gray-50 font-semibold whitespace-nowrap ${column.headerClassName || ""}`}
                 >
-                  {column.header}
+                  {column.sortable ? (
+                    <button
+                      onClick={() => handleSort(column)}
+                      className="flex items-center transition-colors hover:text-blue-600"
+                    >
+                      {column.header}
+                      {getSortIcon(column)}
+                    </button>
+                  ) : (
+                    column.header
+                  )}
                 </TableHead>
               ))}
             </TableRow>
           </TableHeader>
           <TableBody>
-            {data.map((row, rowIndex) => (
+            {sortedData.map((row, rowIndex) => (
               <TableRow
                 key={getRowKey(row, rowIndex)}
                 className={`hover:bg-gray-50 ${onRowClick ? "cursor-pointer" : ""}`}
                 onClick={() => onRowClick?.(row)}
               >
                 {columns.map((column, colIndex) => (
-                  <TableCell key={colIndex} className={`whitespace-nowrap ${column.className || ""}`}>
+                  <TableCell
+                    key={colIndex}
+                    className={`whitespace-nowrap ${column.className || ""}`}
+                  >
                     {typeof column.accessor === "function"
                       ? column.accessor(row)
                       : (row[column.accessor] as ReactNode)}

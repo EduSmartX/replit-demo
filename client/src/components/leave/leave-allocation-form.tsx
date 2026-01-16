@@ -1,9 +1,14 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, Loader2 } from "lucide-react";
-import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useState, useEffect, useMemo } from "react";
+import { useForm, Control } from "react-hook-form";
 import * as z from "zod";
+import { DateRangeFields } from "./shared/DateRangeFields";
+import { LeaveTypeField } from "./shared/LeaveTypeField";
+import { PolicyFormHeader } from "./shared/PolicyFormHeader";
+import { PolicySummaryCard } from "./shared/PolicySummaryCard";
+import { RolesCheckboxField } from "./shared/RolesCheckboxField";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Form,
@@ -17,7 +22,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { parseApiError } from "@/lib/error-parser";
 import {
   createLeaveAllocation,
   updateLeaveAllocation,
@@ -26,19 +30,19 @@ import {
   type LeaveAllocationPayload,
   type LeaveAllocation,
 } from "@/lib/api/leave-api";
-import { PolicyFormHeader } from "./shared/PolicyFormHeader";
-import { LeaveTypeField } from "./shared/LeaveTypeField";
-import { DateRangeFields } from "./shared/DateRangeFields";
-import { RolesCheckboxField } from "./shared/RolesCheckboxField";
-import { PolicySummaryCard } from "./shared/PolicySummaryCard";
+import { parseApiError } from "@/lib/error-parser";
+import { formatDateForDisplay } from "@/lib/utils/date-utils";
 
 const createLeaveAllocationSchema = (mode: "create" | "view" | "edit") => {
   return z.object({
-    leave_type: mode === "edit" 
-      ? z.number().optional()  // Optional in edit mode since it can't be changed
-      : z.number({
-          required_error: "Please select a leave type",
-        }).min(1, "Please select a valid leave type"),
+    leave_type:
+      mode === "edit"
+        ? z.number().optional() // Optional in edit mode since it can't be changed
+        : z
+            .number({
+              required_error: "Please select a leave type",
+            })
+            .min(1, "Please select a valid leave type"),
     name: z.string().optional(),
     description: z.string().optional(),
     total_days: z
@@ -55,9 +59,7 @@ const createLeaveAllocationSchema = (mode: "create" | "view" | "edit") => {
         const num = parseFloat(val);
         return !isNaN(num) && num >= 0;
       }, "Must be a positive number"),
-    roles: z
-      .array(z.number())
-      .min(1, "Please select at least one role"),
+    roles: z.array(z.number()).min(1, "Please select at least one role"),
     effective_from: z.date({
       required_error: "Effective from date is required",
     }),
@@ -75,18 +77,23 @@ interface LeaveAllocationFormProps {
   onEdit?: () => void;
 }
 
-export function LeaveAllocationForm({ mode = "create", initialData, onSuccess, onCancel, onEdit }: LeaveAllocationFormProps) {
+export function LeaveAllocationForm({
+  mode = "create",
+  initialData,
+  onSuccess,
+  onCancel,
+  onEdit,
+}: LeaveAllocationFormProps) {
   const { toast } = useToast();
   const [showSuccess, setShowSuccess] = useState(false);
   const queryClient = useQueryClient();
   const isViewMode = mode === "view";
   const isEditMode = mode === "edit";
-  const isCreateMode = mode === "create";
 
   // Helper function to parse date strings without timezone conversion
-  const parseLocalDate = (dateString: string | undefined): Date | undefined => {
+  const parseLocalDate = (dateString: string | null | undefined): Date | undefined => {
     if (!dateString) return undefined;
-    const [year, month, day] = dateString.split('-').map(Number);
+    const [year, month, day] = dateString.split("-").map(Number);
     return new Date(year, month - 1, day); // month is 0-indexed
   };
 
@@ -102,48 +109,59 @@ export function LeaveAllocationForm({ mode = "create", initialData, onSuccess, o
     queryFn: fetchOrganizationRoles,
   });
 
-  const leaveTypes = leaveTypesData?.data || [];
-  const roles = rolesData?.data || [];
+  const leaveTypes = useMemo(() => leaveTypesData?.data || [], [leaveTypesData]);
+
+  // Handle roles data - it might be direct array or wrapped in data property
+  const roles = useMemo(
+    () => (Array.isArray(rolesData) ? rolesData : rolesData?.data || []),
+    [rolesData]
+  );
 
   // Parse roles from initialData if available - convert role names to IDs
-  const initialRoleNames = initialData?.roles 
-    ? initialData.roles.split(',').map(r => r.trim()).filter(r => r.length > 0)
+  const initialRoleNames = initialData?.roles
+    ? initialData.roles
+        .split(",")
+        .map((r) => r.trim())
+        .filter((r) => r.length > 0)
     : [];
   const initialRoleIds = roles
-    .filter(role => initialRoleNames.includes(role.name))
-    .map(role => role.id);
+    .filter((role) => initialRoleNames.includes(role.name))
+    .map((role) => role.id);
 
   const form = useForm<LeaveAllocationFormValues>({
     resolver: zodResolver(createLeaveAllocationSchema(mode)),
-    defaultValues: initialData ? {
-      leave_type: initialData.leave_type_id || 0,
-      name: initialData.name || "",
-      description: initialData.description || "",
-      total_days: initialData.total_days.toString(),
-      max_carry_forward_days: initialData.max_carry_forward_days.toString(),
-      roles: initialRoleIds,
-      effective_from: parseLocalDate(initialData.effective_from) || new Date(),
-      effective_to: parseLocalDate(initialData.effective_to),
-    } : {
-      leave_type: 0,
-      name: "",
-      description: "",
-      total_days: "",
-      max_carry_forward_days: "0",
-      roles: [],
-      effective_from: new Date(),
-    },
+    defaultValues: initialData
+      ? {
+          leave_type: initialData.leave_type_id || 0,
+          name: initialData.name || "",
+          description: initialData.description || "",
+          total_days: initialData.total_days.toString(),
+          max_carry_forward_days: initialData.max_carry_forward_days.toString(),
+          roles: initialRoleIds,
+          effective_from: parseLocalDate(initialData.effective_from) || new Date(),
+          effective_to: parseLocalDate(initialData.effective_to),
+        }
+      : {
+          leave_type: 0,
+          name: "",
+          description: "",
+          total_days: "",
+          max_carry_forward_days: "0",
+          roles: [],
+          effective_from: new Date(),
+        },
   });
 
   // Reset form when initialData changes
   useEffect(() => {
     if (initialData && roles.length > 0 && leaveTypes.length > 0) {
-      const roleNames = initialData.roles 
-        ? initialData.roles.split(',').map(r => r.trim()).filter(r => r.length > 0)
+      const roleNames = initialData.roles
+        ? initialData.roles
+            .split(",")
+            .map((r) => r.trim())
+            .filter((r) => r.length > 0)
         : [];
-      const roleIds = roles
-        .filter(role => roleNames.includes(role.name))
-        .map(role => role.id);
+      const roleIds = roles.filter((role) => roleNames.includes(role.name)).map((role) => role.id);
 
       form.reset({
         leave_type: initialData.leave_type_id || 0,
@@ -163,7 +181,7 @@ export function LeaveAllocationForm({ mode = "create", initialData, onSuccess, o
     onSuccess: (response) => {
       // Invalidate and refetch allocations
       queryClient.invalidateQueries({ queryKey: ["leave-allocations"] });
-      
+
       setShowSuccess(true);
       toast({
         title: "Success",
@@ -184,12 +202,12 @@ export function LeaveAllocationForm({ mode = "create", initialData, onSuccess, o
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ publicId, data }: { publicId: string; data: Partial<LeaveAllocationPayload> }) => 
+    mutationFn: ({ publicId, data }: { publicId: string; data: Partial<LeaveAllocationPayload> }) =>
       updateLeaveAllocation(publicId, data),
-    onSuccess: (response, variables) => {      
+    onSuccess: (response, variables) => {
       queryClient.invalidateQueries({ queryKey: ["leave-allocations"], exact: false });
       queryClient.invalidateQueries({ queryKey: ["leave-allocation-detail", variables.publicId] });
-      
+
       setShowSuccess(true);
       toast({
         title: "Success",
@@ -209,13 +227,6 @@ export function LeaveAllocationForm({ mode = "create", initialData, onSuccess, o
   });
 
   const onSubmit = (data: LeaveAllocationFormValues) => {
-    console.log("=== FORM SUBMIT DEBUG ===");
-    console.log("onSubmit called with:", data);
-    console.log("effective_from:", data.effective_from);
-    console.log("effective_to:", data.effective_to);
-    console.log("Mode:", mode, "isEditMode:", isEditMode);
-    console.log("initialData:", initialData);
-    
     if (isEditMode && initialData?.public_id) {
       // Update existing allocation - leave_type cannot be changed
       const updatePayload: Partial<LeaveAllocationPayload> = {
@@ -225,15 +236,20 @@ export function LeaveAllocationForm({ mode = "create", initialData, onSuccess, o
         max_carry_forward_days: data.max_carry_forward_days,
         roles: data.roles,
         effective_from: data.effective_from.toISOString().split("T")[0],
-        effective_to: data.effective_to
-          ? data.effective_to.toISOString().split("T")[0]
-          : undefined,
+        effective_to: data.effective_to ? data.effective_to.toISOString().split("T")[0] : undefined,
       };
-      console.log("Update Payload being sent:", updatePayload);
-      console.log("========================");
       updateMutation.mutate({ publicId: initialData.public_id, data: updatePayload });
     } else {
       // Create new allocation - include leave_type
+      if (!data.leave_type) {
+        toast({
+          title: "Error",
+          description: "Leave type is required",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const createPayload: LeaveAllocationPayload = {
         leave_type: data.leave_type,
         name: data.name || "",
@@ -242,182 +258,152 @@ export function LeaveAllocationForm({ mode = "create", initialData, onSuccess, o
         max_carry_forward_days: data.max_carry_forward_days,
         roles: data.roles,
         effective_from: data.effective_from.toISOString().split("T")[0],
-        effective_to: data.effective_to
-          ? data.effective_to.toISOString().split("T")[0]
-          : undefined,
+        effective_to: data.effective_to ? data.effective_to.toISOString().split("T")[0] : undefined,
       };
       createMutation.mutate(createPayload);
     }
   };
 
   // Helper functions and computed values
-  const selectedLeaveType = leaveTypes.find(
-    (type) => type.id === form.watch("leave_type")
-  );
-  const selectedRoles = roles.filter((role) =>
-    form.watch("roles").includes(role.id)
-  );
-
-  const formatDate = (date: Date | undefined) => {
-    if (!date) return "";
-    return date.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
-  };
+  const selectedLeaveType = leaveTypes.find((type) => type.id === form.watch("leave_type"));
+  const selectedRoles = roles.filter((role) => form.watch("roles").includes(role.id));
 
   const getLeaveTypeName = () => {
     if ((isViewMode || isEditMode) && initialData?.leave_type_name) {
       return initialData.leave_type_name;
     }
-    return selectedLeaveType 
-      ? `${selectedLeaveType.name} (${selectedLeaveType.code})` 
+    return selectedLeaveType
+      ? `${selectedLeaveType.name} (${selectedLeaveType.code})`
       : "Not selected";
   };
 
   if (loadingLeaveTypes || loadingRoles) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex h-64 items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
       </div>
     );
   }
 
   return (
-    <div className="max-w-7xl mx-auto">
+    <div className="mx-auto max-w-7xl">
       <PolicyFormHeader mode={mode} />
 
       {showSuccess && (
-        <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3 animate-in slide-in-from-top">
+        <div className="animate-in slide-in-from-top mb-6 flex items-center gap-3 rounded-lg border border-green-200 bg-green-50 p-4">
           <CheckCircle2 className="h-5 w-5 text-green-600" />
-          <p className="text-green-800 font-medium">
+          <p className="font-medium text-green-800">
             Leave allocation policy {mode === "edit" ? "updated" : "created"} successfully!
           </p>
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Form Section */}
-        <Card className="lg:col-span-2 shadow-lg">
+        <Card className="shadow-lg lg:col-span-2">
           <CardHeader>
             <CardTitle className="text-green-900">Leave Policy Details</CardTitle>
             <CardDescription>
-              {isViewMode ? "Review the leave allocation details" : "Configure the leave allocation parameters and applicable roles"}
+              {isViewMode
+                ? "Review the leave allocation details"
+                : "Configure the leave allocation parameters and applicable roles"}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Form {...form}>
               <form className="space-y-6">
                 <fieldset disabled={isViewMode} className="space-y-6">
-                <LeaveTypeField
-                  control={form.control}
-                  leaveTypes={leaveTypes}
-                  mode={mode}
-                  initialLeaveTypeName={initialData?.leave_type_name}
-                />
+                  <LeaveTypeField
+                    control={form.control}
+                    leaveTypes={leaveTypes}
+                    mode={mode}
+                    initialLeaveTypeName={initialData?.leave_type_name}
+                  />
 
-                {/* Optional Name */}
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Custom Name (Optional)</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="e.g., Annual Leave 2026"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        Provide a custom name if different from leave type
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Description */}
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Description (Optional)</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder="Enter additional details about this leave policy..."
-                          className="resize-none"
-                          rows={3}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Total Days */}
+                  {/* Optional Name */}
                   <FormField
                     control={form.control}
-                    name="total_days"
+                    name="name"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Total Days *</FormLabel>
+                        <FormLabel>Custom Name (Optional)</FormLabel>
                         <FormControl>
-                          <Input
-                            type="number"
-                            step="0.5"
-                            min="0"
-                            placeholder="20"
-                            {...field}
-                          />
+                          <Input placeholder="e.g., Annual Leave 2026" {...field} />
                         </FormControl>
                         <FormDescription>
-                          Number of days allocated
+                          Provide a custom name if different from leave type
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
 
-                  {/* Carry Forward Days */}
+                  {/* Description */}
                   <FormField
                     control={form.control}
-                    name="max_carry_forward_days"
+                    name="description"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Carry Forward to Next Year (Days) *</FormLabel>
+                        <FormLabel>Description (Optional)</FormLabel>
                         <FormControl>
-                          <Input
-                            type="number"
-                            step="0.5"
-                            min="0"
-                            placeholder="5"
+                          <Textarea
+                            placeholder="Enter additional details about this leave policy..."
+                            className="resize-none"
+                            rows={3}
                             {...field}
                           />
                         </FormControl>
-                        <FormDescription>
-                          Max days that can be carried forward
-                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                </div>
 
-                <DateRangeFields
-                  control={form.control}
-                  effectiveFrom={form.watch("effective_from")}
-                  disabled={isViewMode}
-                />
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    {/* Total Days */}
+                    <FormField
+                      control={form.control}
+                      name="total_days"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Total Days *</FormLabel>
+                          <FormControl>
+                            <Input type="number" step="0.5" min="0" placeholder="20" {...field} />
+                          </FormControl>
+                          <FormDescription>Number of days allocated</FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                <RolesCheckboxField
-                  control={form.control}
-                  roles={roles}
-                />
+                    {/* Carry Forward Days */}
+                    <FormField
+                      control={form.control}
+                      name="max_carry_forward_days"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Carry Forward to Next Year (Days) *</FormLabel>
+                          <FormControl>
+                            <Input type="number" step="0.5" min="0" placeholder="5" {...field} />
+                          </FormControl>
+                          <FormDescription>Max days that can be carried forward</FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <DateRangeFields
+                    control={
+                      form.control as unknown as Control<{
+                        effective_from: Date;
+                        effective_to?: Date;
+                      }>
+                    }
+                    effectiveFrom={form.watch("effective_from")}
+                    disabled={isViewMode}
+                  />
+
+                  <RolesCheckboxField control={form.control} roles={roles} />
                 </fieldset>
               </form>
             </Form>
@@ -429,8 +415,12 @@ export function LeaveAllocationForm({ mode = "create", initialData, onSuccess, o
           leaveTypeName={getLeaveTypeName()}
           totalDays={form.watch("total_days")}
           carryForwardDays={form.watch("max_carry_forward_days")}
-          effectiveFrom={formatDate(form.watch("effective_from"))}
-          effectiveTo={form.watch("effective_to") ? formatDate(form.watch("effective_to")) : undefined}
+          effectiveFrom={formatDateForDisplay(form.watch("effective_from"))}
+          effectiveTo={
+            form.watch("effective_to")
+              ? formatDateForDisplay(form.watch("effective_to"))
+              : undefined
+          }
           selectedRoles={selectedRoles}
           isSubmitting={createMutation.isPending || updateMutation.isPending}
           onSubmit={form.handleSubmit(onSubmit)}
