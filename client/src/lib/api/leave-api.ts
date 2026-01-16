@@ -4,7 +4,7 @@
  */
 
 import type { ApiResponse, ApiListResponse } from "./types";
-import { apiRequest, getAccessToken, API_ENDPOINTS } from "@/lib/api";
+import { apiRequest, API_ENDPOINTS } from "@/lib/api";
 
 // Re-export for convenience
 export { apiRequest, API_ENDPOINTS };
@@ -96,17 +96,10 @@ export async function fetchLeaveTypes(): Promise<LeaveTypesResponse> {
  * Fetch all organization role types
  */
 export async function fetchOrganizationRoles(): Promise<OrganizationRolesResponse> {
-  console.log("=== fetchOrganizationRoles START ===");
-  console.log("Fetching from:", API_ENDPOINTS.core.organizationRoles);
-
   try {
-    const response = await apiRequest<any>(API_ENDPOINTS.core.organizationRoles, {
+    const response = await apiRequest<unknown>(API_ENDPOINTS.core.organizationRoles, {
       method: "GET",
     });
-
-    console.log("Raw response:", response);
-    console.log("Response type:", typeof response);
-    console.log("Response is array?:", Array.isArray(response));
 
     // Handle different response formats
     let rolesArray: OrganizationRole[] = [];
@@ -114,30 +107,33 @@ export async function fetchOrganizationRoles(): Promise<OrganizationRolesRespons
     // Check if response itself is an array (direct array response)
     if (Array.isArray(response)) {
       rolesArray = response;
-      console.log("Response is direct array");
     }
     // Check if response has data property
-    else if (response.data) {
+    else if (typeof response === "object" && response !== null && "data" in response) {
+      const data = (response as { data: unknown }).data;
       // Check if data has results (paginated format)
-      if (Array.isArray(response.data.results)) {
-        rolesArray = response.data.results;
-        console.log("Using paginated format (data.results)");
+      if (
+        typeof data === "object" &&
+        data !== null &&
+        "results" in data &&
+        Array.isArray((data as { results: unknown }).results)
+      ) {
+        rolesArray = (data as { results: OrganizationRole[] }).results;
       }
       // Check if data is directly an array
-      else if (Array.isArray(response.data)) {
-        rolesArray = response.data;
-        console.log("Using direct array format (data)");
+      else if (Array.isArray(data)) {
+        rolesArray = data as OrganizationRole[];
       }
     }
     // Check if response itself has results
-    else if (response.results && Array.isArray(response.results)) {
-      rolesArray = response.results;
-      console.log("Using results format");
+    else if (
+      typeof response === "object" &&
+      response !== null &&
+      "results" in response &&
+      Array.isArray((response as { results: unknown }).results)
+    ) {
+      rolesArray = (response as { results: OrganizationRole[] }).results;
     }
-
-    console.log("Final roles array:", rolesArray);
-    console.log("Roles count:", rolesArray.length);
-    console.log("=================================");
 
     // Return in expected format
     return {

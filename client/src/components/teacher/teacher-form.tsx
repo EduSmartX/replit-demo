@@ -100,7 +100,7 @@ export function TeacherForm({
   });
 
   const subjects = Array.isArray(subjectsData) ? subjectsData : [];
-  const orgRoles = Array.isArray(orgRolesData) ? orgRolesData : [];
+  const orgRoles = useMemo(() => (Array.isArray(orgRolesData) ? orgRolesData : []), [orgRolesData]);
   const users = Array.isArray(usersData) ? usersData : [];
 
   // Map organization_role name to code using useMemo to avoid recalculating on every render
@@ -158,13 +158,11 @@ export function TeacherForm({
           blood_group: initialData.user?.blood_group || "",
           gender: initialData.user?.gender || "",
           organization_role: organizationRoleCode,
-          supervisor_email: (initialData.user as any)?.supervisor?.email || "",
+          supervisor_email:
+            (initialData.user as { supervisor?: { email?: string } })?.supervisor?.email || "",
         };
 
-        console.log("TeacherForm - Resetting form with values:", formValues);
         form.reset(formValues);
-      } else {
-        console.log("TeacherForm - Form is dirty, skipping reset to preserve user changes");
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -203,11 +201,9 @@ export function TeacherForm({
       return updateTeacher(initialData.public_id, data);
     },
     onSuccess: async (updatedTeacher) => {
-      console.log("TeacherForm - Update successful, received:", updatedTeacher);
-
       // Reset form with updated data to clear dirty state
-      if (updatedTeacher?.data) {
-        const teacher = updatedTeacher.data;
+      if (updatedTeacher) {
+        const teacher = updatedTeacher;
         form.reset(
           {
             employee_id: teacher.employee_id || "",
@@ -220,13 +216,15 @@ export function TeacherForm({
             specialization: teacher.specialization || "",
             designation: teacher.designation || "",
             experience_years: teacher.experience_years?.toString() || "",
-            subjects: teacher.subjects?.map((s) => parseInt(s.public_id)) || [],
+            subjects:
+              teacher.subjects?.map((s: { public_id: string }) => parseInt(s.public_id)) || [],
             emergency_contact_name: teacher.emergency_contact_name || "",
             emergency_contact_number: teacher.emergency_contact_number || "",
             blood_group: teacher.user?.blood_group || "",
             gender: teacher.user?.gender || "",
             organization_role: teacher.user?.organization_role || "",
-            supervisor_email: (teacher.user as any)?.supervisor?.email || "",
+            supervisor_email:
+              (teacher.user as { supervisor?: { email?: string } })?.supervisor?.email || "",
           },
           { keepDirty: false }
         );
@@ -253,8 +251,6 @@ export function TeacherForm({
   });
 
   const onSubmit = async (values: TeacherFormValues) => {
-    console.log("TeacherForm - onSubmit called with values:", values);
-
     const payload: TeacherCreatePayload = {
       employee_id: values.employee_id,
       email: values.email,
@@ -275,13 +271,9 @@ export function TeacherForm({
       supervisor_email: values.supervisor_email || "",
     };
 
-    console.log("TeacherForm - Payload to be sent:", payload);
-
     if (isEditMode) {
       // Don't send email in edit mode (email is immutable)
       const { email: _email, ...updatePayload } = payload;
-
-      console.log("TeacherForm - Update payload (without email):", updatePayload);
 
       try {
         // Submit teacher update
@@ -290,9 +282,7 @@ export function TeacherForm({
         // Also submit address if address form exists
         if (addressFormRef.current && initialData) {
           try {
-            console.log("TeacherForm - Attempting to submit address changes");
             await addressFormRef.current.submitAddress();
-            console.log("TeacherForm - Address submitted successfully");
           } catch (addressError) {
             console.error("Address update failed:", addressError);
             // Don't fail the whole operation if address update fails
@@ -585,31 +575,15 @@ export function TeacherForm({
       {/* Address Management Section - Show in Edit and View modes */}
       {(isEditMode || isViewMode) && initialData && (
         <div className="mt-6">
-          {(() => {
-            const addressToUse = initialData.user?.address || initialData.addresses?.[0] || null;
-            // eslint-disable-next-line no-console
-            console.log("TeacherForm - Address Debug:", {
-              hasInitialData: !!initialData,
-              userPublicId: initialData.user?.public_id,
-              teacherPublicId: initialData.public_id,
-              userAddress: initialData.user?.address,
-              addresses: initialData.addresses,
-              addressToUse,
-              mode,
-            });
-
-            return (
-              <AddressManagementForm
-                ref={addressFormRef}
-                userPublicId={initialData.user?.public_id || initialData.public_id}
-                resourceName={initialData.full_name}
-                currentAddress={addressToUse}
-                mode={mode}
-                onEditMode={onEdit}
-                hideActions={isEditMode}
-              />
-            );
-          })()}
+          <AddressManagementForm
+            ref={addressFormRef}
+            userPublicId={initialData.user?.public_id || initialData.public_id}
+            resourceName={initialData.full_name}
+            currentAddress={initialData.user?.address || initialData.addresses?.[0] || null}
+            mode={mode}
+            onEditMode={onEdit}
+            hideActions={isEditMode}
+          />
         </div>
       )}
 

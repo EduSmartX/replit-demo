@@ -34,8 +34,6 @@ export function TeachersManagementSection() {
     queryFn: async () => {
       if (!teacherId) return null;
       const teacherData = await fetchTeacherDetail(teacherId);
-      // eslint-disable-next-line no-console
-      console.log("Fetched teacher data:", teacherData);
       return teacherData;
     },
     enabled: !!teacherId,

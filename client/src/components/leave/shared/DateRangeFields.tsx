@@ -15,7 +15,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 
 interface DateRangeFieldsProps {
-  control: Control<any>;
+  control: Control<{
+    effective_from: Date;
+    effective_to?: Date;
+  }>;
   effectiveFrom: Date | undefined;
   disabled?: boolean;
 }
@@ -29,11 +32,15 @@ const formatDate = (date: Date | undefined) => {
   });
 };
 
-export function DateRangeFields({ control, effectiveFrom, disabled = false }: DateRangeFieldsProps) {
+export function DateRangeFields({
+  control,
+  effectiveFrom,
+  disabled = false,
+}: DateRangeFieldsProps) {
   const [fromOpen, setFromOpen] = useState(false);
   const [toOpen, setToOpen] = useState(false);
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
       {/* Effective From */}
       <FormField
         control={control}
@@ -53,27 +60,21 @@ export function DateRangeFields({ control, effectiveFrom, disabled = false }: Da
                       !field.value && "text-muted-foreground"
                     )}
                   >
-                    {field.value ? (
-                      formatDate(field.value)
-                    ) : (
-                      <span>Pick a date</span>
-                    )}
+                    {field.value ? formatDate(field.value) : <span>Pick a date</span>}
                     <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                   </Button>
                 </FormControl>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0 z-[100]" align="start" sideOffset={8}>
+              <PopoverContent className="z-[100] w-auto p-0" align="start" sideOffset={8}>
                 <Calendar
                   mode="single"
                   selected={field.value}
                   onSelect={(date) => {
-                    console.log("Effective From selected:", date);
                     field.onChange(date);
                     setFromOpen(false);
                   }}
                   disabled={disabled}
                   initialFocus
-                  captionLayout="buttons"
                   defaultMonth={field.value}
                 />
               </PopoverContent>
@@ -102,21 +103,16 @@ export function DateRangeFields({ control, effectiveFrom, disabled = false }: Da
                       !field.value && "text-muted-foreground"
                     )}
                   >
-                    {field.value ? (
-                      formatDate(field.value)
-                    ) : (
-                      <span>Pick a date</span>
-                    )}
+                    {field.value ? formatDate(field.value) : <span>Pick a date</span>}
                     <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                   </Button>
                 </FormControl>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0 z-[100]" align="start" sideOffset={8}>
+              <PopoverContent className="z-[100] w-auto p-0" align="start" sideOffset={8}>
                 <Calendar
                   mode="single"
                   selected={field.value}
                   onSelect={(date) => {
-                    console.log("Effective To selected:", date);
                     field.onChange(date);
                     setToOpen(false);
                   }}
@@ -125,14 +121,11 @@ export function DateRangeFields({ control, effectiveFrom, disabled = false }: Da
                     return effectiveFrom ? date < effectiveFrom : false;
                   }}
                   initialFocus
-                  captionLayout="buttons"
                   defaultMonth={field.value || effectiveFrom}
                 />
               </PopoverContent>
             </Popover>
-            <FormDescription>
-              Leave blank for no expiry
-            </FormDescription>
+            <FormDescription>Leave blank for no expiry</FormDescription>
             <FormMessage />
           </FormItem>
         )}

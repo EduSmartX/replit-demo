@@ -18,17 +18,15 @@ export default function DashboardPage() {
   const { toast } = useToast();
   const { user, organization, logout } = useUser();
 
-  // Get active menu from URL path
-  const getActiveMenuFromPath = () => {
+  const [activeMenu, setActiveMenu] = useState(() => {
     const path = location.replace("/", "");
     return path === "dashboard" || path === "" ? "overview" : path.split("/")[0];
-  };
-
-  const [activeMenu, setActiveMenu] = useState(getActiveMenuFromPath());
+  });
 
   // Update activeMenu when location changes
   useEffect(() => {
-    const menu = getActiveMenuFromPath();
+    const path = location.replace("/", "");
+    const menu = path === "dashboard" || path === "" ? "overview" : path.split("/")[0];
     setActiveMenu(menu);
   }, [location]);
 

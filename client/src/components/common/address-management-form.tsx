@@ -65,7 +65,7 @@ export const AddressManagementForm = forwardRef<
       mode = "edit",
       onEditMode,
       hideActions = false,
-      onAddressChange,
+      onAddressChange: _onAddressChange,
     },
     ref
   ) => {
@@ -78,22 +78,8 @@ export const AddressManagementForm = forwardRef<
 
     // Sync isEditing state when mode prop changes
     useEffect(() => {
-      // eslint-disable-next-line no-console
-      console.log("AddressManagementForm - Mode changed to:", mode);
       setIsEditing(mode === "edit");
     }, [mode]);
-
-    // Debug logging
-    useEffect(() => {
-      // eslint-disable-next-line no-console
-      console.log("AddressManagementForm - Props:", {
-        userPublicId,
-        currentAddress,
-        mode,
-        isEditing,
-        hasAddress: !!currentAddress,
-      });
-    }, [userPublicId, currentAddress, mode, isEditing]);
 
     // Helper to parse coordinate values
     const parseCoordinate = (value: string | number | null | undefined): number | undefined => {
@@ -144,7 +130,6 @@ export const AddressManagementForm = forwardRef<
       submitAddress: async () => {
         // Only submit if form has changes
         if (!form.formState.isDirty) {
-          console.log("AddressManagementForm - No changes detected, skipping address update");
           return Promise.resolve();
         }
 

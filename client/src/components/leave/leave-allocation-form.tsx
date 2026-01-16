@@ -1,8 +1,8 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, Loader2 } from "lucide-react";
-import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useState, useEffect, useMemo } from "react";
+import { useForm, Control } from "react-hook-form";
 import * as z from "zod";
 import { DateRangeFields } from "./shared/DateRangeFields";
 import { LeaveTypeField } from "./shared/LeaveTypeField";
@@ -88,10 +88,9 @@ export function LeaveAllocationForm({
   const queryClient = useQueryClient();
   const isViewMode = mode === "view";
   const isEditMode = mode === "edit";
-  const isCreateMode = mode === "create";
 
   // Helper function to parse date strings without timezone conversion
-  const parseLocalDate = (dateString: string | undefined): Date | undefined => {
+  const parseLocalDate = (dateString: string | null | undefined): Date | undefined => {
     if (!dateString) return undefined;
     const [year, month, day] = dateString.split("-").map(Number);
     return new Date(year, month - 1, day); // month is 0-indexed
@@ -109,10 +108,13 @@ export function LeaveAllocationForm({
     queryFn: fetchOrganizationRoles,
   });
 
-  const leaveTypes = leaveTypesData?.data || [];
+  const leaveTypes = useMemo(() => leaveTypesData?.data || [], [leaveTypesData]);
 
   // Handle roles data - it might be direct array or wrapped in data property
-  const roles = Array.isArray(rolesData) ? rolesData : rolesData?.data || [];
+  const roles = useMemo(
+    () => (Array.isArray(rolesData) ? rolesData : rolesData?.data || []),
+    [rolesData]
+  );
 
   // Parse roles from initialData if available - convert role names to IDs
   const initialRoleNames = initialData?.roles
@@ -224,13 +226,6 @@ export function LeaveAllocationForm({
   });
 
   const onSubmit = (data: LeaveAllocationFormValues) => {
-    console.log("=== FORM SUBMIT DEBUG ===");
-    console.log("onSubmit called with:", data);
-    console.log("effective_from:", data.effective_from);
-    console.log("effective_to:", data.effective_to);
-    console.log("Mode:", mode, "isEditMode:", isEditMode);
-    console.log("initialData:", initialData);
-
     if (isEditMode && initialData?.public_id) {
       // Update existing allocation - leave_type cannot be changed
       const updatePayload: Partial<LeaveAllocationPayload> = {
@@ -242,11 +237,18 @@ export function LeaveAllocationForm({
         effective_from: data.effective_from.toISOString().split("T")[0],
         effective_to: data.effective_to ? data.effective_to.toISOString().split("T")[0] : undefined,
       };
-      console.log("Update Payload being sent:", updatePayload);
-      console.log("========================");
       updateMutation.mutate({ publicId: initialData.public_id, data: updatePayload });
     } else {
       // Create new allocation - include leave_type
+      if (!data.leave_type) {
+        toast({
+          title: "Error",
+          description: "Leave type is required",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const createPayload: LeaveAllocationPayload = {
         leave_type: data.leave_type,
         name: data.name || "",
@@ -399,7 +401,12 @@ export function LeaveAllocationForm({
                   </div>
 
                   <DateRangeFields
-                    control={form.control}
+                    control={
+                      form.control as unknown as Control<{
+                        effective_from: Date;
+                        effective_to?: Date;
+                      }>
+                    }
                     effectiveFrom={form.watch("effective_from")}
                     disabled={isViewMode}
                   />

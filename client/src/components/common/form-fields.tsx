@@ -4,7 +4,6 @@
  */
 
 import { Control, FieldValues, Path } from "react-hook-form";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   FormControl,
   FormDescription,
@@ -125,9 +124,6 @@ export function SelectField<T extends FieldValues>({
       control={control}
       name={name}
       render={({ field }) => {
-        // eslint-disable-next-line no-console
-        console.log(`SelectField [${String(name)}] - field.value:`, field.value);
-
         return (
           <FormItem>
             <FormLabel>
@@ -241,7 +237,7 @@ export function MultiSelectField<T extends FieldValues>({
       control={control}
       name={name}
       render={({ field }) => {
-        const selectedIds = (field.value as any[]) || [];
+        const selectedIds = (field.value as Array<string | number>) || [];
         const selectedOptions = options.filter((opt) => selectedIds.includes(opt.id));
 
         return (
