@@ -3,8 +3,8 @@
  * Handles all API calls related to leave allocations, types, and roles
  */
 
-import { apiRequest, getAccessToken, API_ENDPOINTS } from "@/lib/api";
 import type { ApiResponse, ApiListResponse } from "./types";
+import { apiRequest, getAccessToken, API_ENDPOINTS } from "@/lib/api";
 
 // Re-export for convenience
 export { apiRequest, API_ENDPOINTS };
@@ -84,11 +84,11 @@ export async function fetchLeaveTypes(): Promise<LeaveTypesResponse> {
   const response = await apiRequest<LeaveTypesResponse>(API_ENDPOINTS.core.leaveTypes, {
     method: "GET",
   });
-  
+
   if (!response.success || response.code < 200 || response.code >= 300) {
     throw new Error(response.message || "Failed to fetch leave types");
   }
-  
+
   return response;
 }
 
@@ -96,15 +96,70 @@ export async function fetchLeaveTypes(): Promise<LeaveTypesResponse> {
  * Fetch all organization role types
  */
 export async function fetchOrganizationRoles(): Promise<OrganizationRolesResponse> {
-  const response = await apiRequest<OrganizationRolesResponse>(API_ENDPOINTS.core.organizationRoles, {
-    method: "GET",
-  });
-  
-  if (!response.success || response.code < 200 || response.code >= 300) {
-    throw new Error(response.message || "Failed to fetch organization roles");
+  console.log("=== fetchOrganizationRoles START ===");
+  console.log("Fetching from:", API_ENDPOINTS.core.organizationRoles);
+
+  try {
+    const response = await apiRequest<any>(API_ENDPOINTS.core.organizationRoles, {
+      method: "GET",
+    });
+
+    console.log("Raw response:", response);
+    console.log("Response type:", typeof response);
+    console.log("Response is array?:", Array.isArray(response));
+
+    // Handle different response formats
+    let rolesArray: OrganizationRole[] = [];
+
+    // Check if response itself is an array (direct array response)
+    if (Array.isArray(response)) {
+      rolesArray = response;
+      console.log("Response is direct array");
+    }
+    // Check if response has data property
+    else if (response.data) {
+      // Check if data has results (paginated format)
+      if (Array.isArray(response.data.results)) {
+        rolesArray = response.data.results;
+        console.log("Using paginated format (data.results)");
+      }
+      // Check if data is directly an array
+      else if (Array.isArray(response.data)) {
+        rolesArray = response.data;
+        console.log("Using direct array format (data)");
+      }
+    }
+    // Check if response itself has results
+    else if (response.results && Array.isArray(response.results)) {
+      rolesArray = response.results;
+      console.log("Using results format");
+    }
+
+    console.log("Final roles array:", rolesArray);
+    console.log("Roles count:", rolesArray.length);
+    console.log("=================================");
+
+    // Return in expected format
+    return {
+      success: true,
+      message: "Roles fetched successfully",
+      data: rolesArray,
+      pagination: {
+        current_page: 1,
+        total_pages: 1,
+        count: rolesArray.length,
+        page_size: rolesArray.length,
+        has_next: false,
+        has_previous: false,
+        next_page: null,
+        previous_page: null,
+      },
+      code: 200,
+    };
+  } catch (error) {
+    console.error("Error fetching organization roles:", error);
+    throw error;
   }
-  
-  return response;
 }
 
 /**
@@ -121,7 +176,7 @@ export async function createLeaveAllocation(
   if (!response.success || response.code < 200 || response.code >= 300) {
     // Format error message for better display
     let errorMessage = response.message || "Failed to create leave allocation";
-    
+
     if (response.errors) {
       const errorFields = Object.keys(response.errors);
       if (errorFields.length > 0) {
@@ -131,7 +186,7 @@ export async function createLeaveAllocation(
         }
       }
     }
-    
+
     throw new Error(errorMessage);
   }
 
@@ -149,7 +204,7 @@ export async function fetchLeaveAllocations(params?: {
   search?: string;
 }): Promise<LeaveAllocationsResponse> {
   const queryParams = new URLSearchParams();
-  
+
   if (params?.page) queryParams.append("page", params.page.toString());
   if (params?.page_size) queryParams.append("page_size", params.page_size.toString());
   if (params?.leave_type) queryParams.append("leave_type", params.leave_type.toString());
@@ -159,15 +214,15 @@ export async function fetchLeaveAllocations(params?: {
   const url = `${API_ENDPOINTS.leave.allocations}${
     queryParams.toString() ? `?${queryParams.toString()}` : ""
   }`;
-  
+
   const response = await apiRequest<LeaveAllocationsResponse>(url, {
     method: "GET",
   });
-  
+
   if (!response.success || response.code < 200 || response.code >= 300) {
     throw new Error(response.message || "Failed to fetch leave allocations");
   }
-  
+
   return response;
 }
 
@@ -181,11 +236,11 @@ export async function fetchLeaveAllocation(publicId: string): Promise<LeaveAlloc
       method: "GET",
     }
   );
-  
+
   if (!response.success || response.code < 200 || response.code >= 300) {
     throw new Error(response.message || "Failed to fetch leave allocation");
   }
-  
+
   return response;
 }
 
@@ -206,7 +261,7 @@ export async function updateLeaveAllocation(
 
   if (!response.success || response.code < 200 || response.code >= 300) {
     let errorMessage = response.message || "Failed to update leave allocation";
-    
+
     if (response.errors) {
       const errorFields = Object.keys(response.errors);
       if (errorFields.length > 0) {
@@ -216,7 +271,7 @@ export async function updateLeaveAllocation(
         }
       }
     }
-    
+
     throw new Error(errorMessage);
   }
 
@@ -233,10 +288,10 @@ export async function deleteLeaveAllocation(publicId: string): Promise<ApiRespon
       method: "DELETE",
     }
   );
-  
+
   if (!response.success || response.code < 200 || response.code >= 300) {
     throw new Error(response.message || "Failed to delete leave allocation");
   }
-  
+
   return response;
 }

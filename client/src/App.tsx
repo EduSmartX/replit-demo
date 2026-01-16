@@ -5,7 +5,12 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { UserProvider } from "@/context/user-context";
 import AuthPage from "@/pages/auth-page";
-import DashboardPage from "@/pages/dashboard-page";
+// Dashboard Pages
+import AllocationsPage from "@/pages/dashboard/allocations-page";
+import OrganizationPage from "@/pages/dashboard/organization-page";
+import OverviewPage from "@/pages/dashboard/overview-page";
+import PreferencesPage from "@/pages/dashboard/preferences-page";
+import TeachersPage from "@/pages/dashboard/teachers-page";
 import NotFound from "@/pages/not-found";
 import OrganizationPendingPage from "@/pages/organization-pending";
 import RegistrationSuccess from "@/pages/registration-success";
@@ -16,17 +21,13 @@ function Router() {
       <Route path="/" component={() => <Redirect to="/auth" />} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/registration-success" component={RegistrationSuccess} />
-      <Route path="/dashboard" component={DashboardPage} />
-      <Route path="/allocations" component={DashboardPage} />
-      <Route path="/allocations/:id" component={DashboardPage} />
-      <Route path="/organization" component={DashboardPage} />
-      <Route path="/preferences" component={DashboardPage} />
-      <Route path="/teachers" component={DashboardPage} />
-      <Route path="/classes" component={DashboardPage} />
-      <Route path="/subjects" component={DashboardPage} />
-      <Route path="/students" component={DashboardPage} />
-      <Route path="/attendance" component={DashboardPage} />
-      <Route path="/requests" component={DashboardPage} />
+      <Route path="/dashboard" component={OverviewPage} />
+      <Route path="/allocations" component={AllocationsPage} />
+      <Route path="/allocations/:id" component={AllocationsPage} />
+      <Route path="/organization" component={OrganizationPage} />
+      <Route path="/preferences" component={PreferencesPage} />
+      <Route path="/teachers" component={TeachersPage} />
+      <Route path="/teachers/:id" component={TeachersPage} />
       <Route path="/organization-pending" component={OrganizationPendingPage} />
       <Route component={NotFound} />
     </Switch>
