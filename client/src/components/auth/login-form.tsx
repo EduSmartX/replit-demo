@@ -62,52 +62,19 @@ export function LoginForm({ onForgotPassword }: LoginFormProps) {
       });
 
       setLocation("/dashboard");
-    } catch (error) {
-      // For demo/testing - use mock data if API fails
-      const mockResponse = {
-        message: "Login successful.",
-        tokens: {
-          refresh: "mock_refresh_token",
-          access: "mock_access_token",
-        },
-        user: {
-          public_id: "vlTDgDUm0L1WfF",
-          username: data.username,
-          email: "rajesh.kumar@stmarysschool.edu",
-          role: data.username.includes("teacher")
-            ? "teacher"
-            : data.username.includes("parent")
-              ? "parent"
-              : "admin",
-          full_name: data.username.includes("teacher")
-            ? "Sarah Johnson"
-            : data.username.includes("parent")
-              ? "Michael Smith"
-              : "Rajesh Kumar",
-        },
-        organization: {
-          public_id: "1SqYNe7saEyqg",
-          name: "St. Mary's International School",
-          organization_type: "public",
-          email: "info@stmarysschool.edu",
-          phone: "+919876543210",
-          website_url: "https://www.stmarysschool.edu",
-          board_affiliation: "cbse",
-          legal_entity: "St. Mary's Educational Trust",
-          is_active: true,
-          is_verified: true,
-          is_approved: data.username !== "pending",
-        },
-      };
-
-      setAuth(mockResponse.user, mockResponse.organization, mockResponse.tokens);
+    } catch (error: any) {
+      // Handle authentication errors properly
+      const errorMessage =
+        error?.message ||
+        error?.detail ||
+        error?.non_field_errors?.[0] ||
+        ErrorMessages.Auth.LOGIN_FAILED;
 
       toast({
-        title: "Welcome back!",
-        description: `Successfully logged in as ${mockResponse.user.full_name}.`,
+        variant: "destructive",
+        title: "Login Failed",
+        description: errorMessage,
       });
-
-      setLocation("/dashboard");
     } finally {
       setIsLoading(false);
     }
