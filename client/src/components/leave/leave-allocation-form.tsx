@@ -31,6 +31,7 @@ import {
   type LeaveAllocation,
 } from "@/lib/api/leave-api";
 import { parseApiError } from "@/lib/error-parser";
+import { formatDateForDisplay } from "@/lib/utils/date-utils";
 
 const createLeaveAllocationSchema = (mode: "create" | "view" | "edit") => {
   return z.object({
@@ -267,15 +268,6 @@ export function LeaveAllocationForm({
   const selectedLeaveType = leaveTypes.find((type) => type.id === form.watch("leave_type"));
   const selectedRoles = roles.filter((role) => form.watch("roles").includes(role.id));
 
-  const formatDate = (date: Date | undefined) => {
-    if (!date) return "";
-    return date.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
-  };
-
   const getLeaveTypeName = () => {
     if ((isViewMode || isEditMode) && initialData?.leave_type_name) {
       return initialData.leave_type_name;
@@ -423,9 +415,11 @@ export function LeaveAllocationForm({
           leaveTypeName={getLeaveTypeName()}
           totalDays={form.watch("total_days")}
           carryForwardDays={form.watch("max_carry_forward_days")}
-          effectiveFrom={formatDate(form.watch("effective_from"))}
+          effectiveFrom={formatDateForDisplay(form.watch("effective_from"))}
           effectiveTo={
-            form.watch("effective_to") ? formatDate(form.watch("effective_to")) : undefined
+            form.watch("effective_to")
+              ? formatDateForDisplay(form.watch("effective_to"))
+              : undefined
           }
           selectedRoles={selectedRoles}
           isSubmitting={createMutation.isPending || updateMutation.isPending}

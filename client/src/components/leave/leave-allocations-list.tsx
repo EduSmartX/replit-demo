@@ -19,6 +19,7 @@ import {
   fetchOrganizationRoles,
   type LeaveAllocation,
 } from "@/lib/api/leave-api";
+import { formatDateForDisplay } from "@/lib/utils/date-utils";
 
 interface LeaveAllocationsListProps {
   onCreateNew: () => void;
@@ -112,14 +113,6 @@ export function LeaveAllocationsList({
 
   const hasActiveFilters = filterLeaveType !== "all" || filterRole !== "all";
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
-  };
-
   // Define table columns
   const columns: Column<LeaveAllocation>[] = [
     {
@@ -173,7 +166,7 @@ export function LeaveAllocationsList({
       accessor: (row) => (
         <div className="text-sm">
           <div className="text-gray-700">{row.created_by_name || "System"}</div>
-          <div className="text-xs text-gray-500">{formatDate(row.created_at)}</div>
+          <div className="text-xs text-gray-500">{formatDateForDisplay(row.created_at)}</div>
         </div>
       ),
       sortable: true,
@@ -181,7 +174,9 @@ export function LeaveAllocationsList({
     },
     {
       header: "Last Updated",
-      accessor: (row) => <div className="text-sm text-gray-500">{formatDate(row.updated_at)}</div>,
+      accessor: (row) => (
+        <div className="text-sm text-gray-500">{formatDateForDisplay(row.updated_at)}</div>
+      ),
       sortable: true,
       sortKey: "updated_at",
     },
