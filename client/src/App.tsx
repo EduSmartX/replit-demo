@@ -1,6 +1,7 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Switch, Route, Redirect } from "wouter";
 import { queryClient } from "./lib/queryClient";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { UserProvider } from "@/context/user-context";
@@ -21,14 +22,46 @@ function Router() {
       <Route path="/" component={() => <Redirect to="/auth" />} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/registration-success" component={RegistrationSuccess} />
-      <Route path="/dashboard" component={OverviewPage} />
-      <Route path="/allocations" component={AllocationsPage} />
-      <Route path="/allocations/:id" component={AllocationsPage} />
-      <Route path="/organization" component={OrganizationPage} />
-      <Route path="/preferences" component={PreferencesPage} />
-      <Route path="/teachers" component={TeachersPage} />
-      <Route path="/teachers/:id" component={TeachersPage} />
-      <Route path="/organization-pending" component={OrganizationPendingPage} />
+      <Route path="/dashboard">
+        <ProtectedRoute>
+          <OverviewPage />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/allocations">
+        <ProtectedRoute>
+          <AllocationsPage />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/allocations/:id">
+        <ProtectedRoute>
+          <AllocationsPage />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/organization">
+        <ProtectedRoute>
+          <OrganizationPage />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/preferences">
+        <ProtectedRoute>
+          <PreferencesPage />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/teachers">
+        <ProtectedRoute>
+          <TeachersPage />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/teachers/:id">
+        <ProtectedRoute>
+          <TeachersPage />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/organization-pending">
+        <ProtectedRoute>
+          <OrganizationPendingPage />
+        </ProtectedRoute>
+      </Route>
       <Route component={NotFound} />
     </Switch>
   );

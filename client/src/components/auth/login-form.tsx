@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useUser, type User } from "@/context/user-context";
+import { useUser } from "@/context/user-context";
 import { useToast } from "@/hooks/use-toast";
 import { api, API_ENDPOINTS, saveTokens } from "@/lib/api";
 import { ErrorMessages, SuccessMessages, ValidationErrorMessages } from "@/lib/constants";
@@ -44,70 +44,45 @@ export function LoginForm({ onForgotPassword }: LoginFormProps) {
     setIsLoading(true);
 
     try {
-      const result = await api.post(API_ENDPOINTS.auth.login, {
+      const result = (await api.post(API_ENDPOINTS.auth.login, {
         username: data.username,
         password: data.password,
-      });
+      })) as {
+        tokens: { access: string; refresh: string };
+        user: { full_name: string; [key: string]: unknown };
+        organization: unknown;
+      };
 
       // Save tokens to localStorage
       if (result.tokens) {
         saveTokens(result.tokens.access, result.tokens.refresh);
       }
 
-      setAuth(result.user, result.organization, result.tokens);
+      setAuth(result.user as any, result.organization as any, result.tokens);
 
       toast({
         title: "Welcome back!",
         description: `${SuccessMessages.Auth.LOGIN_SUCCESS} Welcome, ${result.user.full_name}!`,
       });
 
-      setLocation("/dashboard");
-    } catch (error) {
-      // For demo/testing - use mock data if API fails
-      const mockResponse = {
-        message: "Login successful.",
-        tokens: {
-          refresh: "mock_refresh_token",
-          access: "mock_access_token",
-        },
-        user: {
-          public_id: "vlTDgDUm0L1WfF",
-          username: data.username,
-          email: "rajesh.kumar@stmarysschool.edu",
-          role: data.username.includes("teacher")
-            ? "teacher"
-            : data.username.includes("parent")
-              ? "parent"
-              : "admin",
-          full_name: data.username.includes("teacher")
-            ? "Sarah Johnson"
-            : data.username.includes("parent")
-              ? "Michael Smith"
-              : "Rajesh Kumar",
-        },
-        organization: {
-          public_id: "1SqYNe7saEyqg",
-          name: "St. Mary's International School",
-          organization_type: "public",
-          email: "info@stmarysschool.edu",
-          phone: "+919876543210",
-          website_url: "https://www.stmarysschool.edu",
-          board_affiliation: "cbse",
-          legal_entity: "St. Mary's Educational Trust",
-          is_active: true,
-          is_verified: true,
-          is_approved: data.username !== "pending",
-        },
-      };
-
-      setAuth(mockResponse.user, mockResponse.organization, mockResponse.tokens);
+      // Redirect to stored URL or default to dashboard
+      const redirectUrl = sessionStorage.getItem("redirectAfterLogin") || "/dashboard";
+      sessionStorage.removeItem("redirectAfterLogin");
+      setLocation(redirectUrl);
+    } catch (error: unknown) {
+      // Handle authentication errors properly
+      const err = error as { message?: string; detail?: string; non_field_errors?: string[] };
+      const errorMessage =
+        err?.message ||
+        err?.detail ||
+        err?.non_field_errors?.[0] ||
+        ErrorMessages.Auth.LOGIN_FAILED;
 
       toast({
-        title: "Welcome back!",
-        description: `Successfully logged in as ${mockResponse.user.full_name}.`,
+        variant: "destructive",
+        title: "Login Failed",
+        description: errorMessage,
       });
-
-      setLocation("/dashboard");
     } finally {
       setIsLoading(false);
     }
