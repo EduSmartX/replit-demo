@@ -1,6 +1,6 @@
 /**
  * Generic API Service Utilities
- * Reusable API functions for CRUD operations
+ * Reusable CRUD functions that handle standard API response unwrapping and error handling
  */
 
 import { apiRequest } from "../api";
@@ -29,6 +29,7 @@ export interface PaginatedApiResponse<T> {
 
 /**
  * Generic fetch list function
+ * Unwraps paginated response structure (data.results) and validates success
  */
 export async function fetchList<T>(url: string): Promise<T[]> {
   try {
@@ -61,6 +62,7 @@ export async function fetchList<T>(url: string): Promise<T[]> {
 }
 
 /**
+ * Unwraps single-entity response structure (data) and validates success
  * Generic fetch detail function
  */
 export async function fetchDetail<T>(url: string): Promise<T> {
@@ -89,6 +91,7 @@ export async function fetchDetail<T>(url: string): Promise<T> {
 }
 
 /**
+ * Sends POST request with JSON payload, unwraps response
  * Generic create function
  */
 export async function createEntity<T, P = any>(url: string, payload: P): Promise<T> {

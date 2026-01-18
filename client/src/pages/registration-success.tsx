@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { CheckCircle2, Clock, Mail, ShieldCheck, Users, Settings, ArrowRight } from "lucide-react";
+import { CheckCircle2, Clock, Mail, ShieldCheck, Users, Settings, ArrowRight, CalendarDays, Sliders } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -115,6 +115,30 @@ export default function RegistrationSuccess() {
                       <p className="font-medium">Access your organization dashboard</p>
                       <p className="text-muted-foreground text-xs">
                         Manage organization settings and profile
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3 text-sm">
+                    <div className="bg-primary/10 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full">
+                      <Sliders className="text-primary h-4 w-4" />
+                    </div>
+                    <div>
+                      <p className="font-medium">Configure organization preferences</p>
+                      <p className="text-muted-foreground text-xs">
+                        Set working day policies and attendance preferences
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3 text-sm">
+                    <div className="bg-primary/10 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full">
+                      <CalendarDays className="text-primary h-4 w-4" />
+                    </div>
+                    <div>
+                      <p className="font-medium">Manage leave allocations</p>
+                      <p className="text-muted-foreground text-xs">
+                        Configure leave types and allocate to staff
                       </p>
                     </div>
                   </div>

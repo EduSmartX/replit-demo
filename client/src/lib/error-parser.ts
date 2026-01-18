@@ -2,6 +2,12 @@ import { ErrorMessages } from "./constants";
 
 /**
  * Parse API error response and extract meaningful error message
+ * 
+ * Multi-level error extraction strategy:
+ * 1. Extract JSON from error.message string
+ * 2. Prefer specific field validation error over generic message
+ * 3. Fallback to error.message or defaultMessage
+ * 
  * @param error - The error object from API call
  * @param defaultMessage - Default message if parsing fails
  * @returns Extracted error message

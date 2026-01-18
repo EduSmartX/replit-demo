@@ -12,11 +12,15 @@ export async function verifyOtp(
   otpCode: string,
   purpose: string = "organization_registration"
 ) {
-  return await api.post(API_ENDPOINTS.organizations.verifyOtp, {
-    email,
-    otp_code: otpCode,
-    purpose,
-  });
+  return await api.post(
+    API_ENDPOINTS.organizations.verifyOtp,
+    {
+      email,
+      otp_code: otpCode,
+      purpose,
+    },
+    { skipAuth: true } // Public endpoint - no auth required
+  );
 }
 
 /**
@@ -27,5 +31,9 @@ export async function verifyOtp(
 export async function sendOtps(
   emails: Array<{ email: string; category: string; purpose: string }>
 ) {
-  return await api.post(API_ENDPOINTS.organizations.sendOtp, emails);
+  return await api.post(
+    API_ENDPOINTS.organizations.sendOtp,
+    emails,
+    { skipAuth: true } // Public endpoint - no auth required
+  );
 }

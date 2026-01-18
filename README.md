@@ -1,6 +1,23 @@
 # Replit Demo - React Frontend
 
-A modern React frontend application built with Vite, TypeScript, and Tailwind CSS. This application connects to a Django REST API backend.
+A modern multi-role educational management application built with React, TypeScript, and a well-structured architecture. This application supports **Admin**, **Teacher**, and **Parent** roles with role-based navigation and features.
+
+## 🏗️ Architecture
+
+This project follows a **feature-based architecture** with clear separation of concerns:
+
+- **`common/`** - Application-level shared components (forms, dialogs, layouts)
+- **`core/`** - Infrastructure (contexts, config, API utilities)
+- **`features/`** - Business logic organized by domain (auth, teachers, leave, etc.)
+- **`modules/`** - Role-based UI/UX modules (admin, teacher, parent)
+- **`ui/`** - shadcn/ui component library
+
+📚 **See detailed architecture documentation:**
+- [ARCHITECTURE.md](./ARCHITECTURE.md) - Complete architecture guide
+- [STRUCTURE_MAP.md](./STRUCTURE_MAP.md) - Visual structure diagram  
+- [QUICK_REFERENCE.md](./QUICK_REFERENCE.md) - Quick import reference
+- [MIGRATION_CHECKLIST.md](./MIGRATION_CHECKLIST.md) - Migration guide
+- [RESTRUCTURING_SUMMARY.md](./RESTRUCTURING_SUMMARY.md) - Restructuring summary
 
 ## Tech Stack
 

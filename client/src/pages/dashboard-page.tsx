@@ -1,16 +1,19 @@
+/**
+ * Dashboard Page Component
+ * Main authenticated dashboard page with role-based content and navigation.
+ * Handles URL routing, menu navigation, and renders role-specific dashboards.
+ */
+
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { AdminSidebar } from "@/components/dashboard/admin-sidebar";
-import { ComingSoonPlaceholder } from "@/components/dashboard/coming-soon-placeholder";
-import { DashboardTopBar } from "@/components/dashboard/dashboard-top-bar";
-import { LeaveAllocationsSection } from "@/components/dashboard/leave-allocations-section";
-import { ParentSidebar } from "@/components/dashboard/parent-sidebar";
-import { RoleDashboard } from "@/components/dashboard/role-dashboard";
-import { TeacherSidebar } from "@/components/dashboard/teacher-sidebar";
-import { TeachersManagementSection } from "@/components/dashboard/teachers-management-section";
-import { OrganizationHolidayCalendar } from "@/components/leave";
-import { OrganizationPreferences } from "@/components/preferences/organization-preferences";
-import { useUser } from "@/context/user-context";
+import { AdminSidebar } from "@/modules/admin";
+import { ParentSidebar } from "@/modules/parent";
+import { TeacherSidebar } from "@/modules/teacher";
+import { RoleDashboard } from "@/common/components";
+import { OrganizationHolidayCalendar } from "@/features/leave";
+import { OrganizationPreferences } from "@/features/preferences";
+import { useUser } from "@/core/contexts";
+import { useToast } from "@/hooks/use-toast";
 import { useToast } from "@/hooks/use-toast";
 
 export default function DashboardPage() {

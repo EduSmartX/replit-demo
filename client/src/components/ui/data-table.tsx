@@ -45,6 +45,8 @@ export function DataTable<T>({
   const [sortField, setSortField] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
+  // Client-side sorting: Sort data based on selected column and direction
+  // Handles both direct property access and function accessors via sortKey
   const sortedData = [...data].sort((rowA, rowB) => {
     if (!sortField) return 0;
 
@@ -87,6 +89,7 @@ export function DataTable<T>({
     return 0;
   });
 
+  // Toggle sort: Click same column to flip direction, click new column to sort asc
   const handleSort = (column: Column<T>) => {
     if (!column.sortable) return;
 

@@ -40,11 +40,11 @@ export function AddressAutocomplete({
   const [scriptError, setScriptError] = useState(false);
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
   
-  // Check if Google API is available (only in development with API key)
+  // Conditional Google API usage: Only load in dev mode with API key to avoid production billing
   const isGoogleApiEnabled = import.meta.env.VITE_GOOGLE_API_KEY && import.meta.env.DEV;
 
   useEffect(() => {
-    // Skip Google API initialization if disabled
+    // Skip Google API initialization if disabled (falls back to manual input)
     if (!isGoogleApiEnabled) {
       setIsLoading(false);
       setScriptError(false);

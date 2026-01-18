@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useUser } from "@/context/user-context";
+import { useUser } from "@/core/contexts";
 import { useToast } from "@/hooks/use-toast";
 import { api, API_ENDPOINTS, saveTokens } from "@/lib/api";
 import { ErrorMessages, SuccessMessages, ValidationErrorMessages } from "@/lib/constants";

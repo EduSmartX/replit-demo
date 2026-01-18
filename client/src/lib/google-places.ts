@@ -18,11 +18,12 @@ export interface AddressComponents {
 }
 
 /**
- * Load Google Maps API script
+ * Load Google Maps API script dynamically
+ * Returns promise to support async/await pattern, handles duplicate load attempts
  */
 export function loadGoogleMapsScript(): Promise<void> {
   return new Promise((resolve, reject) => {
-    // Reject if Google API is disabled
+    // Environment gate: Only load in dev with valid API key to avoid production billing
     if (!GOOGLE_API_ENABLED) {
       reject(new Error("Google Places API is disabled for this environment"));
       return;
@@ -60,6 +61,7 @@ export function loadGoogleMapsScript(): Promise<void> {
 
 /**
  * Parse Google Place result into address components
+ * Maps Places API response structure to simplified AddressComponents interface
  */
 export function parseAddressComponents(place: google.maps.places.PlaceResult): AddressComponents {
   const components: AddressComponents = {

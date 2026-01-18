@@ -3,8 +3,7 @@
  * Using generic API service utilities for consistent CRUD operations
  */
 
-import { apiRequest } from "../api";
-import { getAccessToken } from "../api";
+import { apiRequest, getAccessToken } from "../api";
 import { createEntityService } from "../utils/api-service-utils";
 import type { Address } from "./address-api";
 
@@ -165,6 +164,7 @@ export async function fetchTeachers(params?: {
   specialization?: string;
   designation?: string;
   search?: string;
+  is_deleted?: boolean;
 }): Promise<TeachersResponse> {
   const queryParams = new URLSearchParams();
 
@@ -173,6 +173,7 @@ export async function fetchTeachers(params?: {
   if (params?.specialization) queryParams.append("specialization", params.specialization);
   if (params?.designation) queryParams.append("designation", params.designation);
   if (params?.search) queryParams.append("search", params.search);
+  if (params?.is_deleted !== undefined) queryParams.append("is_deleted", params.is_deleted.toString());
 
   const url = `${API_BASE_URL}/api/teacher/admin/${
     queryParams.toString() ? `?${queryParams.toString()}` : ""
@@ -204,6 +205,24 @@ export const fetchTeacherDetail = teacherService.fetchDetail;
 export const createTeacher = teacherService.create;
 export const updateTeacher = teacherService.update;
 export const deleteTeacher = teacherService.delete;
+
+/**
+ * Reactivate a deleted teacher
+ */
+export async function reactivateTeacher(publicId: string): Promise<ApiResponse<Teacher>> {
+  const response = await apiRequest<ApiResponse<Teacher>>(
+    `${API_BASE_URL}/api/teacher/admin/${publicId}/activate/`,
+    {
+      method: "POST",
+    }
+  );
+
+  if (!response.success || response.code < 200 || response.code >= 300) {
+    throw new Error(response.message || "Failed to reactivate teacher");
+  }
+
+  return response;
+}
 
 /**
  * Fetch all subjects from core API

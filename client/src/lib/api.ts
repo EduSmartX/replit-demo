@@ -4,8 +4,8 @@
  */
 
 // Re-export standard types
-export type { ApiResponse, ApiListResponse, ApiErrorResponse, Pagination } from "./api/types";
-export { isSuccessResponse, isPaginatedResponse } from "./api/types";
+export { isPaginatedResponse, isSuccessResponse } from "./api/types";
+export type { ApiErrorResponse, ApiListResponse, ApiResponse, Pagination } from "./api/types";
 
 // Get API base URL from environment variables
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
@@ -37,6 +37,13 @@ export const API_ENDPOINTS = {
     leaveTypes: `${API_BASE_URL}/api/core/leave-types/`,
     organizationRoles: `${API_BASE_URL}/api/core/organization-role-types/`,
     subjects: `${API_BASE_URL}/api/core/subjects/`,
+    coreClasses: `${API_BASE_URL}/api/core/classes/`,
+  },
+  classes: {
+    list: `${API_BASE_URL}/api/classes/admin/`,
+    detail: (publicId: string) => `${API_BASE_URL}/api/classes/admin/${publicId}/`,
+    downloadTemplate: `${API_BASE_URL}/api/classes/admin/download-template/`,
+    bulkUpload: `${API_BASE_URL}/api/classes/admin/bulk-upload/`,
   },
   leave: {
     allocations: `${API_BASE_URL}/api/leave/leave-allocations/`,
@@ -50,6 +57,7 @@ export const API_ENDPOINTS = {
   teacher: {
     list: `${API_BASE_URL}/api/teacher/admin/`,
     detail: (publicId: string) => `${API_BASE_URL}/api/teacher/admin/${publicId}/`,
+    activate: (publicId: string) => `${API_BASE_URL}/api/teacher/admin/${publicId}/activate/`,
   },
   // Add more endpoints as needed
 } as const;
@@ -92,36 +100,41 @@ export function clearTokens(): void {
   localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
 }
 
+export interface ApiRequestOptions extends RequestInit {
+  skipAuth?: boolean;
+}
+
 /**
  * Make an authenticated API request to Django backend
  */
-export async function apiRequest<T = unknown>(url: string, options: RequestInit = {}): Promise<T> {
+export async function apiRequest<T = unknown>(url: string, options: ApiRequestOptions = {}): Promise<T> {
+  const { skipAuth, ...fetchOptions } = options;
   const accessToken = getAccessToken();
 
   const headers: HeadersInit = {
     "Content-Type": "application/json",
-    ...options.headers,
+    ...fetchOptions.headers,
   };
 
-  // Add authorization header if token exists
-  if (accessToken) {
+  // Add authorization header if token exists and skipAuth is not true
+  if (accessToken && !skipAuth) {
     headers["Authorization"] = `Bearer ${accessToken}`;
   }
 
   try {
     const response = await fetch(url, {
-      ...options,
+      ...fetchOptions,
       headers,
     });
 
-    // Handle 401 Unauthorized - try to refresh token
-    if (response.status === 401 && accessToken) {
+    // Handle 401 Unauthorized - try to refresh token (skip for public endpoints)
+    if (response.status === 401 && accessToken && !skipAuth) {
       const refreshed = await refreshAccessToken();
       if (refreshed) {
         // Retry the original request with new token
         headers["Authorization"] = `Bearer ${getAccessToken()}`;
         const retryResponse = await fetch(url, {
-          ...options,
+          ...fetchOptions,
           headers,
         });
 
@@ -155,8 +168,7 @@ export async function apiRequest<T = unknown>(url: string, options: RequestInit 
     if (contentType && contentType.includes("application/json")) {
       responseData = await response.json();
     } else {
-      const text = await response.text();
-      // Try to parse as JSON if possible
+      const text = await response.text();      
       try {
         responseData = JSON.parse(text);
       } catch {
@@ -165,12 +177,10 @@ export async function apiRequest<T = unknown>(url: string, options: RequestInit 
     }
 
     // If response is not ok, throw the parsed response data
-    if (!response.ok) {
-      // If we have a structured error response, throw it as is
+    if (!response.ok) {      
       if (responseData && typeof responseData === "object") {
         throw responseData;
-      }
-      // Otherwise create a structured error
+      }      
       throw {
         success: false,
         message: responseData || response.statusText || "Request failed",
@@ -186,8 +196,7 @@ export async function apiRequest<T = unknown>(url: string, options: RequestInit 
     if (error && typeof error === "object" && "code" in error) {
       throw error;
     }
-
-    // For network errors or other exceptions, wrap them
+    
     throw {
       success: false,
       message: error instanceof Error ? error.message : "Network error occurred",
@@ -239,30 +248,30 @@ async function refreshAccessToken(): Promise<boolean> {
  * Convenience methods for common HTTP methods
  */
 export const api = {
-  get: <T = unknown>(url: string, options?: RequestInit) =>
+  get: <T = unknown>(url: string, options?: ApiRequestOptions) =>
     apiRequest<T>(url, { ...options, method: "GET" }),
 
-  post: <T = unknown>(url: string, data?: unknown, options?: RequestInit) =>
+  post: <T = unknown>(url: string, data?: unknown, options?: ApiRequestOptions) =>
     apiRequest<T>(url, {
       ...options,
       method: "POST",
       body: data ? JSON.stringify(data) : undefined,
     }),
 
-  put: <T = unknown>(url: string, data?: unknown, options?: RequestInit) =>
+  put: <T = unknown>(url: string, data?: unknown, options?: ApiRequestOptions) =>
     apiRequest<T>(url, {
       ...options,
       method: "PUT",
       body: data ? JSON.stringify(data) : undefined,
     }),
 
-  patch: <T = unknown>(url: string, data?: unknown, options?: RequestInit) =>
+  patch: <T = unknown>(url: string, data?: unknown, options?: ApiRequestOptions) =>
     apiRequest<T>(url, {
       ...options,
       method: "PATCH",
       body: data ? JSON.stringify(data) : undefined,
     }),
 
-  delete: <T = unknown>(url: string, options?: RequestInit) =>
+  delete: <T = unknown>(url: string, options?: ApiRequestOptions) =>
     apiRequest<T>(url, { ...options, method: "DELETE" }),
 };

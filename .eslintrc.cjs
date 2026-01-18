@@ -46,6 +46,14 @@ module.exports = {
     ],
     '@typescript-eslint/explicit-module-boundary-types': 'off',
     '@typescript-eslint/no-non-null-assertion': 'warn',
+    '@typescript-eslint/consistent-type-imports': [
+      'warn',
+      {
+        prefer: 'type-imports',
+        fixStyle: 'separate-type-imports',
+      },
+    ],
+    '@typescript-eslint/no-unused-expressions': 'error',
     
     // React Hooks
     'react-hooks/rules-of-hooks': 'error',
@@ -62,20 +70,36 @@ module.exports = {
           'parent',
           'sibling',
           'index',
+          'type',
         ],
         'newlines-between': 'never',
         alphabetize: {
           order: 'asc',
           caseInsensitive: true,
         },
+        pathGroups: [
+          {
+            pattern: '@/**',
+            group: 'internal',
+          },
+        ],
       },
     ],
+    'import/no-duplicates': 'warn',
+    'import/newline-after-import': 'warn',
     
     // General
     'no-console': ['warn', { allow: ['warn', 'error'] }],
     'no-debugger': 'warn',
     'prefer-const': 'warn',
     'no-var': 'error',
+    'no-unused-expressions': 'off', // Use TypeScript version
+    'eqeqeq': ['error', 'always', { null: 'ignore' }],
+    'curly': ['warn', 'all'],
+    'no-nested-ternary': 'warn',
+    'prefer-template': 'warn',
+    'object-shorthand': ['warn', 'always'],
+    'no-param-reassign': ['error', { props: false }],
   },
   settings: {
     react: {

@@ -120,6 +120,56 @@ export async function fetchWorkingDayPolicy(): Promise<WorkingDayPolicyResponse>
   return response;
 }
 
+export interface CreateWorkingDayPolicyPayload {
+  sunday_off: boolean;
+  saturday_off_pattern: SaturdayOffPattern;
+  effective_from: string;
+  effective_to?: string | null;
+}
+
+/**
+ * Create a new working day policy
+ */
+export async function createWorkingDayPolicy(
+  payload: CreateWorkingDayPolicyPayload
+): Promise<ApiResponse<WorkingDayPolicy>> {
+  const response = await apiRequest<ApiResponse<WorkingDayPolicy>>(
+    API_ENDPOINTS.attendance.workingDayPolicy,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }
+  );
+
+  if (!response.success || response.code < 200 || response.code >= 300) {
+    throw new Error(response.message || "Failed to create working day policy");
+  }
+
+  return response;
+}
+
+/**
+ * Update an existing working day policy
+ */
+export async function updateWorkingDayPolicy(
+  publicId: string,
+  payload: Partial<CreateWorkingDayPolicyPayload>
+): Promise<ApiResponse<WorkingDayPolicy>> {
+  const response = await apiRequest<ApiResponse<WorkingDayPolicy>>(
+    `${API_ENDPOINTS.attendance.workingDayPolicy}${publicId}/`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    }
+  );
+
+  if (!response.success || response.code < 200 || response.code >= 300) {
+    throw new Error(response.message || "Failed to update working day policy");
+  }
+
+  return response;
+}
+
 /**
  * Create a single holiday
  */

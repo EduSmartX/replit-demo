@@ -1,17 +1,38 @@
+/**
+ * Main Application Component
+ * 
+ * Root component that sets up the application architecture:
+ * - Query client for data fetching and caching
+ * - User authentication and authorization context
+ * - Global UI providers (toasts, tooltips)
+ * - Application routing
+ * 
+ * Route Structure:
+ * - /auth - Authentication (login/signup)
+ * - /dashboard - Role-based dashboard home
+ * - /teachers - Teacher management
+ * - /allocations - Leave allocation policies
+ * - /organization - Holiday calendar
+ * - /preferences - Organization settings
+ */
+
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Switch, Route, Redirect } from "wouter";
 import { queryClient } from "./lib/queryClient";
-import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { ProtectedRoute } from "@/features/auth";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { UserProvider } from "@/context/user-context";
+import { UserProvider } from "@/core/contexts";
 import AuthPage from "@/pages/auth-page";
-// Dashboard Pages
-import AllocationsPage from "@/pages/dashboard/allocations-page";
-import OrganizationPage from "@/pages/dashboard/organization-page";
-import OverviewPage from "@/pages/dashboard/overview-page";
-import PreferencesPage from "@/pages/dashboard/preferences-page";
-import TeachersPage from "@/pages/dashboard/teachers-page";
+import {
+  AllocationsPage,
+  OrganizationPage,
+  OverviewPage,
+  PreferencesPage,
+  TeachersPage,
+  ClassesPage,
+  StudentsPage
+} from "@/modules/admin/pages";
 import NotFound from "@/pages/not-found";
 import OrganizationPendingPage from "@/pages/organization-pending";
 import RegistrationSuccess from "@/pages/registration-success";
@@ -55,6 +76,26 @@ function Router() {
       <Route path="/teachers/:id">
         <ProtectedRoute>
           <TeachersPage />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/classes">
+        <ProtectedRoute>
+          <ClassesPage />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/classes/:id">
+        <ProtectedRoute>
+          <ClassesPage />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/students">
+        <ProtectedRoute>
+          <StudentsPage />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/students/:id">
+        <ProtectedRoute>
+          <StudentsPage />
         </ProtectedRoute>
       </Route>
       <Route path="/organization-pending">

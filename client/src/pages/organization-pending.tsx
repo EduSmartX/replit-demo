@@ -2,7 +2,7 @@ import { Mail, Phone, Building2, AlertTriangle } from "lucide-react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useUser } from "@/context/user-context";
+import { useUser } from "@/core/contexts";
 
 export default function OrganizationPendingPage() {
   const [, setLocation] = useLocation();
