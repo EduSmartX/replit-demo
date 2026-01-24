@@ -3,6 +3,7 @@
  * Individual expandable row for a single class section
  */
 
+import { ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,7 +16,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 import type { CoreClass } from "@/lib/api/class-api";
 import type { Teacher } from "@/lib/api/teacher-api";
 import type { ClassSectionRow as ClassSectionRowType } from "../../schemas/class-section-schema";
@@ -42,41 +42,42 @@ export function ClassSectionRow({
   onDelete,
 }: ClassSectionRowProps) {
   return (
-    <Card className="relative">
-      <CardHeader className="pb-3">
+    <Card className="border border-blue-200">
+      <CardHeader 
+        className="cursor-pointer bg-blue-50 hover:bg-blue-100 transition-colors pb-3"
+        onClick={onToggleExpand}
+      >
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">
+          <CardTitle className="text-lg font-semibold text-gray-900">
             Section {index + 1}
             {section.section_name && ` - ${section.section_name}`}
           </CardTitle>
           <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onToggleExpand}
-              type="button"
-            >
-              {section.isExpanded ? (
-                <ChevronUp className="h-5 w-5" />
-              ) : (
-                <ChevronDown className="h-5 w-5" />
-              )}
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onDelete}
-              disabled={!canDelete}
-              type="button"
-            >
-              <Trash2 className="h-4 w-4 text-red-500" />
-            </Button>
+            {canDelete && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete();
+                }}
+                type="button"
+                className="h-8 w-8 text-red-600 hover:bg-red-100"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
+            {section.isExpanded ? (
+              <ChevronUp className="h-5 w-5 text-gray-600" />
+            ) : (
+              <ChevronDown className="h-5 w-5 text-gray-600" />
+            )}
           </div>
         </div>
       </CardHeader>
 
       {section.isExpanded && (
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 pt-6">
           <div className="grid gap-4 md:grid-cols-2">
             {/* Core Class Dropdown */}
             <div className="space-y-2">
@@ -140,10 +141,10 @@ export function ClassSectionRow({
                 <SelectTrigger id={`teacher-${section.id}`}>
                   <SelectValue placeholder="Select teacher..." />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="max-h-[300px] overflow-y-auto">
                   {teachers.map((teacher) => (
                     <SelectItem key={teacher.public_id} value={teacher.public_id}>
-                      {teacher.full_name}
+                      {teacher.full_name} ({teacher.email})
                     </SelectItem>
                   ))}
                 </SelectContent>

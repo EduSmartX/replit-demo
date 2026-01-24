@@ -7,7 +7,7 @@ import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/ca
 
 export function StudentsEmptyState() {
   return (
-    <div className="mx-auto max-w-7xl">
+    <div>
       <Card>
         <CardHeader>
           <CardTitle>No Classes Available</CardTitle>

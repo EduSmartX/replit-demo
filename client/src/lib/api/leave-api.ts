@@ -3,8 +3,8 @@
  * Handles all API calls related to leave allocations, types, and roles
  */
 
-import type { ApiResponse, ApiListResponse } from "./types";
 import { apiRequest, API_ENDPOINTS } from "@/lib/api";
+import type { ApiResponse, ApiListResponse } from "./types";
 
 // Re-export for convenience
 export { apiRequest, API_ENDPOINTS };
@@ -196,16 +196,16 @@ export async function fetchLeaveAllocations(params?: {
   page?: number;
   page_size?: number;
   leave_type?: number;
-  role?: string;
+  role?: number;
   search?: string;
 }): Promise<LeaveAllocationsResponse> {
   const queryParams = new URLSearchParams();
 
-  if (params?.page) queryParams.append("page", params.page.toString());
-  if (params?.page_size) queryParams.append("page_size", params.page_size.toString());
-  if (params?.leave_type) queryParams.append("leave_type", params.leave_type.toString());
-  if (params?.role) queryParams.append("role", params.role);
-  if (params?.search) queryParams.append("search", params.search);
+  if (params?.page) {queryParams.append("page", params.page.toString());}
+  if (params?.page_size) {queryParams.append("page_size", params.page_size.toString());}
+  if (params?.leave_type) {queryParams.append("leave_type", params.leave_type.toString());}
+  if (params?.role) {queryParams.append("role", params.role.toString());}
+  if (params?.search) {queryParams.append("search", params.search);}
 
   const url = `${API_ENDPOINTS.leave.allocations}${
     queryParams.toString() ? `?${queryParams.toString()}` : ""

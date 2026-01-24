@@ -1,8 +1,12 @@
 import { z } from "zod";
 import { GENDER_VALUES, BLOOD_GROUP_CHOICES } from "@/lib/constants/choices";
+import { 
+  tenDigitPhoneRegex, 
+  ValidationMessages,
+  cleanPhoneNumber 
+} from "@/lib/utils/validation-utils";
 
 // Regex patterns for input validation
-const phoneRegex = /^[+]?[(]?[0-9]{3}[)]?[-\s.]?[0-9]{3}[-\s.]?[0-9]{4,6}$/;
 const admissionNumberRegex = /^[A-Z0-9_-]+$/i;
 const rollNumberRegex = /^[A-Z0-9]+$/i;
 
@@ -36,10 +40,22 @@ export const studentFormSchema = z
 
     admission_number: z
       .string()
-      .max(50, "Admission number must not exceed 50 characters")
-      .regex(admissionNumberRegex, "Admission number can only contain letters, numbers, hyphens, and underscores")
       .optional()
-      .transform((val) => val?.trim().toUpperCase()),
+      .refine(
+        (val) => {
+          if (!val || val.trim() === "") {return true;}
+          return val.length <= 50;
+        },
+        "Admission number must not exceed 50 characters"
+      )
+      .refine(
+        (val) => {
+          if (!val || val.trim() === "") {return true;}
+          return admissionNumberRegex.test(val);
+        },
+        "Admission number can only contain letters, numbers, hyphens, and underscores"
+      )
+      .transform((val) => val?.trim().toUpperCase() || undefined),
     
     email: z
       .string()
@@ -53,10 +69,16 @@ export const studentFormSchema = z
       .string()
       .optional()
       .refine(
-        (val) => !val || phoneRegex.test(val),
-        "Please enter a valid phone number"
+        (val) => {
+          if (!val) {
+            return true;
+          }
+          const cleaned = cleanPhoneNumber(val);
+          return tenDigitPhoneRegex.test(cleaned);
+        },
+        ValidationMessages.phone.invalid
       )
-      .transform((val) => val?.trim()),
+      .transform((val) => val ? cleanPhoneNumber(val) : undefined),
     
     admission_date: z
       .string()
@@ -75,7 +97,9 @@ export const studentFormSchema = z
       )
       .refine(
         (val) => {
-          if (!val) return true;
+          if (!val) {
+            return true;
+          }
           const dob = new Date(val);
           const today = new Date();
           const age = today.getFullYear() - dob.getFullYear();
@@ -102,7 +126,7 @@ export const studentFormSchema = z
     
     class_id: z
       .string()
-      .optional(),
+      .min(1, "Class selection is required"),
     
     guardian_name: z
       .string()
@@ -114,10 +138,16 @@ export const studentFormSchema = z
       .string()
       .optional()
       .refine(
-        (val) => !val || phoneRegex.test(val),
-        "Please enter a valid guardian phone number"
+        (val) => {
+          if (!val) {
+            return true;
+          }
+          const cleaned = cleanPhoneNumber(val);
+          return tenDigitPhoneRegex.test(cleaned);
+        },
+        "Please enter a valid 10-digit guardian phone number"
       )
-      .transform((val) => val?.trim()),
+      .transform((val) => val ? cleanPhoneNumber(val) : undefined),
     
     guardian_email: z
       .string()
@@ -143,10 +173,16 @@ export const studentFormSchema = z
       .string()
       .optional()
       .refine(
-        (val) => !val || phoneRegex.test(val),
-        "Please enter a valid emergency contact number"
+        (val) => {
+          if (!val) {
+            return true;
+          }
+          const cleaned = cleanPhoneNumber(val);
+          return tenDigitPhoneRegex.test(cleaned);
+        },
+        ValidationMessages.emergencyContact.invalid
       )
-      .transform((val) => val?.trim()),
+      .transform((val) => val ? cleanPhoneNumber(val) : undefined),
     
     medical_conditions: z
       .string()
@@ -172,6 +208,24 @@ export const studentFormSchema = z
         "Please enter a valid supervisor email address"
       )
       .transform((val) => val?.trim().toLowerCase() || ""),
+    
+    // Previous School Information
+    previous_school_name: z
+      .string()
+      .max(255, "Previous school name must not exceed 255 characters")
+      .optional()
+      .transform((val) => val?.trim() || ""),
+    
+    previous_school_address: z
+      .string()
+      .optional()
+      .transform((val) => val?.trim() || ""),
+    
+    previous_school_class: z
+      .string()
+      .max(50, "Previous school class must not exceed 50 characters")
+      .optional()
+      .transform((val) => val?.trim() || ""),
   })
   // Cross-field validation: Emergency contact consistency
   .refine(
@@ -220,7 +274,8 @@ export type StudentFormValues = z.infer<typeof studentFormSchema>;
  * Validation helper functions
  */
 export function validatePhoneNumber(phone: string): boolean {
-  return phoneRegex.test(phone);
+  const cleaned = cleanPhoneNumber(phone);
+  return tenDigitPhoneRegex.test(cleaned);
 }
 
 export function validateAge(dateOfBirth: string): { valid: boolean; age?: number } {

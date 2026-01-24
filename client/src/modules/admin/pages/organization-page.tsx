@@ -7,13 +7,16 @@
  * @route /organization
  */
 
-import { OrganizationHolidayCalendar } from "@/features/leave";
+import { PageWrapper } from "@/common/components";
 import { DashboardLayout } from "@/common/layouts";
+import { OrganizationHolidayCalendar } from "@/features/leave";
 
 export default function OrganizationPage() {
   return (
     <DashboardLayout>
-      <OrganizationHolidayCalendar />
+      <PageWrapper>
+        <OrganizationHolidayCalendar />
+      </PageWrapper>
     </DashboardLayout>
   );
 }

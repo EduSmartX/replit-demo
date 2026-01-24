@@ -4,6 +4,12 @@
  * Displays at the top of the Organization Preferences page.
  */
 
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { AlertCircle, Loader2, Save } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { SuccessDialog } from "@/common/components/dialogs/success-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,7 +32,6 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { SaturdayOffPattern, SaturdayOffPatternLabels, type SaturdayOffPatternType } from "@/constants/attendance";
-import { useToast } from "@/hooks/use-toast";
 import {
   createWorkingDayPolicy,
   fetchWorkingDayPolicy,
@@ -35,16 +40,12 @@ import {
 } from "@/lib/api/holiday-api";
 import { WorkingDayPolicyMessages } from "@/lib/constants/leave-messages";
 import { getShortErrorMessage } from "@/lib/error-utils";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertCircle, Loader2, Save } from "lucide-react";
-import { useEffect } from "react";
-import { useForm } from "react-hook-form";
 import { workingDayPolicySchema, type WorkingDayPolicyFormValues } from "../schemas/working-day-policy-schema";
 
 export function WorkingDayPolicyForm() {
-  const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [successMessage, setSuccessMessage] = useState({ title: "", description: "" });
 
   // Initialize form with react-hook-form and zod validation
   const form = useForm<WorkingDayPolicyFormValues>({
@@ -97,18 +98,15 @@ export function WorkingDayPolicyForm() {
       queryClient.invalidateQueries({ queryKey: ["working-day-policy"] });
       queryClient.invalidateQueries({ queryKey: ["holiday-calendar"] });
       form.reset(form.getValues()); // Reset form dirty state
-      toast({
-        title: "Success",
+      setSuccessMessage({
+        title: "Policy Updated!",
         description: WorkingDayPolicyMessages.Success.UPDATED,
       });
+      setShowSuccessDialog(true);
     },
     onError: (error: unknown) => {
       const errorMessage = getShortErrorMessage(error);
-      toast({
-        title: WorkingDayPolicyMessages.Error.UPDATE_FAILED,
-        description: errorMessage,
-        variant: "destructive",
-      });
+      console.error(WorkingDayPolicyMessages.Error.UPDATE_FAILED, errorMessage);
     },
   });
 
@@ -294,6 +292,13 @@ export function WorkingDayPolicyForm() {
           </form>
         </Form>
       </CardContent>
+
+      <SuccessDialog
+        open={showSuccessDialog}
+        title={successMessage.title}
+        description={successMessage.description}
+        onClose={() => setShowSuccessDialog(false)}
+      />
     </Card>
   );
 }

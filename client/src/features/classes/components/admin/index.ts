@@ -6,4 +6,5 @@
 
 export { BulkUploadClasses } from './bulk-upload-classes';
 export { ClassesList } from './classes-list';
+export { getClassColumns } from './classes-table-columns';
 

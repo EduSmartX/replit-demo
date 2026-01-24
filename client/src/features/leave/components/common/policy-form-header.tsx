@@ -23,14 +23,14 @@ export function PolicyFormHeader({ mode, onCancel, onEdit }: PolicyFormHeaderPro
   const isViewMode = mode === "view";
 
   return (
-    <div className="mb-8 mt-10">
-      <div className="flex items-center justify-between">
+    <div className="mb-6">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={onCancel}>
+          <Button variant="ghost" size="icon" onClick={onCancel} title="Back">
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-3">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
               {titles[mode]}
             </h1>
             <p className="text-gray-600 text-base">

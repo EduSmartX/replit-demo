@@ -179,12 +179,14 @@ interface GenderFieldProps<T extends FieldValues> {
   control: Control<T>;
   name: Path<T>;
   disabled?: boolean;
+  required?: boolean;
 }
 
 export function GenderField<T extends FieldValues>({
   control,
   name,
   disabled = false,
+  required = false,
 }: GenderFieldProps<T>) {
   return (
     <SelectField
@@ -193,6 +195,7 @@ export function GenderField<T extends FieldValues>({
       label="Gender"
       placeholder="Select gender"
       disabled={disabled}
+      required={required}
       options={GENDER_OPTIONS}
     />
   );
@@ -302,6 +305,46 @@ export function MultiSelectField<T extends FieldValues>({
           </FormItem>
         );
       }}
+    />
+  );
+}
+
+/**
+ * Date Input Field
+ * Standardized date input field for consistent date handling across the application
+ */
+interface DateInputFieldProps<T extends FieldValues> {
+  control: Control<T>;
+  name: Path<T>;
+  label: string;
+  required?: boolean;
+  disabled?: boolean;
+  description?: string;
+  max?: Date;
+  min?: Date;
+}
+
+export function DateInputField<T extends FieldValues>({
+  control,
+  name,
+  label,
+  required = false,
+  disabled = false,
+  description,
+  max,
+  min,
+}: DateInputFieldProps<T>) {
+  return (
+    <TextInputField
+      control={control}
+      name={name}
+      label={label}
+      type="date"
+      required={required}
+      disabled={disabled}
+      description={description}
+      max={max ? max.toISOString().split("T")[0] : undefined}
+      min={min ? min.toISOString().split("T")[0] : undefined}
     />
   );
 }

@@ -1,4 +1,3 @@
-import { Control } from "react-hook-form";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   FormControl,
@@ -6,10 +5,10 @@ import {
   FormField,
   FormItem,
   FormLabel,
-  FormMessage,
 } from "@/components/ui/form";
-import { SYSTEM_NAME } from "@/lib/constants";
 import { type OrganizationRole } from "@/lib/api/leave-api";
+import { SYSTEM_NAME } from "@/lib/constants";
+import type { Control } from "react-hook-form";
 
 interface RolesCheckboxFieldProps {
   control: Control<any>;

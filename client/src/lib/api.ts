@@ -59,6 +59,23 @@ export const API_ENDPOINTS = {
     detail: (publicId: string) => `${API_BASE_URL}/api/teacher/admin/${publicId}/`,
     activate: (publicId: string) => `${API_BASE_URL}/api/teacher/admin/${publicId}/activate/`,
   },
+  subjects: {
+    list: `${API_BASE_URL}/api/subjects/`,
+    detail: (publicId: string) => `${API_BASE_URL}/api/subjects/${publicId}/`,
+    downloadTemplate: `${API_BASE_URL}/api/subjects/download_template/`,
+    bulkUpload: `${API_BASE_URL}/api/subjects/bulk_upload/`,
+  },
+  students: {
+    list: `${API_BASE_URL}/api/students/`,
+    classLevel: (classId: string) => `${API_BASE_URL}/api/students/classes/${classId}/students/`,
+    classDetail: (classId: string, publicId: string) => 
+      `${API_BASE_URL}/api/students/classes/${classId}/students/${publicId}/`,
+    activate: (classId: string, publicId: string) => 
+      `${API_BASE_URL}/api/students/classes/${classId}/students/${publicId}/activate/`,
+    bulkUpload: `${API_BASE_URL}/api/students/bulk-operations/bulk_upload/`,
+    downloadTemplate: `${API_BASE_URL}/api/students/bulk-operations/download_template/`,
+    exportData: `${API_BASE_URL}/api/students/bulk-operations/export_students_data/`,
+  },
   // Add more endpoints as needed
 } as const;
 

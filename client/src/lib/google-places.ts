@@ -139,7 +139,7 @@ export function initializeAutocompleteLegacy(
     const place = autocomplete.getPlace();
 
     if (!place.geometry) {
-      console.error("No details available for input: '" + place.name + "'");
+      console.error(`No details available for input: '${  place.name  }'`);
       return;
     }
 

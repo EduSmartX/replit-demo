@@ -4,13 +4,14 @@
  */
 
 import { LogOut, Building2 } from "lucide-react";
+import { useEffect, useRef } from "react";
 import { useLocation } from "wouter";
-import { AdminSidebar } from "@/modules/admin";
-import { ParentSidebar } from "@/modules/parent";
-import { TeacherSidebar } from "@/modules/teacher";
 import { Button } from "@/components/ui/button";
 import { useUser } from "@/core/contexts";
 import { useToast } from "@/hooks/use-toast";
+import { AdminSidebar } from "@/modules/admin";
+import { ParentSidebar } from "@/modules/parent";
+import { TeacherSidebar } from "@/modules/teacher";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -20,6 +21,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [location, setLocation] = useLocation();
   const { toast } = useToast();
   const { user, organization, logout } = useUser();
+  const scrollPositionRef = useRef<number>(0);
+  const shouldRestoreScroll = useRef<boolean>(false);
 
   // Get active menu from URL path
   const getActiveMenuFromPath = () => {
@@ -29,7 +32,37 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const activeMenu = getActiveMenuFromPath();
 
+  // Restore scroll position after navigation
+  useEffect(() => {
+    if (shouldRestoreScroll.current) {
+      // Use multiple timeouts to ensure DOM is fully rendered and content is loaded
+      const timer1 = setTimeout(() => {
+        window.scrollTo({
+          top: scrollPositionRef.current,
+          behavior: 'instant' as ScrollBehavior
+        });
+      }, 0);
+      
+      const timer2 = setTimeout(() => {
+        window.scrollTo({
+          top: scrollPositionRef.current,
+          behavior: 'instant' as ScrollBehavior
+        });
+        shouldRestoreScroll.current = false;
+      }, 100);
+
+      return () => {
+        clearTimeout(timer1);
+        clearTimeout(timer2);
+      };
+    }
+  }, [location]);
+
   const handleMenuChange = (menuId: string) => {
+    // Store current scroll position
+    scrollPositionRef.current = window.scrollY;
+    shouldRestoreScroll.current = true;
+    
     if (menuId === "overview") {
       setLocation("/dashboard");
     } else {
@@ -123,7 +156,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* Main Content */}
       <main className="flex flex-1 flex-col overflow-x-hidden">
         {/* Scrollable Content Area */}
-        <div className="mt-16 flex-1 min-h-screen pb-8">
+        <div className="mt-16 flex-1 min-h-screen pb-8 px-4 md:px-8">
           {children}
         </div>
       </main>

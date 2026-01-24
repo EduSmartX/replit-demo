@@ -5,19 +5,14 @@
  */
 
 import { useQuery } from "@tanstack/react-query";
-import { Plus, Filter, X, Eye, Edit, Trash2 } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useState } from "react";
+import { ResourceFilter, type FilterField } from "@/common/components/filters";
+import { createCommonColumns } from "@/common/components/tables";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable, type Column } from "@/components/ui/data-table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { TablePagination } from "@/components/ui/table-pagination";
 import {
   fetchLeaveAllocations,
@@ -25,7 +20,6 @@ import {
   fetchOrganizationRoles,
   type LeaveAllocation,
 } from "@/lib/api/leave-api";
-import { formatDateForDisplay } from "@/lib/utils/date-utils";
 
 interface LeaveAllocationsListProps {
   onCreateNew: () => void;
@@ -41,9 +35,8 @@ export function LeaveAllocationsList({
   onDelete,
 }: LeaveAllocationsListProps) {
   const [currentPage, setCurrentPage] = useState(1);
-  const [filterLeaveType, setFilterLeaveType] = useState<string>("all");
-  const [filterRole, setFilterRole] = useState<string>("all");
   const [pageSize, setPageSize] = useState(10);
+  const [filters, setFilters] = useState<Record<string, string>>({});
 
   // Fetch leave types for filter
   const { data: leaveTypesData } = useQuery({
@@ -56,20 +49,18 @@ export function LeaveAllocationsList({
     queryKey: ["organization-roles"],
     queryFn: fetchOrganizationRoles,
   });
-
-  // Fetch allocations with filters (fetch all without pagination for client-side filtering)
+  
   const {
     data: allocationsData,
     isLoading,
-    error,
-    refetch,
   } = useQuery({
-    queryKey: ["leave-allocations", filterLeaveType],
+    queryKey: ["leave-allocations", filters.leave_type, filters.role],
     queryFn: () =>
       fetchLeaveAllocations({
         page: 1,
         page_size: 100, // Fetch more records for client-side pagination
-        leave_type: filterLeaveType !== "all" ? parseInt(filterLeaveType) : undefined,
+        leave_type: filters.leave_type ? parseInt(filters.leave_type) : undefined,
+        role: filters.role ? parseInt(filters.role) : undefined,
       }),
     refetchOnMount: "always",
     refetchOnWindowFocus: true,
@@ -79,36 +70,20 @@ export function LeaveAllocationsList({
   const roles = rolesData?.data || [];
   const allAllocations = allocationsData?.data || [];
 
-  // Apply client-side role filtering
-  const filteredAllocations =
-    filterRole !== "all"
-      ? allAllocations.filter((allocation) => {
-          const rolesArray = allocation.roles.split(",").map((role) => role.trim());
-          return rolesArray.includes(filterRole);
-        })
-      : allAllocations;
-
   // Calculate client-side pagination
-  const totalRecords = filteredAllocations.length;
+  const totalRecords = allAllocations.length;
   const totalPages = Math.ceil(totalRecords / pageSize);
   const startIndex = (currentPage - 1) * pageSize;
   const endIndex = startIndex + pageSize;
-  const allocations = filteredAllocations.slice(startIndex, endIndex);
+  const allocations = allAllocations.slice(startIndex, endIndex);
 
   const handleClearFilters = () => {
-    setFilterLeaveType("all");
-    setFilterRole("all");
+    setFilters({});
     setCurrentPage(1);
   };
 
-  // Reset to page 1 when filters change
-  const handleLeaveTypeChange = (value: string) => {
-    setFilterLeaveType(value);
-    setCurrentPage(1);
-  };
-
-  const handleRoleChange = (value: string) => {
-    setFilterRole(value);
+  const handleApplyFilters = (newFilters: Record<string, string>) => {
+    setFilters(newFilters);
     setCurrentPage(1);
   };
 
@@ -117,7 +92,29 @@ export function LeaveAllocationsList({
     setCurrentPage(1);
   };
 
-  const hasActiveFilters = filterLeaveType !== "all" || filterRole !== "all";
+  // Build filter fields configuration
+  const filterFields: FilterField[] = [
+    {
+      name: "leave_type",
+      label: "Leave Type",
+      type: "select",
+      placeholder: "All Leave Types",
+      options: leaveTypes.map((type) => ({
+        value: type.id.toString(),
+        label: type.name,
+      })),
+    },
+    {
+      name: "role",
+      label: "Role",
+      type: "select",
+      placeholder: "All Roles",
+      options: roles.map((role) => ({
+        value: role.id.toString(),
+        label: role.name,
+      })),
+    },
+  ];
 
   // Define table columns
   const columns: Column<LeaveAllocation>[] = [
@@ -167,147 +164,32 @@ export function LeaveAllocationsList({
         );
       },
     },
-    {
-      header: "Created By",
-      accessor: (row) => (
-        <div className="text-sm">
-          <div className="text-gray-700">{row.created_by_name || "System"}</div>
-          <div className="text-xs text-gray-500">{formatDateForDisplay(row.created_at)}</div>
-        </div>
-      ),
-      sortable: true,
-      sortKey: "created_by_name",
-    },
-    {
-      header: "Last Updated",
-      accessor: (row) => (
-        <div className="text-sm text-gray-500">{formatDateForDisplay(row.updated_at)}</div>
-      ),
-      sortable: true,
-      sortKey: "updated_at",
-    },
-    {
-      header: "Actions",
-      accessor: (row) => (
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              onView?.(row);
-            }}
-            className="h-8 w-8 p-0 text-blue-600 hover:bg-blue-50 hover:text-blue-700"
-            title="View"
-          >
-            <Eye className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              onEdit?.(row);
-            }}
-            className="h-8 w-8 p-0 text-green-600 hover:bg-green-50 hover:text-green-700"
-            title="Edit"
-          >
-            <Edit className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete?.(row);
-            }}
-            className="h-8 w-8 p-0 text-red-600 hover:bg-red-50 hover:text-red-700"
-            title="Delete"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
-      ),
-    },
+    ...createCommonColumns<LeaveAllocation>({ onView, onEdit, onDelete }),
   ];
 
   return (
-    <div className="mx-auto max-w-7xl">
+    <div className="space-y-6">
       {/* Page Header */}
-      <div className="mt-10 mb-8 flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="mb-3 text-3xl font-bold text-gray-900">Leave Allocation Policies</h1>
           <p className="text-base text-gray-600">
             Manage leave policies and allocations for your organization
           </p>
         </div>
-        <Button onClick={onCreateNew} className="bg-blue-600 hover:bg-blue-700">
+        <Button onClick={onCreateNew}>
           <Plus className="mr-2 h-4 w-4" />
           Create Policy
         </Button>
       </div>
 
       {/* Filters Section */}
-      <Card className="mb-6 shadow-sm">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Filter className="h-5 w-5 text-gray-500" />
-              <CardTitle className="text-lg">Filters</CardTitle>
-            </div>
-            {hasActiveFilters && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleClearFilters}
-                className="text-gray-600 hover:text-gray-900"
-              >
-                <X className="mr-1 h-4 w-4" />
-                Clear Filters
-              </Button>
-            )}
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            {/* Leave Type Filter */}
-            <div>
-              <span className="mb-2 block text-sm font-medium text-gray-700">Leave Type</span>
-              <Select value={filterLeaveType} onValueChange={handleLeaveTypeChange}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="All Leave Types" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Leave Types</SelectItem>
-                  {leaveTypes.map((type) => (
-                    <SelectItem key={type.id} value={type.id.toString()}>
-                      {type.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Role Filter */}
-            <div>
-              <span className="mb-2 block text-sm font-medium text-gray-700">Role</span>
-              <Select value={filterRole} onValueChange={handleRoleChange}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="All Roles" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Roles</SelectItem>
-                  {roles.map((role) => (
-                    <SelectItem key={role.id} value={role.name}>
-                      {role.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <ResourceFilter
+        fields={filterFields}
+        onFilter={handleApplyFilters}
+        onReset={handleClearFilters}
+        defaultValues={filters}
+      />
 
       {/* Allocations Table */}
       <Card className="shadow-sm">

@@ -1,8 +1,8 @@
 import { Loader2, CheckCircle2 } from "lucide-react";
-import { UseFormRegister, FieldError, FieldValues } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import type { UseFormRegister, FieldError, FieldValues } from "react-hook-form";
 
 interface OtpInputProps<T extends FieldValues = FieldValues> {
   id: string;

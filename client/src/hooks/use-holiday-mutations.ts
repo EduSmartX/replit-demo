@@ -12,6 +12,7 @@ import {
   deleteHoliday,
 } from "@/lib/api/holiday-api";
 import type { CreateHolidayPayload } from "@/lib/api/holiday-api";
+import { parseBackendValidationError } from "@/lib/utils/form-error-handler";
 
 interface UseMutationOptions {
   onSuccess?: () => void;
@@ -36,11 +37,24 @@ export function useCreateHoliday(options?: UseMutationOptions) {
       options?.onSuccess?.();
     },
     onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error?.message || "Failed to create holiday",
-        variant: "destructive",
-      });
+      const errorData = parseBackendValidationError(error);
+      
+      if (errorData?.errors) {
+        const errorMessages = Object.entries(errorData.errors)
+          .flatMap(([field, messages]) => messages);
+        
+        toast({
+          title: "Validation Error",
+          description: errorMessages.join("\n• "),
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: error?.message || "Failed to create holiday",
+          variant: "destructive",
+        });
+      }
     },
   });
 }
@@ -66,11 +80,24 @@ export function useCreateHolidaysBulk(options?: UseMutationOptions) {
       options?.onSuccess?.();
     },
     onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error?.message || "Failed to create holidays",
-        variant: "destructive",
-      });
+      const errorData = parseBackendValidationError(error);
+      
+      if (errorData?.errors) {
+        const errorMessages = Object.entries(errorData.errors)
+          .flatMap(([field, messages]) => messages);
+        
+        toast({
+          title: "Validation Error",
+          description: errorMessages.join("\n• "),
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: error?.message || "Failed to create holidays",
+          variant: "destructive",
+        });
+      }
     },
   });
 }
@@ -94,11 +121,24 @@ export function useUpdateHoliday(options?: UseMutationOptions) {
       options?.onSuccess?.();
     },
     onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error?.message || "Failed to update holiday",
-        variant: "destructive",
-      });
+      const errorData = parseBackendValidationError(error);
+      
+      if (errorData?.errors) {
+        const errorMessages = Object.entries(errorData.errors)
+          .flatMap(([field, messages]) => messages);
+        
+        toast({
+          title: "Validation Error",
+          description: errorMessages.join("\n• "),
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: error?.message || "Failed to update holiday",
+          variant: "destructive",
+        });
+      }
     },
   });
 }
@@ -121,11 +161,24 @@ export function useDeleteHoliday(options?: UseMutationOptions) {
       options?.onSuccess?.();
     },
     onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error?.message || "Failed to delete holiday",
-        variant: "destructive",
-      });
+      const errorData = parseBackendValidationError(error);
+      
+      if (errorData?.errors) {
+        const errorMessages = Object.entries(errorData.errors)
+          .flatMap(([field, messages]) => messages);
+        
+        toast({
+          title: "Validation Error",
+          description: errorMessages.join("\n• "),
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: error?.message || "Failed to delete holiday",
+          variant: "destructive",
+        });
+      }
     },
   });
 }

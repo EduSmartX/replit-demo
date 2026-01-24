@@ -3,11 +3,9 @@
  * Allows editing a single holiday
  */
 
-import { useState, useEffect } from "react";
 import { Calendar, Loader2 } from "lucide-react";
-import type { CreateHolidayPayload, Holiday } from "@/lib/api/holiday-api";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { HolidayFormFields, validateHolidayData } from "./holiday-form-fields";
 import {
   Dialog,
   DialogContent,
@@ -16,8 +14,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useToast } from "@/hooks/use-toast";
 import { useUpdateHoliday } from "@/hooks/use-holiday-mutations";
+import { useToast } from "@/hooks/use-toast";
+import type { CreateHolidayPayload, Holiday } from "@/lib/api/holiday-api";
+import { HolidayFormFields, validateHolidayData } from "./holiday-form-fields";
 
 interface EditHolidayDialogProps {
   holiday: Holiday | null;
@@ -81,7 +81,7 @@ export function EditHolidayDialog({ holiday, open, onOpenChange }: EditHolidayDi
     setFormData({ ...formData, [field]: value });
   };
 
-  if (!holiday) return null;
+  if (!holiday) {return null;}
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

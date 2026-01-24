@@ -1,21 +1,25 @@
 import { useQuery, useMutation, useQueryClient, type UseQueryResult, type UseMutationResult } from "@tanstack/react-query";
-import type { UseFormSetError } from "react-hook-form";
-import { useToast } from "@/hooks/use-toast";
-import { setFormFieldErrors } from "@/lib/utils/form-error-handler";
-import { STUDENT_FIELD_MAP } from "@/lib/constants/form-field-maps";
+import { toast } from "sonner";
+import { fetchClasses, type MasterClass as Class } from "@/lib/api/class-api";
 import {
   createStudent,
   updateStudent,
-  fetchOrganizationRoles,
-  fetchOrganizationUsers,
+  reactivateStudent,
   type StudentCreatePayload,
   type StudentUpdatePayload,
-  type Student,
-  type OrganizationRole,
+  type StudentDetail,
 } from "@/lib/api/student-api";
-import { fetchClasses, type MasterClass as Class } from "@/lib/api/class-api";
-import { StudentMessages } from "../constants/student-messages";
+import { fetchOrganizationRoles, fetchOrganizationUsers, type OrganizationRole } from "@/lib/api/teacher-api";
+import { STUDENT_FIELD_MAP } from "@/lib/constants/form-field-maps";
+import {
+  isDeletedDuplicateError,
+  getDeletedDuplicateMessage,
+  getDeletedRecordId,
+  getApiErrorMessage,
+} from "@/lib/error-utils";
+import { setFormFieldErrors } from "@/lib/utils/form-error-handler";
 import type { StudentFormValues } from "../schemas/student-form-schema";
+import type { UseFormSetError } from "react-hook-form";
 
 type OrganizationUser = {
   email: string;
@@ -50,108 +54,85 @@ export function useOrganizationUsers(): UseQueryResult<OrganizationUser[]> {
 export function useCreateStudent(
   classId: string,
   setError: UseFormSetError<StudentFormValues>,
-  onSuccess: () => void
-): UseMutationResult<Student, Error, StudentCreatePayload> {
+  onSuccess?: () => void,
+  onDeletedDuplicate?: (message: string, payload: StudentCreatePayload, deletedRecordId: string | null) => void
+): UseMutationResult<StudentDetail, Error, { payload: StudentCreatePayload; forceCreate?: boolean }> {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   return useMutation({
-    mutationFn: (payload: StudentCreatePayload) => createStudent(classId, payload),
+    mutationFn: ({ payload, forceCreate }: { payload: StudentCreatePayload; forceCreate?: boolean }) =>
+      createStudent(classId, payload, forceCreate),
     onSuccess: () => {
-      // Invalidate both students and classes caches to reflect updated counts and relationships
-      queryClient.invalidateQueries({ queryKey: ["students"] });
-      queryClient.invalidateQueries({ queryKey: ["classes"] });
-      toast({
-        title: StudentMessages.success.create.title,
-        description: StudentMessages.success.create.description,
-      });
-      onSuccess();
+      await queryClient.invalidateQueries({ queryKey: ["students"] });
+      await queryClient.invalidateQueries({ queryKey: ["classes"] });
+      onSuccess?.();
     },
     onError: (error: unknown) => {
-      const errorObj = error as { response?: { data?: Record<string, unknown> }; message?: string };
-      
-      // Handle field-level errors from backend
-      if (errorObj.response?.data) {
-        const backendErrors = errorObj.response.data;
-        const hasFieldErrors = setFormFieldErrors(backendErrors, setError, STUDENT_FIELD_MAP);
-        
-        if (hasFieldErrors) {
-          toast({
-            title: StudentMessages.error.validation.title,
-            description: StudentMessages.error.validation.description,
-            variant: "destructive",
-          });
-        } else {
-          toast({
-            title: StudentMessages.error.create.title,
-            description: StudentMessages.error.create.description,
-            variant: "destructive",
-          });
-        }
+      if (isDeletedDuplicateError(error) && onDeletedDuplicate) {
+        const message = getDeletedDuplicateMessage(error);
+        const deletedRecordId = getDeletedRecordId(error);
+        const errorObj = error as any;
+        const payload = errorObj.payload as StudentCreatePayload;
+        onDeletedDuplicate(message, payload, deletedRecordId);
       } else {
-        toast({
-          title: StudentMessages.error.create.title,
-          description: errorObj.message || StudentMessages.error.create.description,
-          variant: "destructive",
-        });
+        const hasFieldErrors = setFormFieldErrors(error, setError, STUDENT_FIELD_MAP);
+        
+        if (!hasFieldErrors) {
+          const errorMessage = getApiErrorMessage(error);
+          toast.error(errorMessage);
+        }
       }
     },
   });
 }
 
+export function useReactivateStudent(
+  classId: string,
+  onSuccess?: () => void
+): UseMutationResult<StudentDetail, Error, string> {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (publicId: string) => reactivateStudent(classId, publicId),
+    onSuccess: () => {
+      await queryClient.invalidateQueries({ queryKey: ["students"] });
+      await queryClient.invalidateQueries({ queryKey: ["classes"] });
+      onSuccess?.();
+    },
+    onError: (error: Error) => {
+      const errorMessage = getApiErrorMessage(error);
+      toast.error(errorMessage);
+    },
+  });
+}
+
 export function useUpdateStudent(
+  classId: string,
   publicId: string | undefined,
   setError: UseFormSetError<StudentFormValues>,
-  onSuccess: () => void
-): UseMutationResult<Student, Error, StudentUpdatePayload> {
+  onSuccess?: () => void
+): UseMutationResult<StudentDetail, Error, StudentUpdatePayload> {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   return useMutation({
     mutationFn: (payload: StudentUpdatePayload) => {
       if (!publicId) {
         throw new Error("Student ID is required for update");
       }
-      return updateStudent(publicId, payload);
+      return updateStudent(classId, publicId, payload);
     },
     onSuccess: () => {
-      // Triple invalidation: list + detail + related classes to maintain consistency across all views
       queryClient.invalidateQueries({ queryKey: ["students"] });
       queryClient.invalidateQueries({ queryKey: ["student", publicId] });
       queryClient.invalidateQueries({ queryKey: ["classes"] });
-      toast({
-        title: StudentMessages.success.update.title,
-        description: StudentMessages.success.update.description,
-      });
-      onSuccess();
+      onSuccess?.();
     },
     onError: (error: unknown) => {
-      const errorObj = error as { response?: { data?: Record<string, unknown> }; message?: string };
+      const hasFieldErrors = setFormFieldErrors(error, setError, STUDENT_FIELD_MAP);
       
-      // Handle field-level errors from backend
-      if (errorObj.response?.data) {
-        const backendErrors = errorObj.response.data;
-        const hasFieldErrors = setFormFieldErrors(backendErrors, setError, STUDENT_FIELD_MAP);
-        
-        if (hasFieldErrors) {
-          toast({
-            title: StudentMessages.error.validation.title,
-            description: StudentMessages.error.validation.description,
-            variant: "destructive",
-          });
-        } else {
-          toast({
-            title: StudentMessages.error.update.title,
-            description: StudentMessages.error.update.description,
-            variant: "destructive",
-          });
-        }
-      } else {
-        toast({
-          title: StudentMessages.error.update.title,
-          description: errorObj.message || StudentMessages.error.update.description,
-          variant: "destructive",
-        });
+      if (!hasFieldErrors) {
+        const errorMessage = getApiErrorMessage(error);
+        toast.error(errorMessage);
       }
     },
   });

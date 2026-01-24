@@ -1,38 +1,33 @@
-/**
- * Bulk Upload Teachers Component
- * Uses the generic BulkUploadDialog with teacher-specific configuration
- */
-
 import { useState } from "react";
 import { BulkUploadDialog } from "@/common/components/dialogs";
-import { downloadTeacherTemplate, bulkUploadTeachers } from "@/lib/api/teacher-api";
+import { bulkUploadStudents, downloadStudentTemplate } from "@/lib/api/student-api";
 
-export function BulkUploadTeachers() {
+export function BulkUploadStudents() {
   const [isMinimalFields, setIsMinimalFields] = useState(false);
 
   const handleDownloadTemplate = async () => {
-    return downloadTeacherTemplate(isMinimalFields);
+    return downloadStudentTemplate(isMinimalFields);
   };
 
   const getTemplateFileName = () => {
     return isMinimalFields
-      ? "teacher_import_template_minimal.xlsx"
-      : "teacher_import_template_full.xlsx";
+      ? "student_import_template_minimal.xlsx"
+      : "student_import_template_full.xlsx";
   };
 
   return (
     <BulkUploadDialog
-      title="Bulk Upload Teachers"
+      title="Bulk Upload Students"
       description={
         isMinimalFields
-          ? "Download the minimal template with only mandatory fields, fill in teacher details, and upload the file"
-          : "Download the template, fill in teacher details, and upload the file"
+          ? "Download the minimal template with only mandatory fields, fill in student details, and upload the file"
+          : "Download the template, fill in student details, and upload the file"
       }
       triggerLabel="Bulk Upload"
       triggerVariant="outline"
       downloadTemplate={handleDownloadTemplate}
-      uploadFile={bulkUploadTeachers}
-      invalidateQueryKeys={["teachers"]}
+      uploadFile={bulkUploadStudents}
+      invalidateQueryKeys={["students"]}
       templateFileName={getTemplateFileName()}
       acceptedFileTypes=".xlsx,.xls"
       showMinimalFieldsCheckbox={true}

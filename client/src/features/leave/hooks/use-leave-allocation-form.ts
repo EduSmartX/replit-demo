@@ -1,5 +1,4 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useToast } from "@/hooks/use-toast";
 import {
   createLeaveAllocation,
   updateLeaveAllocation,
@@ -7,11 +6,11 @@ import {
   fetchOrganizationRoles,
   type LeaveAllocationPayload,
 } from "@/lib/api/leave-api";
+import { LEAVE_FIELD_MAP, LeaveMessages } from "@/lib/constants";
 import { parseApiError } from "@/lib/error-parser";
 import { setFormFieldErrors } from "@/lib/utils/form-error-handler";
-import { LEAVE_FIELD_MAP, LeaveMessages } from "@/lib/constants";
-import type { UseFormSetError } from "react-hook-form";
 import type { LeaveAllocationFormValues } from "../schemas/leave-allocation-schema";
+import type { UseFormSetError } from "react-hook-form";
 
 export function useLeaveTypes() {
   const { data, isLoading } = useQuery({
@@ -43,19 +42,12 @@ export function useCreateLeaveAllocation(
   formSetError: UseFormSetError<LeaveAllocationFormValues>,
   onSuccess?: () => void
 ) {
-  const { toast } = useToast();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (data: LeaveAllocationPayload) => createLeaveAllocation(data),
-    onSuccess: (response) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["leave-allocations"] });
-
-      toast({
-        title: "Success",
-        description: response.message || LeaveMessages.Success.CREATED,
-      });
-
       onSuccess?.();
     },
     onError: (error: unknown) => {
@@ -64,7 +56,7 @@ export function useCreateLeaveAllocation(
       const hasFieldErrors = setFormFieldErrors(
         error,
         formSetError,
-        LEAVE_FIELD_MAP as any
+        LEAVE_FIELD_MAP
       );
 
       if (hasFieldErrors) {
@@ -72,11 +64,8 @@ export function useCreateLeaveAllocation(
       }
 
       const errorMessage = parseApiError(error, LeaveMessages.Error.CREATE_FAILED);
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
+      // Error handling without toast - errors shown inline or via dialog
+      console.error("Create leave allocation error:", errorMessage);
     },
   });
 }
@@ -85,28 +74,29 @@ export function useUpdateLeaveAllocation(
   formSetError: UseFormSetError<LeaveAllocationFormValues>,
   onSuccess?: () => void
 ) {
-  const { toast } = useToast();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: ({ publicId, data }: { publicId: string; data: Partial<LeaveAllocationPayload> }) =>
       updateLeaveAllocation(publicId, data),
-    onSuccess: (response, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["leave-allocations"], exact: false });
-      queryClient.invalidateQueries({ queryKey: ["leave-allocation-detail", variables.publicId] });
-
-      toast({
-        title: "Success",
-        description: response.message || LeaveMessages.Success.UPDATED,
+    onSuccess: (_response, variables) => {
+      queryClient.invalidateQueries({ 
+        queryKey: ["leave-allocations"], 
+        exact: false,
+        refetchType: "none"
       });
-
+      // Invalidate and refetch only the detail that was updated
+      queryClient.invalidateQueries({ 
+        queryKey: ["leave-allocation-detail", variables.publicId],
+        refetchType: "active"
+      });
       onSuccess?.();
     },
     onError: (error: unknown) => {
       const hasFieldErrors = setFormFieldErrors(
         error,
         formSetError,
-        LEAVE_FIELD_MAP as any
+        LEAVE_FIELD_MAP
       );
 
       if (hasFieldErrors) {
@@ -114,11 +104,8 @@ export function useUpdateLeaveAllocation(
       }
 
       const errorMessage = parseApiError(error, LeaveMessages.Error.UPDATE_FAILED);
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
+      // Error handling without toast - errors shown inline or via dialog
+      console.error("Update leave allocation error:", errorMessage);
     },
   });
 }

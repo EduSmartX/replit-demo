@@ -1,5 +1,5 @@
-import { ReactNode } from "react";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import type { ReactNode } from "react";
 
 interface AuthFormCardProps {
   children: ReactNode;

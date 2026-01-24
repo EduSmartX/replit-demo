@@ -8,6 +8,7 @@
  * - Application routing
  * 
  * Route Structure:
+ * - / - Home/Landing page
  * - /auth - Authentication (login/signup)
  * - /dashboard - Role-based dashboard home
  * - /teachers - Teacher management
@@ -17,30 +18,33 @@
  */
 
 import { QueryClientProvider } from "@tanstack/react-query";
-import { Switch, Route, Redirect } from "wouter";
-import { queryClient } from "./lib/queryClient";
-import { ProtectedRoute } from "@/features/auth";
+import { Route, Switch } from "wouter";
+import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { UserProvider } from "@/core/contexts";
-import AuthPage from "@/pages/auth-page";
+import { ProtectedRoute } from "@/features/auth";
 import {
-  AllocationsPage,
-  OrganizationPage,
-  OverviewPage,
-  PreferencesPage,
-  TeachersPage,
-  ClassesPage,
-  StudentsPage
+    AllocationsPage,
+    ClassesPage,
+    OrganizationPage,
+    OverviewPage,
+    PreferencesPage,
+    StudentsPage,
+    SubjectsPage,
+    TeachersPage
 } from "@/modules/admin/pages";
+import AuthPage from "@/pages/auth-page";
+import HomePage from "@/pages/home-page";
 import NotFound from "@/pages/not-found";
 import OrganizationPendingPage from "@/pages/organization-pending";
 import RegistrationSuccess from "@/pages/registration-success";
+import { queryClient } from "./lib/queryClient";
 
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={() => <Redirect to="/auth" />} />
+      <Route path="/" component={HomePage} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/registration-success" component={RegistrationSuccess} />
       <Route path="/dashboard">
@@ -88,6 +92,16 @@ function Router() {
           <ClassesPage />
         </ProtectedRoute>
       </Route>
+      <Route path="/subjects">
+        <ProtectedRoute>
+          <SubjectsPage />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/subjects/:id">
+        <ProtectedRoute>
+          <SubjectsPage />
+        </ProtectedRoute>
+      </Route>
       <Route path="/students">
         <ProtectedRoute>
           <StudentsPage />
@@ -114,6 +128,7 @@ function App() {
       <UserProvider>
         <TooltipProvider>
           <Toaster />
+          <SonnerToaster />
           <Router />
         </TooltipProvider>
       </UserProvider>

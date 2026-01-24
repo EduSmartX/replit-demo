@@ -81,11 +81,11 @@ export async function fetchHolidayCalendar(
 ): Promise<HolidayCalendarResponse> {
   const queryParams = new URLSearchParams();
 
-  if (params?.from_date) queryParams.append("from_date", params.from_date);
-  if (params?.to_date) queryParams.append("to_date", params.to_date);
-  if (params?.ordering) queryParams.append("ordering", params.ordering);
-  if (params?.page) queryParams.append("page", params.page.toString());
-  if (params?.page_size) queryParams.append("page_size", params.page_size.toString());
+  if (params?.from_date) {queryParams.append("from_date", params.from_date);}
+  if (params?.to_date) {queryParams.append("to_date", params.to_date);}
+  if (params?.ordering) {queryParams.append("ordering", params.ordering);}
+  if (params?.page) {queryParams.append("page", params.page.toString());}
+  if (params?.page_size) {queryParams.append("page_size", params.page_size.toString());}
 
   const url = `${API_ENDPOINTS.attendance.holidayCalendar}${
     queryParams.toString() ? `?${queryParams.toString()}` : ""
@@ -443,7 +443,7 @@ function getNthWeekdayOfMonth(year: number, month: number, weekday: number, n: n
  * Check if a date is the nth occurrence of a weekday in its month
  */
 export function isNthWeekdayOfMonth(date: Date, weekday: number, occurrences: number[]): boolean {
-  if (date.getDay() !== weekday) return false;
+  if (date.getDay() !== weekday) {return false;}
   
   const year = date.getFullYear();
   const month = date.getMonth();

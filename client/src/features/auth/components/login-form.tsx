@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useLocation } from "wouter";
 import * as z from "zod";
-import { AuthFormCard } from "./auth-form-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,6 +11,7 @@ import { useUser } from "@/core/contexts";
 import { useToast } from "@/hooks/use-toast";
 import { api, API_ENDPOINTS, saveTokens } from "@/lib/api";
 import { ErrorMessages, SuccessMessages, ValidationErrorMessages } from "@/lib/constants";
+import { AuthFormCard } from "./auth-form-card";
 
 const loginSchema = z.object({
   username: z.string().min(1, ValidationErrorMessages.USERNAME_REQUIRED),
@@ -99,24 +99,24 @@ export function LoginForm({ onForgotPassword }: LoginFormProps) {
       <AuthFormCard
         footer={
           <Button
-            className="w-full h-12 text-base"
+            className="w-full h-11 text-sm"
             type="submit"
             disabled={isLoading}
             data-testid="button-login"
           >
-            {isLoading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : "Sign In"}
-            {!isLoading && <ArrowRight className="ml-2 h-5 w-5" />}
+            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Sign In"}
+            {!isLoading && <ArrowRight className="ml-2 h-4 w-4" />}
           </Button>
         }
       >
         <div className="space-y-2">
-          <Label htmlFor="username" className="text-base">Username</Label>
+          <Label htmlFor="username" className="text-sm">Username</Label>
           <div className="relative">
-            <UserIcon className="text-muted-foreground absolute top-3.5 left-3 h-5 w-5" />
+            <UserIcon className="text-muted-foreground absolute top-3 left-3 h-4 w-4" />
             <Input
               id="username"
               placeholder="Enter your username"
-              className="pl-10 h-12 text-base"
+              className="pl-9 h-11 text-sm"
               {...form.register("username")}
               data-testid="input-username"
             />
@@ -127,7 +127,7 @@ export function LoginForm({ onForgotPassword }: LoginFormProps) {
         </div>
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <Label htmlFor="password" className="text-base">Password</Label>
+            <Label htmlFor="password" className="text-sm">Password</Label>
             <Button
               variant="link"
               className="text-primary h-auto px-0 text-sm"
@@ -139,11 +139,11 @@ export function LoginForm({ onForgotPassword }: LoginFormProps) {
             </Button>
           </div>
           <div className="relative">
-            <Lock className="text-muted-foreground absolute top-3.5 left-3 h-5 w-5" />
+            <Lock className="text-muted-foreground absolute top-3 left-3 h-4 w-4" />
             <Input
               id="password"
               type="password"
-              className="pl-10 h-12 text-base"
+              className="pl-9 h-11 text-sm"
               {...form.register("password")}
               data-testid="input-password"
             />

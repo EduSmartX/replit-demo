@@ -3,114 +3,132 @@
  * Defines column structure for students data table
  */
 
-import { Eye, Pencil, Trash2 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Pencil, Trash2, RotateCcw, User, Eye } from "lucide-react";
+import { createCreatedByColumn, createLastUpdatedColumn } from "@/common/components/tables";
 import { Button } from "@/components/ui/button";
 import type { Column } from "@/components/ui/data-table";
 import type { Student } from "@/lib/api/student-api";
 
 interface GetStudentColumnsOptions {
-  onView: (student: Student) => void;
-  onEdit: (student: Student) => void;
-  onDelete: (publicId: string) => void;
+  onView?: (student: Student) => void;
+  onEdit?: (student: Student) => void;
+  onDelete?: (student: Student) => void;
+  onReactivate?: (publicId: string) => void;
 }
 
 export function getStudentColumns({
   onView,
   onEdit,
   onDelete,
+  onReactivate,
 }: GetStudentColumnsOptions): Column<Student>[] {
   return [
     {
-      key: "roll_number",
-      label: "Roll No",
-      render: (student) => (
-        <span className="font-medium text-gray-900">{student.roll_number}</span>
-      ),
-    },
-    {
-      key: "full_name",
-      label: "Student Name",
-      render: (student) => (
-        <div className="flex flex-col">
-          <span className="font-medium text-gray-900">{student.full_name}</span>
-          <span className="text-sm text-gray-500">{student.user?.email || "No email"}</span>
+      header: "Class",
+      accessor: (student) => (
+        <div>
+          <p className="font-medium text-gray-900">{student.class_info.class_master_name} ( {student.class_info.name} )</p>          
         </div>
       ),
+      sortable: true,
+      sortKey: "class_info.name",
     },
     {
-      key: "admission_number",
-      label: "Admission No",
-      render: (student) => (
-        <span className="text-sm text-gray-600">{student.admission_number || "N/A"}</span>
-      ),
-    },
-    {
-      key: "class_assigned",
-      label: "Class",
-      render: (student) => {
-        if (!student.class_assigned) {
-          return <Badge variant="outline">Not Assigned</Badge>;
-        }
-        return (
-          <Badge variant="secondary">
-            {student.class_assigned.class_master?.name || ""} - {student.class_assigned.name}
-          </Badge>
-        );
-      },
-    },
-    {
-      key: "guardian_name",
-      label: "Guardian",
-      render: (student) => (
-        <div className="flex flex-col">
-          <span className="text-sm text-gray-900">{student.guardian_name || "N/A"}</span>
-          <span className="text-xs text-gray-500">{student.guardian_phone || ""}</span>
+      header: "Student Name",
+      accessor: (student) => (
+        <div className="flex items-center gap-2">
+          <User className="h-4 w-4 text-gray-400" />
+          <p className="font-medium text-gray-900">{student.user_info.full_name}</p>
         </div>
       ),
+      sortable: true,
+      sortKey: "user_info.full_name",
     },
     {
-      key: "admission_date",
-      label: "Admission Date",
-      render: (student) => (
-        <span className="text-sm text-gray-600">
-          {student.admission_date
-            ? new Date(student.admission_date).toLocaleDateString()
-            : "N/A"}
-        </span>
+      header: "Roll Number",
+      accessor: (student) => (
+        <p className="text-sm text-gray-900">{student.roll_number}</p>
+      ),
+      sortable: true,
+      sortKey: "roll_number",
+    },
+    {
+      header: "Admission Number",
+      accessor: (student) => (
+        <p className="text-sm text-gray-900">{student.admission_number || "-"}</p>
+      ),
+      sortable: true,
+      sortKey: "admission_number",
+    },
+    {
+      header: "Guardian",
+      accessor: (student) => (
+        <p className="font-medium text-gray-900">{student.guardian_name || "-"}</p>
       ),
     },
+    createCreatedByColumn<Student>(),
+    createLastUpdatedColumn<Student>(),
     {
-      key: "actions",
-      label: "Actions",
-      render: (student) => (
-        <div className="flex gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onView(student)}
-            className="text-blue-600 hover:text-blue-700"
-          >
-            <Eye className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onEdit(student)}
-            className="text-orange-600 hover:text-orange-700"
-          >
-            <Pencil className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onDelete(student.public_id)}
-            className="text-red-600 hover:text-red-700"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
+      header: "Actions",
+      accessor: (student) => (
+        <div className="flex items-center gap-2">
+          {onReactivate ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                onReactivate(student.public_id);
+              }}
+              className="h-8 px-3 text-blue-600 hover:bg-blue-50 hover:text-blue-700"
+              title="Reactivate"
+            >
+              <RotateCcw className="h-4 w-4 mr-1" />
+              Reactivate
+            </Button>
+          ) : (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onView?.(student);
+                }}
+                className="h-8 w-8 p-0 text-blue-600 hover:bg-blue-50 hover:text-blue-700"
+                title="View"
+              >
+                <Eye className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit?.(student);
+                }}
+                className="h-8 w-8 p-0 text-green-600 hover:bg-green-50 hover:text-green-700"
+                title="Edit"
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete?.(student);
+                }}
+                className="h-8 w-8 p-0 text-red-600 hover:bg-red-50 hover:text-red-700"
+                title="Delete"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </>
+          )}
         </div>
       ),
     },
   ];
 }
+

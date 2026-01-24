@@ -3,9 +3,9 @@
  * Uses the generic BulkUploadDialog with class-specific configuration
  */
 
+import { useState } from "react";
 import { BulkUploadDialog } from "@/common/components/dialogs";
 import { bulkUploadClasses, downloadClassTemplate } from "@/lib/api/class-api";
-import { useState } from "react";
 
 export function BulkUploadClasses() {
   const [isMinimalFields, setIsMinimalFields] = useState(false);

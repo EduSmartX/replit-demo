@@ -6,13 +6,13 @@ import type { LeaveAllocation, OrganizationRole } from "@/lib/api/leave-api";
 import type { LeaveAllocationFormValues } from "../schemas/leave-allocation-schema";
 
 export function parseLocalDate(dateString: string | null | undefined): Date | undefined {
-  if (!dateString) return undefined;
+  if (!dateString) {return undefined;}
   const [year, month, day] = dateString.split("-").map(Number);
   return new Date(year, month - 1, day); // month is 0-indexed
 }
 
 export function parseRoleNames(rolesString?: string): string[] {
-  if (!rolesString) return [];
+  if (!rolesString) {return [];}
   return rolesString
     .split(",")
     .map((r) => r.trim())

@@ -7,41 +7,42 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CheckCircle2, Loader2 } from "lucide-react";
-import { useState, useEffect } from "react";
-import { useForm, Control } from "react-hook-form";
+import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+    Form,
+    FormControl,
+    FormDescription,
+    FormField,
+    FormItem,
+    FormLabel,
+    FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
+import type { LeaveAllocation, LeaveAllocationPayload } from "@/lib/api/leave-api";
+import { LeaveMessages } from "@/lib/constants";
+import { formatDateForDisplay } from "@/lib/utils/date-utils";
+import {
+    formatDateForApi,
+    getDefaultFormValues,
+    getFormValuesFromAllocation,
+} from "../../helpers/leave-allocation-helpers";
+import {
+    useCreateLeaveAllocation,
+    useLeaveTypes,
+    useOrganizationRoles,
+    useUpdateLeaveAllocation,
+} from "../../hooks/use-leave-allocation-form";
+import { createLeaveAllocationSchema, type LeaveAllocationFormValues } from "../../schemas/leave-allocation-schema";
 import { DateRangeFields } from "../common/date-range-fields";
 import { LeaveTypeField } from "../common/leave-type-field";
 import { PolicyFormHeader } from "../common/policy-form-header";
 import { PolicySummaryCard } from "../common/policy-summary-card";
 import { RolesCheckboxField } from "../common/roles-checkbox-field";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
-import type { LeaveAllocationPayload, LeaveAllocation } from "@/lib/api/leave-api";
-import { formatDateForDisplay } from "@/lib/utils/date-utils";
-import { LeaveMessages } from "@/lib/constants";
-import { createLeaveAllocationSchema, type LeaveAllocationFormValues } from "../../schemas/leave-allocation-schema";
-import {
-  getDefaultFormValues,
-  getFormValuesFromAllocation,
-  formatDateForApi,
-} from "../../helpers/leave-allocation-helpers";
-import {
-  useLeaveTypes,
-  useOrganizationRoles,
-  useCreateLeaveAllocation,
-  useUpdateLeaveAllocation,
-} from "../../hooks/use-leave-allocation-form";
+import type { Control} from "react-hook-form";
 
 interface LeaveAllocationFormProps {
   mode?: "create" | "view" | "edit";
@@ -155,7 +156,7 @@ export function LeaveAllocationForm({
   }
 
   return (
-    <div className="mx-auto max-w-7xl">
+    <div className="space-y-6">
       <PolicyFormHeader mode={mode} onCancel={onCancel} onEdit={onEdit} />
 
       {showSuccess && (

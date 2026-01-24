@@ -1,4 +1,3 @@
-import { Control } from "react-hook-form";
 import {
   FormControl,
   FormDescription,
@@ -15,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { type LeaveType } from "@/lib/api/leave-api";
+import type { Control } from "react-hook-form";
 
 interface LeaveTypeFieldProps {
   control: Control<any>;

@@ -2,10 +2,11 @@ import { Loader2, MapPin } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import type {
+  AddressComponents} from "@/lib/google-places";
 import {
   loadGoogleMapsScript,
-  initializeAutocompleteLegacy,
-  AddressComponents,
+  initializeAutocompleteLegacy
 } from "@/lib/google-places";
 
 interface AddressAutocompleteProps {
@@ -57,7 +58,7 @@ export function AddressAutocomplete({
       try {
         await loadGoogleMapsScript();
 
-        if (!mounted || !inputRef.current) return;
+        if (!mounted || !inputRef.current) {return;}
 
         // Use legacy API for now since it's still supported
         autocompleteRef.current = initializeAutocompleteLegacy(
