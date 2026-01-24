@@ -191,7 +191,7 @@ export function SingleSubjectForm({ subject, onSuccess, onCancel }: SingleSubjec
       form.reset();
       onSuccess?.();
     },
-    onError: (error: any) => {
+    onError: (_error: any) => {
       // Error is displayed in dialog
     },
   });

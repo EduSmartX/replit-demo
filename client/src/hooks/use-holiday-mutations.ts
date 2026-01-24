@@ -41,7 +41,7 @@ export function useCreateHoliday(options?: UseMutationOptions) {
       
       if (errorData?.errors) {
         const errorMessages = Object.entries(errorData.errors)
-          .flatMap(([field, messages]) => messages);
+          .flatMap(([_field, messages]) => messages);
         
         toast({
           title: "Validation Error",
@@ -84,7 +84,7 @@ export function useCreateHolidaysBulk(options?: UseMutationOptions) {
       
       if (errorData?.errors) {
         const errorMessages = Object.entries(errorData.errors)
-          .flatMap(([field, messages]) => messages);
+          .flatMap(([_field, messages]) => messages);
         
         toast({
           title: "Validation Error",
@@ -125,7 +125,7 @@ export function useUpdateHoliday(options?: UseMutationOptions) {
       
       if (errorData?.errors) {
         const errorMessages = Object.entries(errorData.errors)
-          .flatMap(([field, messages]) => messages);
+          .flatMap(([_field, messages]) => messages);
         
         toast({
           title: "Validation Error",
@@ -165,7 +165,7 @@ export function useDeleteHoliday(options?: UseMutationOptions) {
       
       if (errorData?.errors) {
         const errorMessages = Object.entries(errorData.errors)
-          .flatMap(([field, messages]) => messages);
+          .flatMap(([_field, messages]) => messages);
         
         toast({
           title: "Validation Error",

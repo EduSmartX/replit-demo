@@ -69,7 +69,7 @@ export function useCreateSubject() {
       if (errorData?.errors) {
         // Extract all error messages
         const errorMessages = Object.entries(errorData.errors)
-          .flatMap(([field, messages]) => messages);
+          .flatMap(([_field, messages]) => messages);
         
         toast({
           title: "Validation Error",
@@ -110,7 +110,7 @@ export function useUpdateSubject(publicId: string) {
       if (errorData?.errors) {
         // Extract all error messages
         const errorMessages = Object.entries(errorData.errors)
-          .flatMap(([field, messages]) => messages);
+          .flatMap(([_field, messages]) => messages);
         
         toast({
           title: "Validation Error",
@@ -150,7 +150,7 @@ export function useDeleteSubject() {
       if (errorData?.errors) {
         // Extract all error messages
         const errorMessages = Object.entries(errorData.errors)
-          .flatMap(([field, messages]) => messages);
+          .flatMap(([_field, messages]) => messages);
         
         toast({
           title: "Validation Error",

@@ -56,7 +56,7 @@ interface OrganizationHolidayCalendarProps {
 export function OrganizationHolidayCalendar({ className }: OrganizationHolidayCalendarProps) {
   const [viewMode, setViewMode] = useState<ViewMode>("calendar");
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [dateRange] = useState<DateRange>("monthly");
+  const [_dateRange] = useState<DateRange>("monthly");
 
   // Year-based caching strategy: Fetch working day policy once and cache for 30min
   const { data: workingDayPolicyData } = useQuery({
@@ -490,7 +490,7 @@ interface TableViewProps {
   allHolidays: Holiday[];
 }
 
-function TableView({ holidays, allHolidays }: TableViewProps) {
+function TableView({ holidays, allHolidays: _allHolidays }: TableViewProps) {
   const [editingHoliday, setEditingHoliday] = useState<Holiday | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);

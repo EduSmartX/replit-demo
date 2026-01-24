@@ -2,8 +2,8 @@
  * Organization Preferences API Functions
  */
 
-import { apiRequest, API_ENDPOINTS } from "@/lib/api";
-import type { ApiResponse, ApiListResponse } from "./types";
+import { apiRequest } from "@/lib/api";
+import type { ApiResponse } from "./types";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 

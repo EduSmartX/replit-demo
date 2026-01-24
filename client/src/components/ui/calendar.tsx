@@ -12,7 +12,7 @@ function Calendar({
   classNames,
   showOutsideDays = false,
   captionLayout = "buttons",
-  buttonVariant = "ghost",
+  buttonVariant: _buttonVariant = "ghost",
   formatters,
   components,
   ...props

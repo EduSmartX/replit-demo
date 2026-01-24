@@ -60,7 +60,7 @@ export default function DashboardPage() {
     return null;
   }
 
-  const handleLogout = () => {
+  const _handleLogout = () => {
     toast({
       title: "Logged out",
       description: "You have been successfully logged out.",
@@ -69,7 +69,7 @@ export default function DashboardPage() {
     setLocation("/auth");
   };
 
-  const getRoleColor = () => {
+  const _getRoleColor = () => {
     switch (user.role) {
       case "admin":
         return "from-blue-600 via-teal-500 to-green-600";

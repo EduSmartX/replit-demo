@@ -14,8 +14,6 @@ import { DeletedDuplicateDialog } from "@/common/components/dialogs/deleted-dupl
 import {
     BloodGroupField,
     DateInputField,
-    OrganizationRoleField,
-    SupervisorField,
     TextInputField
 } from "@/common/components/forms";
 import {

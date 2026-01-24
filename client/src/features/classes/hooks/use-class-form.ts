@@ -103,7 +103,7 @@ export function useCreateMultipleClasses(
   onSuccess?: () => void,
   onDeletedDuplicateError?: (error: any, data: ClassCreatePayload[]) => boolean
 ) {
-  const { toast } = useToast();
+  const { toast: _toast } = useToast();
   const queryClient = useQueryClient();
 
   return useMutation({
