@@ -62,7 +62,7 @@ export function useCreateStudent(
   return useMutation({
     mutationFn: ({ payload, forceCreate }: { payload: StudentCreatePayload; forceCreate?: boolean }) =>
       createStudent(classId, payload, forceCreate),
-    onSuccess: () => {
+    onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["students"] });
       await queryClient.invalidateQueries({ queryKey: ["classes"] });
       onSuccess?.();
