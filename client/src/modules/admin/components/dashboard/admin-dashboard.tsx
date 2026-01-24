@@ -106,7 +106,7 @@ const upcomingEvents = [
 
 export function DashboardContent() {
   return (
-    <div className="mx-auto max-w-7xl space-y-8">
+    <div className="space-y-6">
       {/* Welcome Section */}
       <div className="space-y-2">
         <h1 className="bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-4xl font-bold text-transparent">

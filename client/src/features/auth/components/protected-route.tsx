@@ -1,6 +1,6 @@
-import { ReactNode } from "react";
 import { Redirect, useLocation } from "wouter";
 import { useUser } from "@/core/contexts";
+import type { ReactNode } from "react";
 
 interface ProtectedRouteProps {
   children: ReactNode;

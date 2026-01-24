@@ -2,196 +2,214 @@
  * Classes/Sections List Component (Admin)
  * Displays a filterable and paginated table of all classes/sections in the organization.
  * Provides search, filtering, and CRUD actions.
+ * Supports deleted view for reactivating classes.
  */
 
+import { useQuery } from "@tanstack/react-query";
+import { Plus } from "lucide-react";
+import { useState } from "react";
+import { DeletedViewToggle } from "@/common/components";
+import { ResourceFilter, type FilterField } from "@/common/components/filters";
+import {
+  getCardDescription,
+  getCardTitle,
+  getEmptyMessage,
+  getListDescription,
+  getListTitle,
+} from "@/common/utils/deleted-view-helpers";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { DataTable, type Column } from "@/components/ui/data-table";
-import { Input } from "@/components/ui/input";
+import { DataTable } from "@/components/ui/data-table";
 import { TablePagination } from "@/components/ui/table-pagination";
-import { fetchClasses, type MasterClass } from "@/lib/api/class-api";
-import { useQuery } from "@tanstack/react-query";
-import { Eye, GraduationCap, Pencil, Plus, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useDeletedView } from "@/hooks/use-deleted-view";
+import { fetchClasses, fetchCoreClasses, reactivateClass, type MasterClass } from "@/lib/api/class-api";
+import { fetchTeachers } from "@/lib/api/teacher-api";
 import { BulkUploadClasses } from "./bulk-upload-classes";
+import { getClassColumns } from "./classes-table-columns";
 
 interface ClassesListProps {
   onCreateNew: () => void;
   onView: (classData: MasterClass) => void;
   onEdit: (classData: MasterClass) => void;
   onDelete: (classData: MasterClass) => void;
+  onReactivate?: (classData: MasterClass) => void;
 }
 
-export function ClassesList({ onCreateNew, onView, onEdit, onDelete }: ClassesListProps) {
-  const [currentPage, setCurrentPage] = useState(1);
-  const [searchQuery, setSearchQuery] = useState<string>("");
+export function ClassesList({ 
+  onCreateNew, 
+  onView, 
+  onEdit, 
+  onDelete,
+  onReactivate
+}: ClassesListProps) {
+  const [filters, setFilters] = useState<Record<string, string>>({});
+  const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  // Fetch all classes once, paginate client-side to avoid refetch on page navigation
+  const {
+    showDeleted,
+    toggleDeletedView,
+    handleReactivate: _handleReactivate,
+  } = useDeletedView({
+    resourceName: "Section",
+    queryKey: ["classes"],
+    reactivateFn: reactivateClass,
+    onPageChange: setPage,
+  });
+
+  // Fetch class masters for dropdown filter
+  const { data: classMastersData } = useQuery({
+    queryKey: ["core-classes"],
+    queryFn: () => fetchCoreClasses({ page_size: 100 }),
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
+
+  // Fetch teachers for dropdown filter
+  const { data: teachersData } = useQuery({
+    queryKey: ["teachers-list"],
+    queryFn: () => fetchTeachers({ page_size: 100 }),
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
+
   const {
     data: classesData,
     isLoading,
+    error,
+    refetch,
   } = useQuery({
-    queryKey: ["classes", searchQuery],
+    queryKey: ["classes", page, pageSize, filters, showDeleted],
     queryFn: () =>
       fetchClasses({
-        page: 1,
-        page_size: 100, // Fetch more records for client-side pagination
-        search: searchQuery || undefined,
+        page,
+        page_size: pageSize,
+        search: filters.search,
+        class_master: filters.class_master ? parseInt(filters.class_master) : undefined,
+        class_teacher: filters.class_teacher || undefined,
+        is_deleted: showDeleted
       }),
     refetchOnMount: "always",
     refetchOnWindowFocus: true,
   });
 
-  const allClasses = classesData?.data || [];
+  const classes = classesData?.data || [];
+  const totalCount = classesData?.pagination?.count || 0;
+  const totalPages = Math.ceil(totalCount / pageSize);
 
-  // Client-side pagination
-  const startIndex = (currentPage - 1) * pageSize;
-  const endIndex = startIndex + pageSize;
-  const classes = allClasses.slice(startIndex, endIndex);
-  const totalRecords = allClasses.length;
-  const totalPages = Math.ceil(totalRecords / pageSize);
+  const columns = showDeleted 
+    ? getClassColumns({ 
+        onView, 
+        onEdit: () => {}, 
+        onDelete: onReactivate || (() => {}),
+        isDeletedView: true 
+      })
+    : getClassColumns({ onView, onEdit, onDelete });
 
-  const handleSearchChange = (value: string) => {
-    setSearchQuery(value);
-    setCurrentPage(1);
-  };
+  const classMasters = classMastersData?.data || [];
+  const teachers = teachersData?.data || [];
 
-  const handlePageSizeChange = (newSize: number) => {
-    setPageSize(newSize);
-    setCurrentPage(1);
-  };
-
-  // Table columns definition
-  const columns: Column<MasterClass>[] = [
+  const filterFields: FilterField[] = [
     {
-      header: "Class",
-      accessor: (row: MasterClass) => (
-        <div className="font-medium text-gray-900">
-          {row.class_master.name} - {row.name}
-        </div>
-      ),
-      sortable: true,
-      sortKey: "name",
+      name: "search",
+      label: "Search",
+      type: "text",
+      placeholder: "Search classes by name, class master, or teacher...",
     },
     {
-      header: "Class Teacher",
-      accessor: (row: MasterClass) => (
-        <div className="text-sm text-gray-900">
-          {row.class_teacher 
-            ? `${row.class_teacher.full_name} (${row.class_teacher.email})` 
-            : "-"}
-        </div>
-      ),
+      name: "class_master",
+      label: "Class Master",
+      type: "select",
+      placeholder: "All Class Levels",
+      options: classMasters.map((cm) => ({
+        label: cm.name,
+        value: cm.id.toString(),
+      })),
     },
     {
-      header: "Description",
-      accessor: (row: MasterClass) => (
-        <div className="text-sm text-gray-600">
-          {row.info || "-"}
-        </div>
-      ),
-    },
-    {
-      header: "Capacity",
-      accessor: (row: MasterClass) => (
-        <div className="text-sm text-gray-900">
-          {row.capacity ? `${row.capacity} students` : "-"}
-        </div>
-      ),
-      sortable: true,
-      sortKey: "capacity",
-    },
-    {
-      header: "Actions",
-      accessor: (row: MasterClass) => (
-        <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onView(row)}
-            className="h-8 w-8 p-0 text-blue-600 hover:bg-blue-50 hover:text-blue-700"
-            title="View"
-          >
-            <Eye className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onEdit(row)}
-            className="h-8 w-8 p-0 text-purple-600 hover:bg-purple-50 hover:text-purple-700"
-            title="Edit"
-          >
-            <Pencil className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onDelete(row)}
-            className="h-8 w-8 p-0 text-red-600 hover:bg-red-50 hover:text-red-700"
-            title="Delete"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
-      ),
+      name: "class_teacher",
+      label: "Class Teacher",
+      type: "select",
+      placeholder: "All Class Teachers",
+      options: teachers.map((teacher) => ({
+        label: teacher.full_name || `${teacher.user?.first_name || ''} ${teacher.user?.last_name || ''}`.trim() || teacher.email,
+        value: teacher.public_id,
+      })),
     },
   ];
 
-  return (
-    <div className="mx-auto max-w-7xl">
-      {/* Page Header */}
-      <div className="mt-10 mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="mb-3 text-3xl font-bold text-gray-900">Classes & Sections Management</h1>
-          <p className="text-base text-gray-600">
-            Manage your organization&apos;s classes and sections
-          </p>
-        </div>
-        <div className="flex gap-3">
-          <BulkUploadClasses />
-          <Button
-            onClick={onCreateNew}
-            className="gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-          >
-            <Plus className="h-4 w-4" />
-            Add Sections
-          </Button>
-        </div>
-      </div>
+  const handleFilter = (newFilters: Record<string, string>) => {
+    setFilters(newFilters);
+    setPage(1);
+  };
 
-      {/* Filters Card */}
-      <Card className="mb-6 shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-lg">Search & Filters</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-            <div>
-              <span className="mb-2 block text-sm font-medium text-gray-700">Search</span>
-              <Input
-                type="text"
-                placeholder="Search by section name..."
-                value={searchQuery}
-                onChange={(e) => handleSearchChange(e.target.value)}
-                className="w-full"
-              />
-            </div>
+  const handleResetFilters = () => {
+    setFilters({});
+    setPage(1);
+  };
+
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage);
+  };
+
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setPage(1);
+  };
+
+  if (error) {
+    return (
+      <Card className="mx-auto max-w-7xl">
+        <CardContent className="flex flex-col items-center justify-center py-12">
+          <div className="text-center">
+            <h3 className="text-lg font-semibold text-red-600 mb-2">Error Loading Classes</h3>
+            <p className="text-gray-600 mb-4">Failed to fetch classes. Please try again.</p>
+            <Button onClick={() => refetch()}>Retry</Button>
           </div>
         </CardContent>
       </Card>
+    );
+  }
 
-      {/* Classes Table */}
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h1 className="mb-3 text-3xl font-bold text-gray-900">
+            {getListTitle("Classes", showDeleted)}
+          </h1>
+          <p className="text-base text-gray-600">
+            {getListDescription("Classes", showDeleted)}
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <DeletedViewToggle
+            showDeleted={showDeleted}
+            onToggle={toggleDeletedView}
+            resourceName="classes"
+          />
+          {!showDeleted && (
+            <>
+              <BulkUploadClasses />
+              <Button onClick={onCreateNew} className="gap-2">
+                <Plus className="h-4 w-4" />
+                Add Sections
+              </Button>
+            </>
+          )}
+        </div>
+      </div>
+
+      <ResourceFilter
+        fields={filterFields}
+        onFilter={handleFilter}
+        onReset={handleResetFilters}
+        defaultValues={filters}
+      />
+
       <Card className="shadow-sm">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <GraduationCap className="h-5 w-5" />
-            Sections
-          </CardTitle>
+          <CardTitle>{getCardTitle("Classes", totalCount, showDeleted)}</CardTitle>
           <CardDescription>
-            {totalRecords > 0
-              ? `Showing ${startIndex + 1}-${Math.min(endIndex, totalRecords)} of ${totalRecords} section(s)`
-              : "No sections found"}
+            {getCardDescription("classes", Object.keys(filters).length > 0, showDeleted)}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -199,20 +217,24 @@ export function ClassesList({ onCreateNew, onView, onEdit, onDelete }: ClassesLi
             columns={columns}
             data={classes}
             isLoading={isLoading}
-            emptyMessage="No sections found"
-            emptyAction={{
-              label: "Add Your First Section",
-              onClick: onCreateNew,
-            }}
+            emptyMessage={getEmptyMessage("classes", showDeleted)}
+            emptyAction={
+              !showDeleted
+                ? {
+                    label: "Add Your First Section",
+                    onClick: onCreateNew,
+                  }
+                : undefined
+            }
             getRowKey={(row) => row.public_id}
           />
 
           <div className="mt-4">
             <TablePagination
-              currentPage={currentPage}
+              currentPage={page}
               totalPages={totalPages}
-              totalRecords={totalRecords}
-              onPageChange={setCurrentPage}
+              totalRecords={totalCount}
+              onPageChange={handlePageChange}
               pageSize={pageSize}
               onPageSizeChange={handlePageSizeChange}
             />

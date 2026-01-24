@@ -10,6 +10,12 @@
 export const SYSTEM_NAME = "Educard";
 
 /**
+ * Company/Product display name
+ * Used in marketing materials and landing pages
+ */
+export const COMPANY_NAME = "Educard";
+
+/**
  * Application version
  */
 export const APP_VERSION = "1.0.0";

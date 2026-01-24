@@ -1,5 +1,6 @@
-import { ReactNode, useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
+import type { ReactNode} from "react";
 
 interface ResizableSidebarProps {
   children: (width: number) => ReactNode;
@@ -102,7 +103,10 @@ export function ResizableSidebar({
       
       {/* Spacer for main content */}
       <div 
-        className="hidden md:block flex-shrink-0" 
+        className={cn(
+          "flex-shrink-0",
+          "hidden md:block"
+        )}
         style={{ width: `${sidebarWidth}px` }}
       />
     </>

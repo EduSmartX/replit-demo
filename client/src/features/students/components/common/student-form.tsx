@@ -6,60 +6,61 @@
  */
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, Loader2, Save, Edit } from "lucide-react";
-import { useState, useEffect, useMemo, useRef } from "react";
+import { ArrowLeft, Edit, Loader2, Save } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
-import { SuccessMessage } from "@/common/components/dialogs";
+import { toast } from "sonner";
+import { DeletedDuplicateDialog } from "@/common/components/dialogs/deleted-duplicate-dialog";
 import {
-  TextInputField,
-  BloodGroupField,
-  GenderField,
-  SelectField,
+    BloodGroupField,
+    DateInputField,
+    TextInputField
 } from "@/common/components/forms";
 import {
-  AddressManagementForm,
-  type AddressManagementFormRef,
+    AddressManagementForm,
+    type AddressManagementFormRef,
 } from "@/common/components/forms/address-management-form";
+import { useDeletedDuplicateHandler } from "@/common/hooks/use-deleted-duplicate-handler";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
+    Form,
+    FormControl,
+    FormDescription,
+    FormField,
+    FormItem,
+    FormLabel,
+    FormMessage,
 } from "@/components/ui/form";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
-import type { Student } from "@/lib/api/student-api";
-import { getFormConfig } from "@/lib/utils/form-utils";
+import type { StudentCreatePayload, StudentDetail } from "@/lib/api/student-api";
 import type { FormMode } from "@/lib/utils/form-utils";
+import { getFormConfig } from "@/lib/utils/form-utils";
+import { StudentMessages } from "../../constants/student-messages";
 import {
-  studentFormSchema,
-  type StudentFormValues,
-} from "../../schemas/student-form-schema";
-import {
-  getDefaultFormValues,
-  getFormValuesFromStudent,
-  getOrganizationRoleCode,
-  formValuesToCreatePayload,
-  formValuesToUpdatePayload,
+    formValuesToCreatePayload,
+    formValuesToUpdatePayload,
+    getDefaultFormValues,
+    getFormValuesFromStudent
 } from "../../helpers/student-form-helpers";
 import {
-  useClasses,
-  useOrganizationRoles,
-  useOrganizationUsers,
-  useCreateStudent,
-  useUpdateStudent,
+    useClasses,
+    useCreateStudent,
+    useReactivateStudent,
+    useUpdateStudent,
 } from "../../hooks/use-student-form";
-import { StudentMessages } from "../../constants/student-messages";
+import {
+    studentFormSchema,
+    type StudentFormValues,
+} from "../../schemas/student-form-schema";
+import { MinimalStudentFields } from "./minimal-student-fields";
 
 interface StudentFormProps {
   mode?: FormMode;
   classId?: string; // Required for create mode
-  initialData?: Student | null;
+  initialData?: StudentDetail | null;
   onSuccess?: () => void;
   onCancel?: () => void;
   onEdit?: () => void;
@@ -73,59 +74,84 @@ export function StudentForm({
   onCancel,
   onEdit,
 }: StudentFormProps) {
-  const { toast } = useToast();
-  const [showSuccess, setShowSuccess] = useState(false);
+  const [minimalFields, setMinimalFields] = useState(false);
   const addressFormRef = useRef<AddressManagementFormRef>(null);
+
+  const duplicateHandler = useDeletedDuplicateHandler<{
+    payload: StudentCreatePayload;
+    deletedRecordId: string | null;
+  }>();
 
   const formConfig = getFormConfig(mode, "Student");
   const isViewMode = mode === "view";
   const isEditMode = mode === "edit";
   const isCreateMode = mode === "create";
 
-  // Parallel data fetching: Load classes, roles, and users simultaneously for faster form init
   const { data: classes = [], isLoading: loadingClasses } = useClasses();
-  const { data: orgRoles = [], isLoading: loadingOrgRoles } = useOrganizationRoles();
-  const { data: users = [], isLoading: loadingUsers } = useOrganizationUsers();
 
-  // Reverse lookup: Map organization_role display name back to code for form initialization
   const organizationRoleCode = useMemo(() => {
-    if (!initialData?.user?.organization_role || orgRoles.length === 0) {
+    if (!initialData?.user?.organization_role) {
       return "";
     }
-    return getOrganizationRoleCode(initialData.user.organization_role, orgRoles);
-  }, [initialData?.user?.organization_role, orgRoles]);
+    return initialData.user.organization_role.code || "";
+  }, [initialData?.user?.organization_role]);
 
-  // Initialize form
   const form = useForm<StudentFormValues>({
     resolver: zodResolver(studentFormSchema),
-    defaultValues: getDefaultFormValues(),
+    defaultValues: { ...getDefaultFormValues(), class_id: classId || "" },
   });
 
-  // Form rehydration: Populate form fields when editing/viewing, skip if user has started editing
   useEffect(() => {
     if (initialData && initialData.user && !form.formState.isDirty) {
       const formValues = getFormValuesFromStudent(initialData, organizationRoleCode);
       form.reset(formValues);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialData, organizationRoleCode]);
 
-  // Success flow: Show toast message briefly then trigger parent callback
-  const handleSuccess = () => {
-    setShowSuccess(true);
-    setTimeout(() => {
-      setShowSuccess(false);
-      onSuccess?.();
-    }, 2000);
+  // Auto-select supervisor when class is selected
+  useEffect(() => {
+    const subscription = form.watch((value, { name }) => {
+      if (name === "class_id" && value.class_id) {
+        const selectedClass = classes.find((cls: any) => cls.public_id === value.class_id);
+        if (selectedClass?.class_teacher?.email) {
+          form.setValue("supervisor_email", selectedClass.class_teacher.email);
+        }
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [form, classes]);
+
+  const selectedClassId = form.watch("class_id") || classId || "";
+  
+  const handleDeletedDuplicate = (message: string, payload: StudentCreatePayload, deletedRecordId: string | null) => {
+    duplicateHandler.openDialog(message, { payload, deletedRecordId });
   };
 
-  // Create and update mutations using custom hooks
   const createMutation = useCreateStudent(
-    classId || initialData?.class_assigned?.public_id || "",
+    selectedClassId,
     form.setError,
-    handleSuccess
+    () => {
+      toast.success('Student created successfully');
+      onSuccess?.();
+    },
+    handleDeletedDuplicate
   );
-  const updateMutation = useUpdateStudent(initialData?.public_id, form.setError, handleSuccess);
+  
+  const reactivateMutation = useReactivateStudent(selectedClassId, () => {
+    duplicateHandler.closeDialog();
+    toast.success("Student reactivated successfully");
+    onSuccess?.();
+  });
+  
+  const updateMutation = useUpdateStudent(
+    selectedClassId,
+    initialData?.public_id,
+    form.setError,
+    () => {
+      toast.success("Student updated successfully");
+      onSuccess?.();
+    }
+  );
 
   const onSubmit = async (values: StudentFormValues) => {
     if (isEditMode) {
@@ -134,17 +160,12 @@ export function StudentForm({
       try {
         await updateMutation.mutateAsync(updatePayload);
 
-        // Also submit address if address form exists
         if (addressFormRef.current && initialData) {
           try {
             await addressFormRef.current.submitAddress();
           } catch (addressError) {
             console.error("Address update failed:", addressError);
-            toast({
-              title: StudentMessages.error.addressUpdate.title,
-              description: StudentMessages.error.addressUpdate.description,
-              variant: "destructive",
-            });
+            toast.error(`${StudentMessages.error.addressUpdate.title}: ${StudentMessages.error.addressUpdate.description}`);
           }
         }
       } catch (error) {
@@ -152,39 +173,39 @@ export function StudentForm({
       }
     } else {
       const createPayload = formValuesToCreatePayload(values);
-      createMutation.mutate(createPayload);
+      createMutation.mutate({ payload: createPayload, forceCreate: false });
     }
   };
 
-  const isLoading = createMutation.isPending || updateMutation.isPending;
+  const handleReactivate = () => {
+    const deletedRecordId = duplicateHandler.pendingData?.deletedRecordId;
+    if (deletedRecordId) {
+      reactivateMutation.mutate(deletedRecordId);
+    }
+  };
 
-  // Success message
-  if (showSuccess) {
-    return (
-      <SuccessMessage
-        title={formConfig.successMessage}
-        description={
-          isEditMode
-            ? "The student information has been updated successfully."
-            : "A new student has been added to your organization successfully."
-        }
-      />
-    );
-  }
+  const handleCreateNew = () => {
+    if (duplicateHandler.pendingData?.payload) {
+      createMutation.mutate({ payload: duplicateHandler.pendingData.payload, forceCreate: true });
+      duplicateHandler.closeDialog();
+    }
+  };
+
+  const isLoading = createMutation.isPending || updateMutation.isPending || reactivateMutation.isPending;
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="mb-8 flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={onCancel}>
+          <Button variant="ghost" size="icon" onClick={onCancel} title="Back">
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-3xl font-bold text-transparent">
+            <h1 className="mb-3 text-3xl font-bold text-gray-900">
               {formConfig.title}
             </h1>
-            <p className="mt-2 text-gray-600">{formConfig.description}</p>
+            <p className="text-base text-gray-600">{formConfig.description}</p>
           </div>
         </div>
         {isViewMode && (
@@ -195,35 +216,56 @@ export function StudentForm({
         )}
       </div>
 
+      {/* Minimal Fields Toggle */}
+      {isCreateMode && (
+        <div className="flex items-center space-x-2 bg-blue-50 px-4 py-3 rounded-lg border border-blue-200">
+          <Checkbox
+            id="minimalFields"
+            checked={minimalFields}
+            onCheckedChange={(checked) => setMinimalFields(checked as boolean)}
+          />
+          <Label
+            htmlFor="minimalFields"
+            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+          >
+            Minimum Required Fields Only
+          </Label>
+        </div>
+      )}
+
       {/* Form */}
       <Card className="border-0 shadow-lg">
         <CardHeader className="border-b bg-gradient-to-r from-blue-50 to-purple-50">
           <CardTitle className="text-blue-900">Student Information</CardTitle>
-          <CardDescription className="text-blue-700">
-            {isViewMode
-              ? "Student details are displayed below"
-              : isEditMode
-                ? "Update the fields you want to change"
-                : "All fields marked with * are required"}
-          </CardDescription>
         </CardHeader>
         <CardContent className="pt-6">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              {/* Basic Information */}
+              {/* Conditional Rendering: Minimal or Full Fields */}
+              {isCreateMode && minimalFields ? (
+                <MinimalStudentFields 
+                  control={form.control}
+                  classes={classes}
+                  loadingClasses={loadingClasses}
+                  isCreateMode={isCreateMode}
+                />
+              ) : (
+                <>
+              {/* Reuse Minimal Fields Component */}
+              <MinimalStudentFields
+                control={form.control}
+                classes={classes}
+                loadingClasses={loadingClasses}
+                isCreateMode={isCreateMode}
+                isViewMode={isViewMode}
+                showAsCard={false}
+                initialData={initialData}
+                showClassNote={true}
+              />
+
+              {/* Additional Basic Information Fields */}
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900">Basic Information</h3>
-
                 <div className="grid gap-4 md:grid-cols-2">
-                  <TextInputField
-                    control={form.control}
-                    name="roll_number"
-                    label="Roll Number"
-                    placeholder="001"
-                    required
-                    disabled={isViewMode}
-                  />
-
                   <TextInputField
                     control={form.control}
                     name="admission_number"
@@ -231,24 +273,12 @@ export function StudentForm({
                     placeholder="ADM2024001"
                     disabled={isViewMode}
                   />
-                </div>
 
-                <div className="grid gap-4 md:grid-cols-2">
-                  <TextInputField
+                  <DateInputField
                     control={form.control}
-                    name="first_name"
-                    label="First Name"
-                    placeholder="John"
-                    required
-                    disabled={isViewMode}
-                  />
-
-                  <TextInputField
-                    control={form.control}
-                    name="last_name"
-                    label="Last Name"
-                    placeholder="Doe"
-                    required
+                    name="admission_date"
+                    label="Admission Date"
+                    max={new Date()}
                     disabled={isViewMode}
                   />
                 </div>
@@ -274,51 +304,20 @@ export function StudentForm({
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-2">
-                  <GenderField control={form.control} name="gender" disabled={isViewMode} />
-
                   <BloodGroupField
                     control={form.control}
                     name="blood_group"
                     disabled={isViewMode}
                   />
-                </div>
 
-                <div className="grid gap-4 md:grid-cols-2">
-                  <TextInputField
+                  <DateInputField
                     control={form.control}
                     name="date_of_birth"
                     label="Date of Birth"
-                    type="date"
-                    max={new Date().toISOString().split("T")[0]}
-                    disabled={isViewMode}
-                  />
-
-                  <TextInputField
-                    control={form.control}
-                    name="admission_date"
-                    label="Admission Date"
-                    type="date"
-                    max={new Date().toISOString().split("T")[0]}
+                    max={new Date()}
                     disabled={isViewMode}
                   />
                 </div>
-
-                {isCreateMode && classId && (
-                  <div className="rounded-md bg-blue-50 p-4">
-                    <p className="text-sm text-blue-800">
-                      <strong>Note:</strong> Student will be assigned to the selected class.
-                    </p>
-                  </div>
-                )}
-
-                {!isCreateMode && initialData?.class_assigned && (
-                  <div className="rounded-md bg-gray-50 p-4">
-                    <p className="text-sm text-gray-700">
-                      <strong>Current Class:</strong> {initialData.class_assigned.class_master?.name || ""}{" "}
-                      - {initialData.class_assigned.name}
-                    </p>
-                  </div>
-                )}
               </div>
 
               {/* Guardian Information */}
@@ -388,6 +387,48 @@ export function StudentForm({
                 </div>
               </div>
 
+              {/* Previous School Information */}
+              <div className="space-y-4 border-t pt-6">
+                <h3 className="text-lg font-semibold text-gray-900">Previous School Information</h3>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <TextInputField
+                    control={form.control}
+                    name="previous_school_name"
+                    label="Previous School Name"
+                    placeholder="ABC School"
+                    disabled={isViewMode}
+                  />
+
+                  <TextInputField
+                    control={form.control}
+                    name="previous_school_class"
+                    label="Previous School Class"
+                    placeholder="Grade 5"
+                    disabled={isViewMode}
+                  />
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name="previous_school_address"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Previous School Address</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          {...field}
+                          placeholder="Enter previous school address..."
+                          rows={2}
+                          disabled={isViewMode}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
               {/* Additional Information */}
               <div className="space-y-4 border-t pt-6">
                 <h3 className="text-lg font-semibold text-gray-900">Additional Information</h3>
@@ -437,39 +478,7 @@ export function StudentForm({
                 />
               </div>
 
-              {/* Advanced Settings */}
-              {!isViewMode && (
-                <div className="space-y-4 border-t pt-6">
-                  <h3 className="text-lg font-semibold text-gray-900">Advanced Settings</h3>
-
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <SelectField
-                      control={form.control}
-                      name="organization_role"
-                      label="Organization Role"
-                      placeholder="Select role"
-                      options={orgRoles.map((role: { code: string; name: string }) => ({
-                        value: role.code,
-                        label: role.name,
-                      }))}
-                      disabled={isViewMode || loadingOrgRoles}
-                      description="Optional: Specify a custom role for this student"
-                    />
-
-                    <SelectField
-                      control={form.control}
-                      name="supervisor_email"
-                      label="Supervisor"
-                      placeholder="Select supervisor"
-                      options={users.map((user: { email: string; full_name: string; public_id: string }) => ({
-                        value: user.email,
-                        label: `${user.full_name} (${user.email})`,
-                      }))}
-                      disabled={isViewMode || loadingUsers}
-                      description="Optional: Assign a supervisor for this student"
-                    />
-                  </div>
-                </div>
+              </>
               )}
 
               {/* Form Actions */}
@@ -522,6 +531,15 @@ export function StudentForm({
           </Button>
         </div>
       )}
+
+      <DeletedDuplicateDialog
+        open={duplicateHandler.isOpen}
+        onOpenChange={duplicateHandler.closeDialog}
+        message={duplicateHandler.message}
+        onReactivate={handleReactivate}
+        onCreateNew={handleCreateNew}
+        onCancel={duplicateHandler.closeDialog}
+      />
     </div>
   );
 }

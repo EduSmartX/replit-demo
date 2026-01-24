@@ -6,6 +6,7 @@
  */
 
 export { StudentsList } from './students-list';
+export { BulkUploadStudents } from './bulk-upload-students';
 
 // Sub-components (can be reused elsewhere)
 export { StudentsHeader } from './students-header';

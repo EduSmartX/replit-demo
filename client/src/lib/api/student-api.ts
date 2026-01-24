@@ -1,57 +1,61 @@
 /**
- * Student Management API
- * Handles CRUD operations and filtering for students
+ * Student API
+ * Handles all student-related API operations following Teacher pattern
  */
 
-import { apiRequest, getAccessToken } from "../api";
-import { createEntityService } from "../utils/api-service-utils";
-import type { Address } from "./address-api";
-import {
-  fetchClasses,
-  fetchCoreClasses,
-  type CoreClass,
-  type MasterClass
-} from "./class-api";
+import type { BulkUploadResponse } from "@/common/components/dialogs/bulk-upload-dialog";
+import { api, API_ENDPOINTS, getAccessToken } from "../api";
+import type { ApiListResponse } from "./types";
 
-export type { Address } from "./address-api";
-export type { MasterClass as Class, CoreClass as ClassMaster } from "./class-api";
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
-
+// Student interface for list view (matching API response structure)
 export interface Student {
+  public_id: string;
+  user_info: {
+    public_id: string;
+    username: string;
+    full_name: string;
+  };
+  class_info: {
+    public_id: string;
+    class_master_name: string;
+    name: string;
+  };
+  roll_number: string;
+  admission_number: string;
+  admission_date: string;
+  guardian_name?: string;
+  created_at: string;
+  updated_at: string;
+  created_by_public_id: string;
+  created_by_name: string;
+  updated_by_public_id: string;
+  updated_by_name: string;
+}
+
+// Detailed student interface for individual student view/edit
+export interface StudentDetail {
   public_id: string;
   user?: {
     public_id: string;
-    username?: string;
+    username: string;
+    full_name: string;
     first_name?: string;
     last_name?: string;
-    full_name?: string;
     email?: string;
     phone?: string;
-    role?: string;
     gender?: string;
     blood_group?: string;
-    organization_role?: string;
-    supervisor?: {
-      email: string;
-      full_name: string;
-    };
-    address?: Address;
-    [key: string]: unknown;
   };
-  roll_number: string;
-  admission_number?: string;
-  admission_date?: string;
-  date_of_birth?: string;
-  full_name: string;
+  user_info?: {
+    date_of_birth?: string;
+  };
   class_assigned?: {
     public_id: string;
     name: string;
-    class_master?: {
-      name: string;
-      code: string;
-    };
   };
+  roll_number: string;
+  admission_number: string;
+  admission_date?: string;
   guardian_name?: string;
   guardian_phone?: string;
   guardian_email?: string;
@@ -60,46 +64,65 @@ export interface Student {
   emergency_contact_phone?: string;
   medical_conditions?: string;
   description?: string;
-  is_first_login?: boolean;
-  addresses?: Address[];
   created_at: string;
   updated_at: string;
+  created_by_public_id: string;
+  created_by_name: string;
+  updated_by_public_id: string;
+  updated_by_name: string;
 }
 
 export interface StudentCreatePayload {
+  user: {
+    username: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+    phone: string;
+    role: string;
+    gender: string;
+    blood_group?: string;
+    date_of_birth: string;
+    organization_role_code: string;
+    supervisor_email?: string;
+    address?: {
+      address_type: string;
+      street_address: string;
+      address_line_2?: string;
+      city: string;
+      state: string;
+      zip_code: string;
+      country: string;
+      latitude?: string;
+      longitude?: string;
+    };
+  };
   roll_number: string;
-  first_name: string;
-  last_name: string;
-  admission_number?: string;
-  email?: string;
-  phone_number?: string;
-  admission_date?: string;
-  date_of_birth?: string;
-  blood_group?: string;
-  gender?: string;
-  guardian_name?: string;
-  guardian_phone?: string;
-  guardian_email?: string;
-  guardian_relationship?: string;
+  admission_number: string;
+  admission_date: string;
+  guardian_name: string;
+  guardian_phone: string;
+  guardian_email: string;
+  guardian_relationship: string;
+  medical_conditions?: string;
   emergency_contact_name?: string;
   emergency_contact_phone?: string;
-  medical_conditions?: string;
   description?: string;
-  organization_role?: string;
-  supervisor_email?: string;
 }
 
 export interface StudentUpdatePayload {
+  user?: {
+    first_name?: string;
+    last_name?: string;
+    email?: string;
+    phone?: string;
+    gender?: string;
+    blood_group?: string;
+    date_of_birth?: string;
+  };
   roll_number?: string;
-  first_name?: string;
-  last_name?: string;
   admission_number?: string;
-  email?: string;
-  phone_number?: string;
   admission_date?: string;
-  date_of_birth?: string;
-  blood_group?: string;
-  gender?: string;
   guardian_name?: string;
   guardian_phone?: string;
   guardian_email?: string;
@@ -108,68 +131,30 @@ export interface StudentUpdatePayload {
   emergency_contact_phone?: string;
   medical_conditions?: string;
   description?: string;
-  organization_role?: string;
-  supervisor_email?: string;
 }
 
 export interface StudentListParams {
-  class_master_id?: string;
-  section_id?: string;
   class_id?: string;
   search?: string;
+  is_deleted?: boolean;
   page?: number;
   page_size?: number;
 }
 
-export interface StudentListResponse {
-  count: number;
-  next: string | null;
-  previous: string | null;
-  results: Student[];
-}
-
-export interface OrganizationRole {
-  code: string;
-  name: string;
-}
-
-// Wrapper functions to reuse class-api logic instead of duplicating code
-export const fetchClassMasters = async (): Promise<CoreClass[]> => {
-  const response = await fetchCoreClasses({ page_size: 100 });
-  return response.data || [];
-};
-
-export const fetchSectionsByClassMaster = async (classMasterId: number): Promise<MasterClass[]> => {
-  const response = await fetchClasses({ class_master: classMasterId, page_size: 100 });
-  return response.data || [];
-};
-
-const studentService = createEntityService<
-  Student,
-  StudentCreatePayload,
-  StudentUpdatePayload
->(
-  `${API_BASE_URL}/api/students/`,
-  (publicId: string) => `${API_BASE_URL}/api/students/${publicId}/`
-);
-
-// Custom fetchStudents: Supports multi-level filtering (class_master_id → section_id → search)
-// for cascading dropdown UX pattern
-export const fetchStudents = async (params?: StudentListParams): Promise<StudentListResponse> => {
-  const token = getAccessToken();
+/**
+ * Fetch students list (admin level)
+ */
+export async function getStudents(params?: StudentListParams): Promise<ApiListResponse<Student>> {
   const queryParams = new URLSearchParams();
   
-  if (params?.class_master_id) {
-    queryParams.append("class_master_id", params.class_master_id);
-  }
-  if (params?.section_id) {
-    queryParams.append("section_id", params.section_id);
-  }
   if (params?.class_id) {
     queryParams.append("class_id", params.class_id);
   }
   if (params?.search) {
     queryParams.append("search", params.search);
+  }
+  if (params?.is_deleted !== undefined) {
+    queryParams.append("is_deleted", params.is_deleted.toString());
   }
   if (params?.page) {
     queryParams.append("page", params.page.toString());
@@ -177,151 +162,124 @@ export const fetchStudents = async (params?: StudentListParams): Promise<Student
   if (params?.page_size) {
     queryParams.append("page_size", params.page_size.toString());
   }
+  
+  const url = `${API_ENDPOINTS.students.list}?${queryParams.toString()}`;
+  return api.get<ApiListResponse<Student>>(url);
+}
 
-  const queryString = queryParams.toString();
-  const url = `${API_BASE_URL}/api/students/${queryString ? `?${queryString}` : ""}`;
+/**
+ * Create a student in a specific class
+ */
+export async function createStudent(
+  classId: string,
+  payload: StudentCreatePayload,
+  forceCreate = false
+): Promise<StudentDetail> {
+  const url = `${API_ENDPOINTS.students.classLevel(classId)}${forceCreate ? "?force_create=true" : ""}`;
+  return api.post<StudentDetail>(url, payload);
+}
 
-  const response = await apiRequest<StudentListResponse>(url, {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-  });
-  return response;
-};
+/**
+ * Get student details
+ */
+export async function getStudent(classId: string, publicId: string): Promise<StudentDetail> {
+  return api.get<StudentDetail>(API_ENDPOINTS.students.classDetail(classId, publicId));
+}
 
-export const fetchStudentById = async (publicId: string): Promise<Student> => {
-  const token = getAccessToken();
-  const response = await apiRequest<{ data: Student }>(
-    `${API_BASE_URL}/api/students/${publicId}/`,
-    {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-    }
-  );
-  return response.data;
-};
-
-export const createStudent = async (payload: StudentCreatePayload): Promise<Student> => {
-  const token = getAccessToken();
-  const response = await apiRequest<{ data: Student }>(
-    `${API_BASE_URL}/api/students/`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(payload),
-    }
-  );
-  return response.data;
-};
-
-export const updateStudent = async (
+/**
+ * Update a student
+ */
+export async function updateStudent(
+  classId: string,
   publicId: string,
   payload: StudentUpdatePayload
-): Promise<Student> => {
-  const token = getAccessToken();
-  const response = await apiRequest<{ data: Student }>(
-    `${API_BASE_URL}/api/students/${publicId}/`,
-    {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(payload),
-    }
-  );
-  return response.data;
-};
+): Promise<StudentDetail> {
+  return api.patch<StudentDetail>(API_ENDPOINTS.students.classDetail(classId, publicId), payload);
+}
 
 /**
  * Delete a student (soft delete)
  */
-export const deleteStudent = async (publicId: string): Promise<void> => {
-  const token = getAccessToken();
-  await apiRequest<void>(`${API_BASE_URL}/api/students/${publicId}/`, {
-    method: "DELETE",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-  });
-};
+export async function deleteStudent(classId: string, publicId: string): Promise<void> {
+  return api.delete(API_ENDPOINTS.students.classDetail(classId, publicId));
+}
 
-export const fetchOrganizationRoles = async (): Promise<OrganizationRole[]> => {
-  const token = getAccessToken();
-  const response = await apiRequest<{ results: OrganizationRole[] }>(
-    `${API_BASE_URL}/api/organization/roles/`,
-    {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-    }
-  );
-  return response.results;
-};
+/**
+ * Reactivate a deleted student
+ */
+export async function reactivateStudent(classId: string, publicId: string): Promise<StudentDetail> {
+  return api.post<StudentDetail>(API_ENDPOINTS.students.activate(classId, publicId));
+}
 
-export const fetchOrganizationUsers = async (): Promise<
-  Array<{ email: string; full_name: string; public_id: string }>
-> => {
-  const token = getAccessToken();
-  const response = await apiRequest<{
-    results: Array<{ email: string; full_name: string; public_id: string }>;
-  }>(`${API_BASE_URL}/api/organization/users/`, {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-  });
-  return response.results;
-};
-
-export const bulkUploadStudents = async (
-  classId: string,
-  file: File
-): Promise<{ message: string; created_count: number }> => {
-  const token = getAccessToken();
+/**
+ * Bulk upload students from Excel file
+ */
+export async function bulkUploadStudents(file: File): Promise<BulkUploadResponse> {
   const formData = new FormData();
   formData.append("file", file);
+  const accessToken = getAccessToken();
 
-  const response = await apiRequest<{ message: string; created_count: number }>(
-    `${API_BASE_URL}/api/classes/${classId}/students/bulk-upload/`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      body: formData,
-    }
-  );
-  return response;
-};
+  const headers: HeadersInit = {};
+  if (accessToken) {
+    headers["Authorization"] = `Bearer ${accessToken}`;
+  }
 
-export const downloadStudentTemplate = async (classId: string): Promise<Blob> => {
-  const token = getAccessToken();
-  const response = await fetch(
-    `${API_BASE_URL}/api/classes/${classId}/students/download-template/`,
-    {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    }
-  );
+  const response = await fetch(API_ENDPOINTS.students.bulkUpload, {
+    method: "POST",
+    headers,
+    body: formData,
+    credentials: "include",
+  });
 
   if (!response.ok) {
-    throw new Error("Failed to download template");
+    const errorData = await response.json().catch(() => null);
+    throw errorData || new Error(`HTTP ${response.status}: ${response.statusText}`);
+  }
+
+  return await response.json();
+}
+
+/**
+ * Download student bulk upload template
+ */
+export async function downloadStudentTemplate(isLimitedFields: boolean = false): Promise<Blob> {
+  const queryParams = isLimitedFields ? "?is_limited_fields_only=true" : "";
+  const url = `${API_ENDPOINTS.students.downloadTemplate}${queryParams}`;
+  const accessToken = getAccessToken();
+
+  const response = await fetch(url, {
+    method: "GET",
+    headers: {
+      ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
+    },
+    credentials: "include",
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => "Unknown error");
+    throw new Error(`Failed to download template: ${response.status} - ${errorText}`);
   }
 
   return response.blob();
-};
+}
+
+/**
+ * Export students data
+ */
+export async function exportStudentsData(params?: Record<string, string>): Promise<Blob> {
+  const queryParams = new URLSearchParams(params);
+  const url = `${API_ENDPOINTS.students.exportData}${queryParams.toString() ? `?${queryParams.toString()}` : ""}`;
+  
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to export data");
+  }
+
+  return response.blob();
+}

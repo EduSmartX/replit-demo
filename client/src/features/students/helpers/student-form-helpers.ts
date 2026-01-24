@@ -3,7 +3,7 @@
  * Pure transformation functions for converting between form state, API payloads, and student entities
  */
 
-import type { Student } from "@/lib/api/student-api";
+import type { StudentDetail, StudentCreatePayload, StudentUpdatePayload } from "@/lib/api/student-api";
 import type { StudentFormValues } from "../schemas/student-form-schema";
 
 export function getDefaultFormValues(): StudentFormValues {
@@ -29,13 +29,15 @@ export function getDefaultFormValues(): StudentFormValues {
     description: "",
     organization_role: "",
     supervisor_email: "",
+    previous_school_name: "",
+    previous_school_address: "",
+    previous_school_class: "",
   };
 }
 
-// Entity to form mapping: Extract nested properties from Student entity (user.email, user.supervisor.email)
-// and flatten into form-compatible structure
+// Entity to form mapping: Extract nested properties from StudentDetail entity
 export function getFormValuesFromStudent(
-  student: Student,
+  student: StudentDetail,
   organizationRoleCode?: string
 ): StudentFormValues {
   return {
@@ -46,7 +48,7 @@ export function getFormValuesFromStudent(
     email: student.user?.email || "",
     phone: student.user?.phone || "",
     admission_date: student.admission_date || "",
-    date_of_birth: student.date_of_birth || "",
+    date_of_birth: student.user_info?.date_of_birth || "",
     blood_group: student.user?.blood_group || "",
     gender: student.user?.gender || "",
     class_id: student.class_assigned?.public_id || "",
@@ -61,6 +63,9 @@ export function getFormValuesFromStudent(
     organization_role: organizationRoleCode || "",
     supervisor_email:
       (student.user as { supervisor?: { email?: string } })?.supervisor?.email || "",
+    previous_school_name: "",
+    previous_school_address: "",
+    previous_school_class: "",
   };
 }
 
@@ -76,64 +81,90 @@ export function getOrganizationRoleCode(
   const matchingRole = orgRoles.find((role) => role.name === roleName);
   return matchingRole?.code || "";
 }
-// Form to API payload transformation: Only include non-empty optional fields to minimize payload size
 
+// Form to API payload transformation: Map form values to nested user object structure
 export function formValuesToCreatePayload(values: StudentFormValues): StudentCreatePayload {
   const payload: StudentCreatePayload = {
+    user: {
+      username: values.email || undefined,
+      first_name: values.first_name,
+      last_name: values.last_name,
+      email: values.email || undefined,
+      phone: values.phone || undefined,
+      role: "student",
+      gender: values.gender || undefined,
+      blood_group: values.blood_group || undefined,
+      date_of_birth: values.date_of_birth || undefined,
+      organization_role_code: values.organization_role || "STUDENT",
+      supervisor_email: values.supervisor_email || undefined,
+    },
     roll_number: values.roll_number,
-    first_name: values.first_name,
-    last_name: values.last_name,
+    admission_number: values.admission_number || undefined,
+    admission_date: values.admission_date || undefined,
+    guardian_name: values.guardian_name || undefined,
+    guardian_phone: values.guardian_phone || undefined,
+    guardian_email: values.guardian_email || undefined,
+    guardian_relationship: values.guardian_relationship || undefined,
+    medical_conditions: values.medical_conditions || undefined,
+    emergency_contact_name: values.emergency_contact_name || undefined,
+    emergency_contact_phone: values.emergency_contact_phone || undefined,
+    description: values.description || undefined,
   };
 
-  // Optional fields - only include if they have values
-  if (values.admission_number) { payload.admission_number = values.admission_number; }
-  if (values.email) { payload.email = values.email; }
-  if (values.phone) { payload.phone_number = values.phone; }
-  if (values.admission_date) { payload.admission_date = values.admission_date; }
-  if (values.date_of_birth) { payload.date_of_birth = values.date_of_birth; }
-  if (values.blood_group) { payload.blood_group = values.blood_group; }
-  if (values.gender) { payload.gender = values.gender; }
-  if (values.guardian_name) { payload.guardian_name = values.guardian_name; }
-  if (values.guardian_phone) { payload.guardian_phone = values.guardian_phone; }
-  if (values.guardian_email) { payload.guardian_email = values.guardian_email; }
-  if (values.guardian_relationship) { payload.guardian_relationship = values.guardian_relationship; }
-  if (values.emergency_contact_name) { payload.emergency_contact_name = values.emergency_contact_name; }
-  if (values.emergency_contact_phone) { payload.emergency_contact_phone = values.emergency_contact_phone; }
-  if (values.medical_conditions) { payload.medical_conditions = values.medical_conditions; }
-  if (values.description) { payload.description = values.description; }
-  if (values.organization_role) { payload.organization_role = values.organization_role; }
-  if (values.supervisor_email) { payload.supervisor_email = values.supervisor_email; }
+  // Remove undefined fields from user object
+  Object.keys(payload.user).forEach(key => {
+    if (payload.user[key as keyof typeof payload.user] === undefined) {
+      delete payload.user[key as keyof typeof payload.user];
+    }
+  });
+
+  // Remove undefined fields from root payload
+  Object.keys(payload).forEach(key => {
+    if (key !== 'user' && payload[key as keyof typeof payload] === undefined) {
+      delete payload[key as keyof typeof payload];
+    }
+  });
 
   return payload;
 }
 
 export function formValuesToUpdatePayload(values: StudentFormValues): StudentUpdatePayload {
   const payload: StudentUpdatePayload = {
+    user: {
+      first_name: values.first_name,
+      last_name: values.last_name,
+      email: values.email || undefined,
+      phone: values.phone || undefined,
+      gender: values.gender || undefined,
+      blood_group: values.blood_group || undefined,
+      date_of_birth: values.date_of_birth || undefined,
+    },
     roll_number: values.roll_number,
-    first_name: values.first_name,
-    last_name: values.last_name,
+    admission_number: values.admission_number || undefined,
+    admission_date: values.admission_date || undefined,
+    guardian_name: values.guardian_name || undefined,
+    guardian_phone: values.guardian_phone || undefined,
+    guardian_email: values.guardian_email || undefined,
+    guardian_relationship: values.guardian_relationship || undefined,
+    emergency_contact_name: values.emergency_contact_name || undefined,
+    emergency_contact_phone: values.emergency_contact_phone || undefined,
+    medical_conditions: values.medical_conditions || undefined,
+    description: values.description || undefined,
   };
 
-  // Include email in update payload (made updatable)
-  if (values.email) { payload.email = values.email; }
+  // Remove undefined fields from user object
+  Object.keys(payload.user).forEach(key => {
+    if (payload.user[key as keyof typeof payload.user] === undefined) {
+      delete payload.user[key as keyof typeof payload.user];
+    }
+  });
 
-  // Optional fields
-  if (values.admission_number) { payload.admission_number = values.admission_number; }
-  if (values.phone) { payload.phone_number = values.phone; }
-  if (values.admission_date) { payload.admission_date = values.admission_date; }
-  if (values.date_of_birth) { payload.date_of_birth = values.date_of_birth; }
-  if (values.blood_group) { payload.blood_group = values.blood_group; }
-  if (values.gender) { payload.gender = values.gender; }
-  if (values.guardian_name) { payload.guardian_name = values.guardian_name; }
-  if (values.guardian_phone) { payload.guardian_phone = values.guardian_phone; }
-  if (values.guardian_email) { payload.guardian_email = values.guardian_email; }
-  if (values.guardian_relationship) { payload.guardian_relationship = values.guardian_relationship; }
-  if (values.emergency_contact_name) { payload.emergency_contact_name = values.emergency_contact_name; }
-  if (values.emergency_contact_phone) { payload.emergency_contact_phone = values.emergency_contact_phone; }
-  if (values.medical_conditions) { payload.medical_conditions = values.medical_conditions; }
-  if (values.description) { payload.description = values.description; }
-  if (values.organization_role) { payload.organization_role = values.organization_role; }
-  if (values.supervisor_email) { payload.supervisor_email = values.supervisor_email; }
+  // Remove undefined fields from root payload
+  Object.keys(payload).forEach(key => {
+    if (key !== 'user' && payload[key as keyof typeof payload] === undefined) {
+      delete payload[key as keyof typeof payload];
+    }
+  });
 
   return payload;
 }
@@ -141,7 +172,6 @@ export function formValuesToUpdatePayload(values: StudentFormValues): StudentUpd
 export function formatStudentFullName(firstName: string, lastName: string): string {
   return `${firstName} ${lastName}`.trim();
 }
-
 /**
  * Validate phone number format
  */
@@ -166,51 +196,3 @@ export function validateAge(dateOfBirth: string): { valid: boolean; age?: number
   return { valid: age >= 3 && age <= 25, age };
 }
 
-/**
- * Type definitions for API payloads
- */
-export interface StudentCreatePayload {
-  roll_number: string;
-  first_name: string;
-  last_name: string;
-  admission_number?: string;
-  email?: string;
-  phone_number?: string;
-  admission_date?: string;
-  date_of_birth?: string;
-  blood_group?: string;
-  gender?: string;
-  guardian_name?: string;
-  guardian_phone?: string;
-  guardian_email?: string;
-  guardian_relationship?: string;
-  emergency_contact_name?: string;
-  emergency_contact_phone?: string;
-  medical_conditions?: string;
-  description?: string;
-  organization_role?: string;
-  supervisor_email?: string;
-}
-
-export interface StudentUpdatePayload {
-  roll_number: string;
-  first_name: string;
-  last_name: string;
-  admission_number?: string;
-  email?: string;
-  phone_number?: string;
-  admission_date?: string;
-  date_of_birth?: string;
-  blood_group?: string;
-  gender?: string;
-  guardian_name?: string;
-  guardian_phone?: string;
-  guardian_email?: string;
-  guardian_relationship?: string;
-  emergency_contact_name?: string;
-  emergency_contact_phone?: string;
-  medical_conditions?: string;
-  description?: string;
-  organization_role?: string;
-  supervisor_email?: string;
-}

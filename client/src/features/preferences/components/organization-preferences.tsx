@@ -4,19 +4,21 @@
  * Handles preference updates and cache invalidation with optimistic UI updates.
  */
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Settings, AlertCircle, Loader2, RefreshCw } from "lucide-react";
-import { PreferenceCategoryCard } from "./preference-category-card";
-import { WorkingDayPolicyForm } from "./working-day-policy-form";
-import { fetchGroupedPreferences, updatePreference } from "@/lib/api/preferences-api";
-import { useToast } from "@/hooks/use-toast";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { AlertCircle, Loader2, RefreshCw, Settings } from "lucide-react";
+import { useState } from "react";
+import { SuccessDialog } from "@/common/components/dialogs/success-dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { parseApiError, getShortErrorMessage } from "@/lib/error-utils";
+import { fetchGroupedPreferences, updatePreference } from "@/lib/api/preferences-api";
+import { getShortErrorMessage, parseApiError } from "@/lib/error-utils";
+import { PreferenceCategoryCard } from "./preference-category-card";
+import { WorkingDayPolicyForm } from "./working-day-policy-form";
 
 export function OrganizationPreferences() {
-  const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [successMessage, setSuccessMessage] = useState({ title: "", description: "" });
 
   // Fetch preferences
   const {
@@ -42,18 +44,15 @@ export function OrganizationPreferences() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["organization-preferences"] });
-      toast({
-        title: "Success",
-        description: "Preferences updated successfully",
+      setSuccessMessage({
+        title: "Preferences Updated!",
+        description: "Organization preferences have been updated successfully.",
       });
+      setShowSuccessDialog(true);
     },
     onError: (error: any) => {
       const errorMessage = getShortErrorMessage(error);
-      toast({
-        title: "Failed to update preferences",
-        description: errorMessage,
-        variant: "destructive",
-      });
+      console.error("Failed to update preferences:", errorMessage);
     },
   });
 
@@ -120,22 +119,15 @@ export function OrganizationPreferences() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-blue-600 to-teal-600 flex items-center justify-center">
-            <Settings className="h-6 w-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-teal-600 bg-clip-text text-transparent">
-              Organization Preferences
-            </h1>
-            <p className="text-gray-600 mt-1">
-              Configure your organization's settings and preferences
-            </p>
-          </div>
-        </div>
+      <div>
+        <h1 className="mb-3 text-3xl font-bold text-gray-900">
+          Organization Preferences
+        </h1>
+        <p className="text-base text-gray-600">
+          Configure your organization&apos;s settings and preferences
+        </p>
       </div>
 
       {/* Working Day Policy - At the Top */}
@@ -152,6 +144,13 @@ export function OrganizationPreferences() {
           />
         ))}
       </div>
+
+      <SuccessDialog
+        open={showSuccessDialog}
+        title={successMessage.title}
+        description={successMessage.description}
+        onClose={() => setShowSuccessDialog(false)}
+      />
     </div>
   );
 }

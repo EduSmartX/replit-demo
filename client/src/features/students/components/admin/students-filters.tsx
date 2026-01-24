@@ -7,13 +7,13 @@ import { Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
 } from "@/components/ui/select";
-import type { ClassMaster, Class } from "@/lib/api/student-api";
+import type { Class, ClassMaster } from "@/lib/api/student-api";
 
 interface StudentsFiltersProps {
   selectedClassMaster: number | string;
@@ -28,8 +28,6 @@ interface StudentsFiltersProps {
   onSearch: () => void;
   onClearFilters: () => void;
   hasActiveFilters: boolean;
-  pageSize: number;
-  onPageSizeChange: (value: number) => void;
 }
 
 export function StudentsFilters({
@@ -45,15 +43,15 @@ export function StudentsFilters({
   onSearch,
   onClearFilters,
   hasActiveFilters,
-  pageSize,
-  onPageSizeChange,
 }: StudentsFiltersProps) {
   return (
     <div className="space-y-4">
-      <div className="grid gap-4 md:grid-cols-4">
+      {/* All filters in one row */}
+      <div className="grid gap-4 md:grid-cols-3">
         <div className="space-y-2">
-          <label className="text-sm font-medium text-gray-700">Search</label>
+          <label htmlFor="student-search" className="text-sm font-medium text-gray-700">Search</label>
           <Input
+            id="student-search"
             placeholder="Search by name, roll number..."
             value={searchInput}
             onChange={(e) => onSearchInputChange(e.target.value)}
@@ -66,12 +64,13 @@ export function StudentsFilters({
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-medium text-gray-700">Select Class/Grade</label>
+          <label htmlFor="student-class-master" className="text-sm font-medium text-gray-700">Select Class/Grade</label>
           <Select value={selectedClassMaster.toString()} onValueChange={onClassMasterChange}>
-            <SelectTrigger>
+            <SelectTrigger id="student-class-master">
               <SelectValue placeholder="Select a class" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="all">All Classes</SelectItem>
               {classMasters.map((classMaster) => (
                 <SelectItem key={classMaster.id} value={classMaster.id.toString()}>
                   {classMaster.name}
@@ -82,24 +81,25 @@ export function StudentsFilters({
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-medium text-gray-700">Select Section</label>
+          <label htmlFor="student-section" className="text-sm font-medium text-gray-700">Select Section</label>
           <Select 
             value={selectedSection} 
             onValueChange={onSectionChange}
             disabled={loadingSections || sections.length === 0}
           >
-            <SelectTrigger>
+            <SelectTrigger id="student-section">
               <SelectValue 
                 placeholder={
                   loadingSections 
                     ? "Loading..." 
                     : sections.length === 0 
                     ? "No sections" 
-                    : "All sections"
+                    : "Select section"
                 } 
               />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="all">All Sections</SelectItem>
               {sections.map((section) => (
                 <SelectItem key={section.public_id} value={section.public_id}>
                   {section.name}
@@ -108,45 +108,24 @@ export function StudentsFilters({
             </SelectContent>
           </Select>
         </div>
-
-        <div className="flex items-end">
-          <Button onClick={onSearch} className="w-full gap-2">
-            <Search className="h-4 w-4" />
-            Search
-          </Button>
-        </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4">
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-gray-700">Items per page</label>
-          <Select
-            value={pageSize.toString()}
-            onValueChange={(value) => onPageSizeChange(Number(value))}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="10">10 per page</SelectItem>
-              <SelectItem value="25">25 per page</SelectItem>
-              <SelectItem value="50">50 per page</SelectItem>
-              <SelectItem value="100">100 per page</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+      {/* Search and Clear buttons at the bottom */}
+      <div className="flex gap-4">
+        <Button onClick={onSearch} className="gap-2">
+          <Search className="h-4 w-4" />
+          Search
+        </Button>
 
         {hasActiveFilters && (
-          <div className="flex items-end md:col-start-4">
-            <Button 
-              variant="outline" 
-              onClick={onClearFilters} 
-              className="w-full gap-2"
-            >
-              <X className="h-4 w-4" />
-              Clear All Filters
-            </Button>
-          </div>
+          <Button 
+            variant="outline" 
+            onClick={onClearFilters} 
+            className="gap-2"
+          >
+            <X className="h-4 w-4" />
+            Clear All Filters
+          </Button>
         )}
       </div>
     </div>

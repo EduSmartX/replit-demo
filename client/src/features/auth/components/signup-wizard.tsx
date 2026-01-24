@@ -20,26 +20,24 @@
  */
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import {
-  Loader2,
-  CheckCircle2,
   ArrowRight,
-  Mail,
   Building2,
-  User,
+  CheckCircle2,
+  Globe,
+  Loader2,
   Lock,
+  Mail,
   MapPin,
   Phone,
-  Globe,
+  User,
 } from "lucide-react";
 import { useState } from "react";
-import { useForm, Controller } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { useLocation } from "wouter";
 import * as z from "zod";
-import { OtpInput } from "./otp-input";
-import { AuthFormCard } from "./auth-form-card";
-import { AddressAutocomplete } from "@/components/ui/address-autocomplete";
+import { AddressInputFields } from "@/common/components/forms";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -52,10 +50,18 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { api, API_ENDPOINTS } from "@/lib/api";
-import { ErrorMessages, SuccessMessages, ValidationErrorMessages } from "@/lib/constants";
+import { ValidationErrorMessages } from "@/lib/constants";
 import { parseApiError } from "@/lib/error-parser";
-import { AddressComponents } from "@/lib/google-places";
-import { verifyOtp, sendOtps } from "@/lib/otp-service";
+import type { AddressComponents } from "@/lib/google-places";
+import { sendOtps, verifyOtp } from "@/lib/otp-service";
+import { 
+  tenDigitPhoneRegex, 
+  nameRegex,
+  ValidationMessages,
+  cleanPhoneNumber 
+} from "@/lib/utils/validation-utils";
+import { AuthFormCard } from "./auth-form-card";
+import { OtpInput } from "./otp-input";
 
 // Schema for Step 1
 const step1Schema = z.object({
@@ -75,7 +81,20 @@ const step3Schema = z
     // Organization Info
     orgName: z.string().min(2, ValidationErrorMessages.ORG_NAME_REQUIRED),
     orgType: z.string().min(1, "Organization type is required"),
-    orgPhoneNumber: z.string().min(10, ValidationErrorMessages.INVALID_PHONE),
+    orgPhoneNumber: z
+      .string()
+      .min(1, "Phone number is required")
+      .refine(
+        (val) => {
+          if (!val) {
+            return false;
+          }
+          const cleaned = cleanPhoneNumber(val);
+          return tenDigitPhoneRegex.test(cleaned);
+        },
+        ValidationMessages.phone.invalid
+      )
+      .transform((val) => cleanPhoneNumber(val)),
     orgWebsite: z.string().optional(),
     boardAffiliation: z.string().optional(),
     legalEntity: z.string().optional(),
@@ -92,8 +111,14 @@ const step3Schema = z
     longitude: z.string().optional(),
 
     // Admin Info
-    firstName: z.string().min(2, "First name is required"),
-    lastName: z.string().min(2, "Last name is required"),
+    firstName: z
+      .string()
+      .min(2, "First name is required")
+      .regex(nameRegex, ValidationMessages.name.invalid),
+    lastName: z
+      .string()
+      .min(2, "Last name is required")
+      .regex(nameRegex, ValidationMessages.name.invalid),
     password: z.string().min(8, ValidationErrorMessages.PASSWORD_TOO_SHORT),
     confirmPassword: z.string(),
     notificationOptIn: z.boolean().default(true),
@@ -218,21 +243,26 @@ export function SignupWizard({
       let errorDescription = "Failed to send verification codes. Please try again.";
 
       try {
-        const errorText = (error as { message?: string })?.message || "";
-        const jsonMatch = errorText.match(/\{[\s\S]*\}/);
+        // Check if error has errors property (our API error structure)
+        const errorData = error?.errors || error?.response?.data || error?.data;
 
-        if (jsonMatch) {
-          const errorData = JSON.parse(jsonMatch[0]);
-
+        if (errorData) {
           // Handle validation errors with specific email errors
           if (errorData.errors && Array.isArray(errorData.errors)) {
-            // Build a detailed error message
-            const errorMessages = errorData.errors
-              .map((err: { email: string; error: string }) => `${err.email}: ${err.error}`)
-              .join("\n");
+            // Build a user-friendly error message from structured errors
+            errorTitle = errorData.detail || "Registration Error";
+            
+            // Create readable error messages for each email
+            const errorMessages = errorData.errors.map((err: { 
+              email: string; 
+              category: string; 
+              error: string 
+            }) => {
+              const emailType = err.category === 'admin' ? 'Administrator' : 'Organization';
+              return `• ${emailType} email (${err.email}): ${err.error}`;
+            }).join("\n");
 
-            errorTitle = errorData.detail || "Validation Failed";
-            errorDescription = errorMessages;
+            errorDescription = errorMessages || "Please check the email addresses and try again.";
           }
           // Handle already registered emails
           else if (errorData.detail && errorData.detail.includes("already registered")) {
@@ -242,17 +272,20 @@ export function SignupWizard({
           }
           // Handle general errors with detail field
           else if (errorData.detail) {
-            errorTitle = "OTP Send Failed";
+            errorTitle = "Registration Failed";
             errorDescription = errorData.detail;
           }
           // Handle errors with message field
           else if (errorData.message) {
             errorDescription = errorData.message;
           }
+        } else {
+          // Fallback to error message
+          errorDescription = error?.message || errorDescription;
         }
       } catch (parseError) {
         // If parsing fails, use the original error message
-        errorDescription = (error as { message?: string })?.message || errorDescription;
+        errorDescription = error?.message || errorDescription;
       }
 
       toast({
@@ -533,6 +566,7 @@ export function SignupWizard({
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
+            className="mx-auto max-w-md"
           >
             <AuthFormCard
               footer={
@@ -596,6 +630,7 @@ export function SignupWizard({
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
+            className="mx-auto max-w-md"
           >
             <AuthFormCard
               footer={
@@ -648,6 +683,7 @@ export function SignupWizard({
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
+            className="mx-auto max-w-3xl"
           >
             <AuthFormCard
               footer={
@@ -656,7 +692,7 @@ export function SignupWizard({
                     Back
                   </Button>
                   <Button
-                    className="bg-primary hover:bg-primary/90 h-12 text-base"
+                    className="bg-primary hover:bg-primary/90 h-12 text-base px-8"
                     onClick={form3.handleSubmit(onStep3Submit)}
                     disabled={isLoading}
                     data-testid="button-complete-signup"
@@ -664,7 +700,7 @@ export function SignupWizard({
                     {isLoading ? (
                       <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                     ) : (
-                      "Complete Registration"
+                      "Register"
                     )}
                   </Button>
                 </div>
@@ -695,7 +731,7 @@ export function SignupWizard({
                     )}
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="orgType" className="text-base">
                         Type <span className="text-destructive">*</span>
@@ -740,7 +776,7 @@ export function SignupWizard({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="orgWebsite" className="text-base">Website URL</Label>
                       <div className="relative">
@@ -782,7 +818,7 @@ export function SignupWizard({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="legalEntity" className="text-base">Legal Entity</Label>
                       <Input
@@ -822,107 +858,28 @@ export function SignupWizard({
                     Organization Address
                   </h3>
 
-                  <Controller
-                    name="streetAddress"
+                  <AddressInputFields
                     control={form3.control}
-                    render={({ field }) => (
-                      <AddressAutocomplete
-                        onAddressSelect={handleAddressSelect}
-                        value={field.value}
-                        onChange={field.onChange}
-                        label="Street Address"
-                        required
-                        error={form3.formState.errors.streetAddress?.message}
-                        id="streetAddress"
-                        testId="input-street-address"
-                        name={field.name}
-                      />
-                    )}
+                    streetAddressName="streetAddress"
+                    addressLine2Name="addressLine2"
+                    cityName="city"
+                    stateName="state"
+                    zipCodeName="zipCode"
+                    countryName="country"
+                    latitudeName="latitude"
+                    longitudeName="longitude"
+                    onAddressSelect={handleAddressSelect}
+                    errors={{
+                      streetAddress: form3.formState.errors.streetAddress,
+                      addressLine2: form3.formState.errors.addressLine2,
+                      city: form3.formState.errors.city,
+                      state: form3.formState.errors.state,
+                      zipCode: form3.formState.errors.zipCode,
+                      country: form3.formState.errors.country,
+                    }}
+                    showLocationButton={true}
+                    gridCols="2"
                   />
-
-                  <div className="space-y-2">
-                    <Label htmlFor="addressLine2" className="text-base">Address Line 2</Label>
-                    <Input
-                      id="addressLine2"
-                      placeholder="Suite, Building, Floor (optional)"
-                      {...form3.register("addressLine2")}
-                      className="h-12 text-base"
-                    />
-                    {form3.formState.errors.addressLine2 && (
-                      <p className="text-destructive text-sm">
-                        {form3.formState.errors.addressLine2.message}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="city" className="text-base">
-                        City <span className="text-destructive">*</span>
-                      </Label>
-                      <Input
-                        id="city"
-                        placeholder="Mumbai"
-                        {...form3.register("city")}
-                        data-testid="input-city"
-                        className="h-12 text-base"
-                      />
-                      {form3.formState.errors.city && (
-                        <p className="text-destructive text-sm">
-                          {form3.formState.errors.city.message}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="state" className="text-base">
-                        State <span className="text-destructive">*</span>
-                      </Label>
-                      <Input
-                        id="state"
-                        placeholder="Maharashtra"
-                        {...form3.register("state")}
-                        data-testid="input-state"
-                        className="h-12 text-base"
-                      />
-                      {form3.formState.errors.state && (
-                        <p className="text-destructive text-sm">
-                          {form3.formState.errors.state.message}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="zipCode" className="text-base">
-                        Zip Code <span className="text-destructive">*</span>
-                      </Label>
-                      <Input
-                        id="zipCode"
-                        placeholder="400001"
-                        {...form3.register("zipCode")}
-                        data-testid="input-zip-code"
-                        className="h-12 text-base"
-                      />
-                      {form3.formState.errors.zipCode && (
-                        <p className="text-destructive text-sm">
-                          {form3.formState.errors.zipCode.message}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="country" className="text-base">Country</Label>
-                      <Input
-                        id="country"
-                        value={form3.watch("country") || "INDIA"}
-                        disabled
-                        {...form3.register("country")}
-                        className="h-12 text-base"
-                      />
-                    </div>
-                  </div>
                 </div>
 
                 {/* Admin Information */}
@@ -932,7 +889,7 @@ export function SignupWizard({
                     Administrator Information
                   </h3>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="firstName" className="text-base">
                         First Name <span className="text-destructive">*</span>

@@ -5,7 +5,8 @@
  * and mapping them to form fields using React Hook Form.
  */
 
-import { UseFormSetError, FieldValues, Path } from "react-hook-form";
+import { toast } from "@/hooks/use-toast";
+import type { UseFormSetError, FieldValues, Path } from "react-hook-form";
 
 /**
  * Backend validation error response structure
@@ -24,7 +25,23 @@ interface BackendValidationError {
  * @returns Parsed error data or null if not a validation error
  */
 export function parseBackendValidationError(error: unknown): BackendValidationError | null {
-  try {
+  try {    
+    // Check if error has response.data structure (from axios)
+    if (error && typeof error === 'object' && 'response' in error) {
+      const responseError = error as { response?: { data?: BackendValidationError } };
+      if (responseError.response?.data?.errors) {
+        return responseError.response.data;
+      }
+    }
+    
+    // Check if error directly has errors property
+    if (error && typeof error === 'object' && 'errors' in error) {
+      const errorObj = error as BackendValidationError;
+      if (errorObj.errors && typeof errorObj.errors === 'object') {
+        return errorObj;
+      }
+    }
+        
     const errorText = (error as { message?: string })?.message || "";
     const jsonMatch = errorText.match(/\{[\s\S]*\}/);
     
@@ -35,8 +52,7 @@ export function parseBackendValidationError(error: unknown): BackendValidationEr
         return errorData;
       }
     }
-  } catch (parseError) {
-    // If parsing fails, return null
+  } catch (parseError) {    
     return null;
   }
   
@@ -47,8 +63,7 @@ export function parseBackendValidationError(error: unknown): BackendValidationEr
  * Set form field errors from backend validation response
  * 
  * Core error mapping strategy: Extract backend validation errors from API response,
- * then map to form fields using optional fieldMap (backend_name -> form_name).
- * Returns true if any field errors were set, allowing callers to skip generic error toast.
+ * then map to form fields using optional fieldMap (backend_name -> form_name). 
  * 
  * @param error - The error object from API call
  * @param setError - React Hook Form's setError function
@@ -67,22 +82,46 @@ export function setFormFieldErrors<TFieldValues extends FieldValues>(
   }
   
   let hasFieldError = false;
+  const errorMessages: string[] = [];
   
   Object.entries(errorData.errors).forEach(([field, messages]) => {
-    if (Array.isArray(messages) && messages.length > 0) {
-      // Use field map if provided, otherwise use field name directly
-      const formField = fieldMap?.[field] || (field as Path<TFieldValues>);
+    if (Array.isArray(messages) && messages.length > 0) {      
+      const formField = fieldMap?.[field] || (field as Path<TFieldValues>);      
+      const displayFieldName = formatFieldName(field);
       
       setError(formField, {
         type: 'manual',
         message: messages[0],
-      });
+      });            
+      errorMessages.push(`${displayFieldName}: ${messages[0]}`);
       
       hasFieldError = true;
     }
   });
   
+  // Show toast with all validation errors
+  if (hasFieldError && errorMessages.length > 0) {
+    toast({
+      title: "Validation Error",
+      description: errorMessages.join("\n• "),
+      variant: "destructive",
+    });
+  }
+  
   return hasFieldError;
+}
+
+/**
+ * Format field name from snake_case to Title Case
+ */
+function formatFieldName(fieldName: string): string {
+  // Remove array indices and nested paths
+  const cleanField = fieldName.replace(/\.\d+\./g, ' ').replace(/\./g, ' ');
+  
+  return cleanField
+    .split(/[_\s]+/)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
 }
 
 /**

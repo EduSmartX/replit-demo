@@ -3,8 +3,6 @@
  * Reusable utilities for form operations across different entities
  */
 
-import { UseMutationResult } from "@tanstack/react-query";
-
 /**
  * Generic API Response Types
  */
@@ -88,7 +86,7 @@ export function isFormMode(mode: FormMode, checkMode: FormMode | FormMode[]): bo
  * Format date for input field (YYYY-MM-DD)
  */
 export function formatDateForInput(date: string | Date | undefined): string {
-  if (!date) return "";
+  if (!date) {return "";}
   const d = typeof date === "string" ? new Date(date) : date;
   return d.toISOString().split("T")[0];
 }
@@ -97,7 +95,7 @@ export function formatDateForInput(date: string | Date | undefined): string {
  * Parse local date string without timezone conversion
  */
 export function parseLocalDate(dateString: string | undefined): Date | undefined {
-  if (!dateString) return undefined;
+  if (!dateString) {return undefined;}
   const [year, month, day] = dateString.split("-").map(Number);
   return new Date(year, month - 1, day); // month is 0-indexed
 }
@@ -225,30 +223,30 @@ export function createCrudActions<T>(
   return {
     handleCreate: () => {
       setState({ viewMode: "create", selectedItem: null });
-      if (setLocation) setLocation(`${basePath}/create`);
+      if (setLocation) {setLocation(`${basePath}/create`);}
     },
     handleView: (item: T) => {
       setState({ viewMode: "view", selectedItem: item });
       const id = (item as any).public_id || (item as any).id;
-      if (setLocation && id) setLocation(`${basePath}/${id}`);
+      if (setLocation && id) {setLocation(`${basePath}/${id}`);}
     },
     handleEdit: (item: T) => {
       setState({ viewMode: "edit", selectedItem: item });
       const id = (item as any).public_id || (item as any).id;
-      if (setLocation && id) setLocation(`${basePath}/${id}/edit`);
+      if (setLocation && id) {setLocation(`${basePath}/${id}/edit`);}
     },
     handleDelete: (id: string) => {
       deleteAction(id);
     },
     handleCancel: () => {
       setState({ viewMode: "list", selectedItem: null });
-      if (setLocation) setLocation(basePath);
+      if (setLocation) {setLocation(basePath);}
     },
     handleSuccess: () => {
       setState({ showSuccess: true });
       setTimeout(() => {
         setState({ showSuccess: false, viewMode: "list", selectedItem: null });
-        if (setLocation) setLocation(basePath);
+        if (setLocation) {setLocation(basePath);}
       }, 2000);
     },
   };

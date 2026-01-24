@@ -4,29 +4,40 @@
  * Administrative interface for managing classes and sections.
  * Supports creating, viewing, editing, and deleting sections.
  * Handles routing for list view and detail views.
+ * Implements modular approach with reusable hooks and centralized dialogs.
  * 
  * @route /classes
  * @route /classes/:id (for viewing/editing specific class)
  */
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
+import { Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
+import { PageWrapper, SuccessDialog, DeleteConfirmationDialog } from "@/common/components";
 import { DashboardLayout } from "@/common/layouts";
 import { ClassesList, MultiRowClassForm, SingleClassForm } from "@/features/classes";
-import { useToast } from "@/hooks/use-toast";
-import { deleteClass, fetchClass, type MasterClass } from "@/lib/api/class-api";
+import { useDeleteMutation } from "@/hooks/use-delete-mutation";
+import { useReactivateMutation } from "@/hooks/use-reactivate-mutation";
+import { deleteClass, fetchClass, reactivateClass, type MasterClass } from "@/lib/api/class-api";
 
 type ViewMode = "list" | "create" | "view" | "edit";
 
 export default function ClassesPage() {
   const [location, setLocation] = useLocation();
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [selectedClass, setSelectedClass] = useState<MasterClass | null>(null);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [successMessage, setSuccessMessage] = useState({ title: "", description: "" });
+  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; classData: MasterClass | null }>({
+    open: false,
+    classData: null,
+  });
+  const [reactivateDialog, setReactivateDialog] = useState<{ open: boolean; classData: MasterClass | null }>({
+    open: false,
+    classData: null,
+  });
 
-  // Extract class ID from URL
   const getClassIdFromPath = () => {
     const match = location.match(/\/classes\/([a-zA-Z0-9]+)$/);
     return match ? match[1] : null;
@@ -34,8 +45,7 @@ export default function ClassesPage() {
 
   const classId = getClassIdFromPath();
 
-  // Fetch class detail when URL contains an ID
-  const { data: classDetail } = useQuery({
+  const { data: classDetail, isLoading: isLoadingClass } = useQuery({
     queryKey: ["class-detail", classId],
     queryFn: async () => {
       if (!classId) {
@@ -49,7 +59,6 @@ export default function ClassesPage() {
     refetchOnMount: true,
   });
 
-  // Update viewMode and selectedClass when URL changes
   useEffect(() => {
     if (classId && classDetail) {
       setSelectedClass(classDetail);
@@ -60,125 +69,165 @@ export default function ClassesPage() {
     }
   }, [classId, classDetail]);
 
-  // Class delete mutation
-  const deleteMutation = useMutation({
-    mutationFn: (publicId: string) => deleteClass(publicId),
-    onSuccess: async () => {
-      // Invalidate all queries starting with "classes"
-      await queryClient.invalidateQueries({
-        queryKey: ["classes"],
+  const deleteClassMutation = useDeleteMutation({
+    resourceName: "Section",
+    deleteFn: deleteClass,
+    queryKeys: ["classes", "class-detail"],
+    onSuccessCallback: () => {
+      setSuccessMessage({
+        title: "Section Deleted!",
+        description: "The section has been successfully deleted.",
       });
-      toast({
-        title: "Success",
-        description: "Section has been deleted successfully",
-      });
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to delete section",
-        variant: "destructive",
-      });
+      setShowSuccessDialog(true);
     },
   });
 
+  const reactivateClassMutation = useReactivateMutation({
+    resourceName: "Section",
+    reactivateFn: reactivateClass,
+    queryKeys: ["classes", "class-detail"],
+    onSuccessCallback: () => {
+      setSuccessMessage({
+        title: "Section Reactivated!",
+        description: "The section has been successfully reactivated.",
+      });
+      setShowSuccessDialog(true);
+    },
+  });
+
+  const handleDeleteClass = (classData: MasterClass) => {
+    setDeleteDialog({ open: true, classData });
+  };
+
+  const handleReactivateClass = (classData: MasterClass) => {
+    setReactivateDialog({ open: true, classData });
+  };
+
+  const confirmDelete = () => {
+    if (deleteDialog.classData) {
+      deleteClassMutation.mutate(deleteDialog.classData.public_id);
+      setDeleteDialog({ open: false, classData: null });
+    }
+  };
+
+  const confirmReactivate = () => {
+    if (reactivateDialog.classData) {
+      reactivateClassMutation.mutate(reactivateDialog.classData.public_id);
+      setReactivateDialog({ open: false, classData: null });
+    }
+  };
+
   const handleView = (classData: MasterClass) => {
-    setSelectedClass(classData);
     setViewMode("view");
     setLocation(`/classes/${classData.public_id}`);
   };
 
   const handleEdit = (classData: MasterClass) => {
-    setSelectedClass(classData);
     setViewMode("edit");
     setLocation(`/classes/${classData.public_id}`);
   };
 
-  const handleDelete = async (classData: MasterClass) => {
-    if (confirm(`Are you sure you want to delete the section "${classData.name}"?`)) {
-      deleteMutation.mutate(classData.public_id);
+  const handleCreateNew = () => {
+    setSelectedClass(null);
+    setViewMode("create");
+  };
+
+  const handleSuccess = (isCreate: boolean = false) => {
+    setSuccessMessage({
+      title: isCreate ? "Section(s) Created!" : "Section Updated!",
+      description: isCreate
+        ? "The section(s) have been successfully created."
+        : "The section has been successfully updated.",
+    });
+    setShowSuccessDialog(true);
+  };
+
+  const handleSuccessDialogClose = () => {
+    setShowSuccessDialog(false);
+    
+    if (successMessage.title.includes("Deleted") || successMessage.title.includes("Reactivated")) {
+      setViewMode("list");
+      setSelectedClass(null);
+      setLocation("/classes");
+    } else if (viewMode === "create") {
+      setViewMode("list");
+      setSelectedClass(null);
+      setLocation("/classes");
+    } else if (viewMode === "edit") {
+      setSelectedClass(null);
+      setViewMode("view");
+    }
+  };
+
+  const handleCancel = () => {
+    if (viewMode === "edit") {
+      setViewMode("view");
+    } else {
+      setViewMode("list");
+      setSelectedClass(null);
+      setLocation("/classes");
     }
   };
 
   return (
     <DashboardLayout>
-      {viewMode === "list" && (
-        <ClassesList
-          onCreateNew={() => {
-            setSelectedClass(null);
-            setViewMode("create");
-          }}
-          onView={handleView}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-        />
-      )}
+      <PageWrapper>
+        {viewMode === "list" ? (
+          <ClassesList
+            onCreateNew={handleCreateNew}
+            onView={handleView}
+            onEdit={handleEdit}
+            onDelete={handleDeleteClass}
+            onReactivate={handleReactivateClass}
+          />
+        ) : viewMode === "create" ? (
+          <MultiRowClassForm
+            onSuccess={() => handleSuccess(true)}
+            onCancel={handleCancel}
+          />
+        ) : (isLoadingClass || (classId && !selectedClass)) ? (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+            <div className="flex flex-col items-center gap-2">
+              <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
+              <p className="text-sm text-muted-foreground">Loading class data...</p>
+            </div>
+          </div>
+        ) : (
+          <SingleClassForm
+            mode={viewMode}
+            initialData={selectedClass}
+            onEdit={() => setViewMode("edit")}
+            onSuccess={() => handleSuccess(false)}
+            onCancel={handleCancel}
+          />
+        )}
+      </PageWrapper>
 
-      {viewMode === "create" && (
-        <MultiRowClassForm
-          onSuccess={async () => {
-            toast({
-              title: "Success",
-              description: "Section(s) have been created successfully",
-            });
+      <SuccessDialog
+        open={showSuccessDialog}
+        title={successMessage.title}
+        description={successMessage.description}
+        onClose={handleSuccessDialogClose}
+      />
 
-            // Invalidate and refetch classes list
-            await queryClient.invalidateQueries({
-              queryKey: ["classes"],
-              exact: false,
-            });
+      <DeleteConfirmationDialog
+        open={deleteDialog.open}
+        description={`Are you sure you want to delete the section "${deleteDialog.classData?.name}"? This action cannot be undone.`}
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteDialog({ open: false, classData: null })}
+        isDeleting={deleteClassMutation.isPending}
+      />
 
-            // Go back to list after create
-            setViewMode("list");
-            setSelectedClass(null);
-            setLocation("/classes");
-          }}
-          onCancel={() => {
-            setViewMode("list");
-            setSelectedClass(null);
-            setLocation("/classes");
-          }}
-        />
-      )}
-
-      {(viewMode === "view" || viewMode === "edit") && (
-        <SingleClassForm
-          mode={viewMode}
-          initialData={selectedClass}
-          onEdit={() => setViewMode("edit")}
-          onSuccess={async () => {
-            toast({
-              title: "Success",
-              description: "Section has been updated successfully",
-            });
-
-            // Invalidate and refetch
-            if (selectedClass) {
-              await queryClient.invalidateQueries({
-                queryKey: ["class-detail", selectedClass.public_id],
-              });
-              await queryClient.invalidateQueries({
-                queryKey: ["classes"],
-                exact: false,
-              });
-            }
-
-            // Go back to view mode after edit
-            if (viewMode === "edit") {
-              setViewMode("view");
-            }
-          }}
-          onCancel={() => {
-            if (viewMode === "edit") {
-              setViewMode("view");
-            } else {
-              setViewMode("list");
-              setSelectedClass(null);
-              setLocation("/classes");
-            }
-          }}
-        />
-      )}
+      <DeleteConfirmationDialog
+        open={reactivateDialog.open}
+        title="Reactivate Section"
+        description={`Are you sure you want to reactivate the section "${reactivateDialog.classData?.name}"?`}
+        confirmLabel="Reactivate"
+        onConfirm={confirmReactivate}
+        onCancel={() => setReactivateDialog({ open: false, classData: null })}
+        isDeleting={reactivateClassMutation.isPending}
+        variant="default"
+      />
     </DashboardLayout>
   );
 }

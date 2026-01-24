@@ -1,0 +1,6 @@
+1. Form Field Erros
+2. Deleted Duplicate Records dialogue box
+3. Filter Utility
+4. Data Table Utility
+5. Toggling Deleted records and active records
+6. Uniform Success and Validation Error Messeges

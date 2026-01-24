@@ -7,8 +7,6 @@
  * - Operations: Attendance, leave requests
  */
 
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import {
   Award,
   BarChart3,
@@ -24,6 +22,8 @@ import {
   X
 } from "lucide-react";
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { ResizableSidebar } from "./resizable-sidebar";
 
 const adminMenuItems = [
@@ -55,7 +55,7 @@ export function AdminSidebar({ activeMenu, onMenuChange }: AdminSidebarProps) {
       <Button
         variant="ghost"
         size="icon"
-        className="fixed top-4 left-4 z-40 md:hidden"
+        className="fixed top-4 left-4 z-[60] md:hidden text-white hover:bg-white/20"
         onClick={() => setIsOpen(!isOpen)}
         data-testid="button-mobile-menu"
       >
@@ -64,7 +64,7 @@ export function AdminSidebar({ activeMenu, onMenuChange }: AdminSidebarProps) {
 
       {isOpen && (
         <div
-          className="fixed inset-0 z-30 bg-black/50 md:hidden"
+          className="fixed inset-0 z-40 bg-black/50 md:hidden"
           onClick={() => setIsOpen(false)}
           onKeyDown={(e) => e.key === "Escape" && setIsOpen(false)}
           role="button"
@@ -77,8 +77,8 @@ export function AdminSidebar({ activeMenu, onMenuChange }: AdminSidebarProps) {
         isOpen={isOpen}
         className="border-blue-200 bg-gradient-to-b from-blue-50 to-green-50"
         minWidth={280}
-        maxWidth={500}
-        defaultWidth={350}
+        maxWidth={350}
+        defaultWidth={330}
       >
         {(width) => (
           <>
@@ -120,7 +120,8 @@ export function AdminSidebar({ activeMenu, onMenuChange }: AdminSidebarProps) {
                 return (
                   <button
                     key={menuItem.id}
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.preventDefault();
                       onMenuChange(menuItem.id);
                       setIsOpen(false);
                     }}

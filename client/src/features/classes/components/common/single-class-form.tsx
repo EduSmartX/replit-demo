@@ -4,45 +4,46 @@
  * Supports three modes: create, edit, and view with appropriate field states.
  */
 
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Edit, Loader2, Save } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { useForm } from "react-hook-form";
+import { TeacherField } from "@/common/components/forms";
+import { PageWrapper } from "@/common/components/layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-    Form,
-    FormControl,
-    FormDescription,
-    FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import type { MasterClass } from "@/lib/api/class-api";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, Edit, Loader2, Save } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
-import { useForm } from "react-hook-form";
 import {
-    getDefaultSingleFormValues,
-    getSingleFormValuesFromClass,
+  getDefaultSingleFormValues,
+  getSingleFormValuesFromClass,
 } from "../../helpers/class-form-helpers";
 import {
-    useCoreClasses,
-    useCreateClass,
-    useTeachers,
-    useUpdateClass,
+  useCoreClasses,
+  useCreateClass,
+  useUpdateClass,
 } from "../../hooks/use-class-form";
 import {
-    classSingleFormSchema,
-    type ClassSingleFormValues,
+  classSingleFormSchema,
+  type ClassSingleFormValues,
 } from "../../schemas/class-section-schema";
 
 interface SingleClassFormProps {
@@ -68,7 +69,6 @@ export function SingleClassForm({
 
   // Fetch data
   const { data: coreClasses = [], isLoading: loadingCoreClasses } = useCoreClasses();
-  const { data: teachers = [], isLoading: loadingTeachers } = useTeachers();
 
   // Initialize form
   const form = useForm<ClassSingleFormValues>({
@@ -113,8 +113,8 @@ export function SingleClassForm({
   };
 
   // Setup mutations
-  const createMutation = useCreateClass(handleMutationSuccess);
-  const updateMutation = useUpdateClass(handleMutationSuccess);
+  const createMutation = useCreateClass(handleMutationSuccess, form.setError);
+  const updateMutation = useUpdateClass(handleMutationSuccess, form.setError);
 
   // Form submission handler - MUST check mode first
   const onSubmit = (data: ClassSingleFormValues) => {    
@@ -163,7 +163,7 @@ export function SingleClassForm({
     description: formDescription,
   };
 
-  if (loadingCoreClasses || loadingTeachers) {
+  if (loadingCoreClasses) {
     return (
       <div className="flex h-64 items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
@@ -172,20 +172,11 @@ export function SingleClassForm({
   }
 
   return (
-    <div className="mx-auto max-w-4xl">
-      {/* Header */}
-      <div className="mb-8 flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={onCancel}>
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div>
-          <h1 className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-3xl font-bold text-transparent">
-            {formConfig.title}
-          </h1>
-          <p className="mt-2 text-gray-600">{formConfig.description}</p>
-        </div>
-      </div>
-
+    <PageWrapper
+      title={formConfig.title}
+      description={formConfig.description}
+      onBack={onCancel}
+    >
       {/* Success Message */}
       {showSuccess && (
         <div className="mb-6 rounded-lg border border-green-200 bg-green-50 p-4">
@@ -196,7 +187,7 @@ export function SingleClassForm({
       )}
 
       {/* Form */}
-      <Card className="shadow-lg">
+      <Card className="border-0 shadow-lg">
         <CardHeader>
           <CardTitle>Section Details</CardTitle>
           <CardDescription>
@@ -267,35 +258,11 @@ export function SingleClassForm({
                 />
 
                 {/* Class Teacher */}
-                <FormField
+                <TeacherField
                   control={form.control}
                   name="class_teacher"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Class Teacher (Optional)</FormLabel>
-                      <Select
-                        onValueChange={(value) => field.onChange(value || null)}
-                        value={field.value || undefined}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select teacher..." />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {teachers.map((teacher) => (
-                            <SelectItem
-                              key={teacher.public_id}
-                              value={teacher.public_id}
-                            >
-                              {teacher.full_name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                  label="Class Teacher"
+                  disabled={isViewMode}
                 />
 
                 {/* Capacity */}
@@ -395,6 +362,6 @@ export function SingleClassForm({
           </Form>
         </CardContent>
       </Card>
-    </div>
+    </PageWrapper>
   );
 }

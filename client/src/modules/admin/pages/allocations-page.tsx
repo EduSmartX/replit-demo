@@ -1,20 +1,17 @@
 /**
  * Leave Allocations Management Page
  * 
- * Administrative interface for managing leave allocation policies.
- * Supports creating, viewing, editing, and deleting allocation policies.
- * Handles routing for list view and detail views.
- * 
  * @route /allocations
  * @route /allocations/:id (for viewing/editing specific allocation)
  */
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { LeaveAllocationForm, LeaveAllocationsList } from "@/features/leave";
-import { useToast } from "@/hooks/use-toast";
+import { PageWrapper, SuccessDialog, DeleteConfirmationDialog } from "@/common/components";
 import { DashboardLayout } from "@/common/layouts";
+import { LeaveAllocationForm, LeaveAllocationsList } from "@/features/leave";
+import { useDeleteMutation } from "@/hooks/use-delete-mutation";
 import { deleteLeaveAllocation, apiRequest, API_ENDPOINTS } from "@/lib/api/leave-api";
 import type { LeaveAllocation } from "@/lib/api/leave-api";
 
@@ -22,10 +19,15 @@ type ViewMode = "list" | "create" | "view" | "edit";
 
 export default function AllocationsPage() {
   const [location, setLocation] = useLocation();
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
+  const _queryClient = useQueryClient();
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [selectedAllocation, setSelectedAllocation] = useState<LeaveAllocation | null>(null);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [successMessage, setSuccessMessage] = useState({ title: "", description: "" });
+  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; allocation: LeaveAllocation | null }>({
+    open: false,
+    allocation: null,
+  });
 
   // Extract allocation ID from URL
   const getAllocationIdFromPath = () => {
@@ -39,7 +41,9 @@ export default function AllocationsPage() {
   const { data: allocationDetail } = useQuery({
     queryKey: ["leave-allocation-detail", allocationId],
     queryFn: async () => {
-      if (!allocationId) return null;
+      if (!allocationId) {
+        return null;
+      }
       const response = await apiRequest<{
         success: boolean;
         message: string;
@@ -91,29 +95,16 @@ export default function AllocationsPage() {
   }, [allocationId, allocationDetail]);
 
   // Delete mutation
-  const deleteMutation = useMutation({
-    mutationFn: (publicId: string) => deleteLeaveAllocation(publicId),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: ["leave-allocations"],
-        exact: false,
-        refetchType: "active",
+  const deleteMutation = useDeleteMutation({
+    resourceName: "Leave allocation policy",
+    deleteFn: deleteLeaveAllocation,
+    queryKeys: ["leave-allocations"],
+    onSuccessCallback: () => {
+      setSuccessMessage({
+        title: "Policy Deleted!",
+        description: "The leave allocation policy has been successfully deleted.",
       });
-      await queryClient.refetchQueries({
-        queryKey: ["leave-allocations"],
-        exact: false,
-      });
-      toast({
-        title: "Success",
-        description: "Leave allocation policy has been deleted successfully",
-      });
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to delete leave allocation policy",
-        variant: "destructive",
-      });
+      setShowSuccessDialog(true);
     },
   });
 
@@ -130,56 +121,80 @@ export default function AllocationsPage() {
   };
 
   const handleDelete = async (allocation: LeaveAllocation) => {
-    if (confirm(`Are you sure you want to delete the ${allocation.leave_type_name} policy?`)) {
-      deleteMutation.mutate(allocation.public_id);
+    setDeleteDialog({ open: true, allocation });
+  };
+
+  const confirmDelete = () => {
+    if (deleteDialog.allocation) {
+      deleteMutation.mutate(deleteDialog.allocation.public_id);
+      setDeleteDialog({ open: false, allocation: null });
     }
   };
 
   return (
     <DashboardLayout>
-      {viewMode === "list" ? (
-        <LeaveAllocationsList
-          onCreateNew={() => {
-            setSelectedAllocation(null);
-            setViewMode("create");
-          }}
-          onView={handleView}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-        />
-      ) : (
-        <LeaveAllocationForm
-          mode={viewMode}
-          initialData={selectedAllocation}
-          onEdit={() => setViewMode("edit")}
-          onSuccess={async () => {
-            const message =
-              viewMode === "create"
-                ? "Leave allocation policy has been created successfully"
-                : "Leave allocation policy has been updated successfully";
-            toast({
-              title: "Success",
-              description: message,
-            });
-
-            if (viewMode === "edit" && selectedAllocation) {
-              await queryClient.invalidateQueries({
-                queryKey: ["leave-allocation-detail", selectedAllocation.public_id],
+      <PageWrapper>
+        {viewMode === "list" ? (
+          <LeaveAllocationsList
+            onCreateNew={() => {
+              setSelectedAllocation(null);
+              setViewMode("create");
+            }}
+            onView={handleView}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+          />
+        ) : (
+          <LeaveAllocationForm
+            mode={viewMode}
+            initialData={selectedAllocation}
+            onEdit={() => setViewMode("edit")}
+            onSuccess={() => {
+              const isCreate = viewMode === "create";
+              setSuccessMessage({
+                title: isCreate ? "Policy Created!" : "Policy Updated!",
+                description: isCreate
+                  ? "Leave allocation policy has been created successfully."
+                  : "Leave allocation policy has been updated successfully.",
               });
-              setViewMode("view");
-            } else {
+              setShowSuccessDialog(true);
+            }}
+            onCancel={() => {
               setViewMode("list");
               setSelectedAllocation(null);
               setLocation("/allocations");
-            }
-          }}
-          onCancel={() => {
+            }}
+          />
+        )}
+      </PageWrapper>
+
+      <SuccessDialog
+        open={showSuccessDialog}
+        title={successMessage.title}
+        description={successMessage.description}
+        onClose={() => {
+          setShowSuccessDialog(false);
+          if (successMessage.title.includes("Deleted")) {
             setViewMode("list");
             setSelectedAllocation(null);
             setLocation("/allocations");
-          }}
-        />
-      )}
+          } else if (viewMode === "create") {
+            setViewMode("list");
+            setSelectedAllocation(null);
+            setLocation("/allocations");
+          } else if (viewMode === "edit") {
+            setViewMode("view");
+          }
+        }}
+      />
+
+      <DeleteConfirmationDialog
+        open={deleteDialog.open}
+        description={`Are you sure you want to delete the ${deleteDialog.allocation?.leave_type_name} policy? This action cannot be undone.`}
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteDialog({ open: false, allocation: null })}
+        isDeleting={deleteMutation.isPending}
+      />
     </DashboardLayout>
   );
 }

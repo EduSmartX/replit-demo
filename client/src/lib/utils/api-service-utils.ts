@@ -94,8 +94,9 @@ export async function fetchDetail<T>(url: string): Promise<T> {
  * Sends POST request with JSON payload, unwraps response
  * Generic create function
  */
-export async function createEntity<T, P = any>(url: string, payload: P): Promise<T> {
-  const response = await apiRequest<ApiResponse<T>>(url, {
+export async function createEntity<T, P = any>(url: string, payload: P, forceCreate?: boolean): Promise<T> {
+  const finalUrl = forceCreate ? `${url}?force_create=true` : url;
+  const response = await apiRequest<ApiResponse<T>>(finalUrl, {
     method: "POST",
     body: JSON.stringify(payload),
   });
@@ -165,7 +166,7 @@ export async function bulkUpload<T>(url: string, file: File): Promise<T> {
 export interface EntityService<T, CreatePayload = any, UpdatePayload = any> {
   fetchList: () => Promise<T[]>;
   fetchDetail: (id: string) => Promise<T>;
-  create: (payload: CreatePayload) => Promise<T>;
+  create: (payload: CreatePayload, forceCreate?: boolean) => Promise<T>;
   update: (id: string, payload: Partial<UpdatePayload>) => Promise<T>;
   delete: (id: string) => Promise<void>;
 }
@@ -177,7 +178,7 @@ export function createEntityService<T, CreatePayload = any, UpdatePayload = any>
   return {
     fetchList: () => fetchList<T>(baseUrl),
     fetchDetail: (id: string) => fetchDetail<T>(detailUrl(id)),
-    create: (payload: CreatePayload) => createEntity<T, CreatePayload>(baseUrl, payload),
+    create: (payload: CreatePayload, forceCreate?: boolean) => createEntity<T, CreatePayload>(baseUrl, payload, forceCreate),
     update: (id: string, payload: Partial<UpdatePayload>) =>
       updateEntity<T, UpdatePayload>(detailUrl(id), payload),
     delete: (id: string) => deleteEntity(detailUrl(id)),

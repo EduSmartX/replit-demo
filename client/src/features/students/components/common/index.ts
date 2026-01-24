@@ -6,3 +6,4 @@
  */
 
 export { StudentForm } from './student-form';
+export { MinimalStudentFields } from './minimal-student-fields';

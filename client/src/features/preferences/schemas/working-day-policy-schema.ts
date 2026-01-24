@@ -1,5 +1,5 @@
-import { WorkingDayPolicyMessages } from "@/lib/constants/leave-messages";
 import * as z from "zod";
+import { WorkingDayPolicyMessages } from "@/lib/constants/leave-messages";
 
 export const workingDayPolicySchema = z.object({
   sunday_off: z.boolean(),

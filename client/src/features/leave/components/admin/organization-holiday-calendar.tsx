@@ -3,26 +3,24 @@
  * Displays organization holidays in both calendar and tabular views
  */
 
-import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useToast } from "@/hooks/use-toast";
+import { addMonths, endOfMonth, format, isSameDay, isSameMonth, isWithinInterval, parseISO, startOfDay, startOfMonth, subMonths } from "date-fns";
 import {
+  AlertCircle,
   Calendar as CalendarIcon,
-  List,
   ChevronLeft,
   ChevronRight,
+  List,
   Loader2,
-  AlertCircle,
   Pencil,
   Trash2,
 } from "lucide-react";
-import { fetchHolidayCalendar, fetchWorkingDayPolicy, getHolidayTypeColor, formatHolidayType, calculateDuration, isNthWeekdayOfMonth } from "@/lib/api/holiday-api";
-import type { Holiday, WorkingDayPolicy, SaturdayOffPattern } from "@/lib/api/holiday-api";
+import { useMemo, useState } from "react";
+import { ConfirmationDialog } from "@/common/components/dialogs";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
   TableBody,
@@ -31,22 +29,22 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { AddHolidaysForm } from "./add-holidays-form";
-import { EditHolidayDialog } from "./edit-holiday-dialog";
-import { BulkUploadHolidays } from "./bulk-upload-holidays";
-import { ConfirmationDialog } from "@/common/components/dialogs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useDeleteHoliday } from "@/hooks/use-holiday-mutations";
-import { 
-  isWeekendHoliday, 
-  filterNonWeekendHolidays, 
-  filterWeekendTypes,
-  formatDateRange,
-  sortHolidaysByDate,
-  isHolidayPast,
-  getUpcomingHolidays 
-} from "@/lib/utils/holiday-utils";
+import type { Holiday } from "@/lib/api/holiday-api";
+import { calculateDuration, fetchHolidayCalendar, fetchWorkingDayPolicy, formatHolidayType, getHolidayTypeColor, isNthWeekdayOfMonth } from "@/lib/api/holiday-api";
 import { cn } from "@/lib/utils";
-import { format, startOfMonth, endOfMonth, addMonths, subMonths, isSameMonth, isSameDay, isWithinInterval, parseISO, startOfDay } from "date-fns";
+import {
+  filterNonWeekendHolidays,
+  filterWeekendTypes,
+  getUpcomingHolidays,
+  isHolidayPast,
+  isWeekendHoliday,
+  sortHolidaysByDate
+} from "@/lib/utils/holiday-utils";
+import { AddHolidaysForm } from "./add-holidays-form";
+import { BulkUploadHolidays } from "./bulk-upload-holidays";
+import { EditHolidayDialog } from "./edit-holiday-dialog";
 
 type ViewMode = "calendar" | "table";
 type DateRange = "monthly" | "quarterly" | "half-yearly";
@@ -58,7 +56,7 @@ interface OrganizationHolidayCalendarProps {
 export function OrganizationHolidayCalendar({ className }: OrganizationHolidayCalendarProps) {
   const [viewMode, setViewMode] = useState<ViewMode>("calendar");
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [dateRange] = useState<DateRange>("monthly");
+  const [_dateRange] = useState<DateRange>("monthly");
 
   // Year-based caching strategy: Fetch working day policy once and cache for 30min
   const { data: workingDayPolicyData } = useQuery({
@@ -69,35 +67,28 @@ export function OrganizationHolidayCalendar({ className }: OrganizationHolidayCa
 
   const workingDayPolicy = workingDayPolicyData?.data?.[0];
 
-  // Date range calculation: Fetch entire year but display only current month to optimize performance
-  // This allows month navigation without refetching, using cached year data
-  const { currentYear, fetchFromDate, fetchToDate, displayFromDate, displayToDate } = useMemo(() => {
-    // Fetch entire year: January 1st to December 31st of current viewing year
+  const { currentYear, currentMonth, fetchFromDate, fetchToDate } = useMemo(() => {
     const year = currentDate.getFullYear();
-    const yearStart = new Date(year, 0, 1); // Jan 1
-    const yearEnd = new Date(year, 11, 31); // Dec 31
-    
-    // Display range for current month view
-    const currentMonthStart = startOfMonth(currentDate);
-    const currentMonthEnd = endOfMonth(currentDate);
+    const month = currentDate.getMonth();
+        
+    const monthStart = startOfMonth(currentDate);
+    const monthEnd = endOfMonth(currentDate);
 
     return {
       currentYear: year.toString(),
-      fetchFromDate: format(yearStart, "yyyy-MM-dd"),
-      fetchToDate: format(yearEnd, "yyyy-MM-dd"),
-      displayFromDate: format(currentMonthStart, "yyyy-MM-dd"),
-      displayToDate: format(currentMonthEnd, "yyyy-MM-dd"),
+      currentMonth: month.toString(),
+      fetchFromDate: format(monthStart, "yyyy-MM-dd"),
+      fetchToDate: format(monthEnd, "yyyy-MM-dd"),
     };
   }, [currentDate]);
-
-  // Year-scoped query: Fetch all holidays for entire year once, cache by year for instant month navigation
+  
   const {
     data: holidayData,
     isLoading,
     isError,
     error,
   } = useQuery({
-    queryKey: ["holiday-calendar", currentYear],
+    queryKey: ["holiday-calendar", currentYear, currentMonth],
     queryFn: () =>
       fetchHolidayCalendar({
         from_date: fetchFromDate,
@@ -111,7 +102,7 @@ export function OrganizationHolidayCalendar({ className }: OrganizationHolidayCa
   // Weekend generation algorithm: Dynamically compute Sunday/Saturday holidays based on policy
   // (ALL, SECOND_ONLY, SECOND_AND_FOURTH, NONE) without backend storage
   const generatedWeekendHolidays = useMemo(() => {
-    if (!workingDayPolicy) return [];
+    if (!workingDayPolicy) {return [];}
 
     const holidays: Holiday[] = [];
     const startDate = parseISO(fetchFromDate);
@@ -176,22 +167,8 @@ export function OrganizationHolidayCalendar({ className }: OrganizationHolidayCa
     return [...apiHolidays, ...generatedWeekendHolidays];
   }, [holidayData, generatedWeekendHolidays]);
 
-  // Filter holidays for current display month
-  const displayHolidays = useMemo(() => {
-    return allHolidays.filter((holiday) => {
-      const holidayStart = parseISO(holiday.start_date);
-      const holidayEnd = parseISO(holiday.end_date);
-      const displayStart = parseISO(displayFromDate);
-      const displayEnd = parseISO(displayToDate);
-      
-      // Check if holiday overlaps with display range
-      return (
-        (holidayStart >= displayStart && holidayStart <= displayEnd) ||
-        (holidayEnd >= displayStart && holidayEnd <= displayEnd) ||
-        (holidayStart <= displayStart && holidayEnd >= displayEnd)
-      );
-    });
-  }, [allHolidays, displayFromDate, displayToDate]);
+  // Since we're fetching monthly data, all holidays are for current month
+  const displayHolidays = allHolidays;
 
   // Navigation handlers
   const handlePreviousMonth = () => {
@@ -207,11 +184,27 @@ export function OrganizationHolidayCalendar({ className }: OrganizationHolidayCa
   };
 
   return (
-    <div className={cn("mx-auto max-w-7xl space-y-3", className)}>
+    <div className={cn("space-y-6", className)}>
+      {/* Page Header */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h1 className="mb-3 text-3xl font-bold text-gray-900">Holiday Calendar</h1>
+          <p className="text-base text-gray-600">
+            Manage organization-wide holidays and working days
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <BulkUploadHolidays />
+          <AddHolidaysForm />
+        </div>
+      </div>
+
       <Card>
         <CardHeader className="pb-2">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <CardTitle className="text-xl font-bold">Holiday Calendar</CardTitle>
+            <div className="text-lg font-semibold text-foreground">
+              {format(currentDate, "MMMM yyyy")}
+            </div>
             <div className="flex items-center gap-2 flex-wrap">
               {/* View Toggle */}
               <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
@@ -249,14 +242,7 @@ export function OrganizationHolidayCalendar({ className }: OrganizationHolidayCa
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>
-
-              {/* Bulk Upload and Add Holidays Buttons */}
-              <BulkUploadHolidays />
-              <AddHolidaysForm />
             </div>
-          </div>
-          <div className="text-lg font-semibold text-foreground mt-2">
-            {format(currentDate, "MMMM yyyy")}
           </div>
         </CardHeader>
         <CardContent className="pt-3">
@@ -504,7 +490,7 @@ interface TableViewProps {
   allHolidays: Holiday[];
 }
 
-function TableView({ holidays, allHolidays }: TableViewProps) {
+function TableView({ holidays, allHolidays: _allHolidays }: TableViewProps) {
   const [editingHoliday, setEditingHoliday] = useState<Holiday | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);

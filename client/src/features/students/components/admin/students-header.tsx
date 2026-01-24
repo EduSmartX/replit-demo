@@ -13,22 +13,21 @@ interface StudentsHeaderProps {
 
 export function StudentsHeader({ onAddStudent, canAddStudent }: StudentsHeaderProps) {
   return (
-    <div className="mb-8 flex items-center justify-between">
+    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
       <div>
-        <h1 className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-3xl font-bold text-transparent">
+        <h1 className="mb-3 text-3xl font-bold text-gray-900">
           Students Management
         </h1>
-        <p className="mt-2 text-gray-600">
+        <p className="text-base text-gray-600">
           Manage student information, enrollments, and guardian details
         </p>
       </div>
-      <div className="flex gap-2">
+      <div className="flex gap-2 justify-end">
         <Button
           onClick={onAddStudent}
           disabled={!canAddStudent}
-          className="gap-2"
         >
-          <Plus className="h-4 w-4" />
+          <Plus className="mr-2 h-4 w-4" />
           Add Student
         </Button>
       </div>

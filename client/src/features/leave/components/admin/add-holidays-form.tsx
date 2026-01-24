@@ -3,11 +3,10 @@
  * Allows adding single or multiple holidays at once
  */
 
+import { Plus, Trash2, Calendar, Loader2, ChevronDown, ChevronUp } from "lucide-react";
 import { useState } from "react";
-import { Plus, Trash2, Calendar, Loader2 } from "lucide-react";
-import type { CreateHolidayPayload } from "@/lib/api/holiday-api";
 import { Button } from "@/components/ui/button";
-import { HolidayFormRow, validateHolidayData } from "./holiday-form-fields";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -17,12 +16,15 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { useToast } from "@/hooks/use-toast";
 import { useCreateHoliday, useCreateHolidaysBulk } from "@/hooks/use-holiday-mutations";
+import { useToast } from "@/hooks/use-toast";
+import type { CreateHolidayPayload } from "@/lib/api/holiday-api";
 import { getDefaultHolidayFormData } from "@/lib/utils/holiday-utils";
+import { HolidayFormRow, validateHolidayData } from "./holiday-form-fields";
 
 interface HolidayFormData extends CreateHolidayPayload {
   id: string;
+  isExpanded?: boolean;
 }
 
 export function AddHolidaysForm() {
@@ -30,6 +32,7 @@ export function AddHolidaysForm() {
   const [holidays, setHolidays] = useState<HolidayFormData[]>([
     {
       id: crypto.randomUUID(),
+      isExpanded: true,
       ...getDefaultHolidayFormData(),
     },
   ]);
@@ -54,6 +57,7 @@ export function AddHolidaysForm() {
     setHolidays([
       {
         id: crypto.randomUUID(),
+        isExpanded: true,
         ...getDefaultHolidayFormData(),
       },
     ]);
@@ -64,6 +68,7 @@ export function AddHolidaysForm() {
       ...holidays,
       {
         id: crypto.randomUUID(),
+        isExpanded: true,
         ...getDefaultHolidayFormData(),
       },
     ]);
@@ -73,6 +78,14 @@ export function AddHolidaysForm() {
     if (holidays.length > 1) {
       setHolidays(holidays.filter((h) => h.id !== id));
     }
+  };
+
+  const toggleExpand = (id: string) => {
+    setHolidays(
+      holidays.map((h) =>
+        h.id === id ? { ...h, isExpanded: !h.isExpanded } : h
+      )
+    );
   };
 
   const updateHoliday = (id: string, field: keyof CreateHolidayPayload, value: any) => {
@@ -100,7 +113,7 @@ export function AddHolidaysForm() {
   };
 
   const handleSubmit = () => {
-    if (!validateHolidays()) return;
+    if (!validateHolidays()) {return;}
 
     // Prepare payloads
     const payloads: CreateHolidayPayload[] = holidays.map((h) => ({
@@ -128,10 +141,10 @@ export function AddHolidaysForm() {
           Add Holidays
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
+          <DialogTitle className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+            <Calendar className="h-5 w-5 text-purple-600" />
             Add Organization Holidays
           </DialogTitle>
           <DialogDescription>
@@ -140,40 +153,52 @@ export function AddHolidaysForm() {
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Table Header */}
-          <div className="grid grid-cols-12 gap-3 px-3 py-2 bg-muted/50 rounded-lg text-xs font-semibold">
-            <div className="col-span-3">Start Date *</div>
-            <div className="col-span-3">End Date (Optional)</div>
-            <div className="col-span-2">Type *</div>
-            <div className="col-span-3">Description *</div>
-            <div className="col-span-1 text-center">Action</div>
-          </div>
-
-          {/* Holiday Rows */}
+          {/* Holiday Sections */}
           <div className="space-y-3">
             {holidays.map((holiday, index) => (
-              <div
-                key={holiday.id}
-                className="grid grid-cols-12 gap-3 items-start p-3 border rounded-lg"
-              >
-                <HolidayFormRow
-                  formData={holiday}
-                  onUpdate={(field, value) => updateHoliday(holiday.id, field, value)}
-                />
-
-                {/* Remove Button */}
-                <div className="col-span-1 flex justify-center">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => removeHolidayRow(holiday.id)}
-                    disabled={holidays.length === 1}
-                    className="h-8 w-8"
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                </div>
-              </div>
+              <Card key={holiday.id} className="border border-purple-200">
+                <CardHeader
+                  className="cursor-pointer bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 transition-colors py-3"
+                  onClick={() => toggleExpand(holiday.id)}
+                >
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-purple-900">
+                      Holiday {index + 1}
+                      {holiday.description && ` - ${holiday.description}`}
+                    </h3>
+                    <div className="flex items-center gap-2">
+                      {holidays.length > 1 && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeHolidayRow(holiday.id);
+                          }}
+                          className="h-8 w-8 text-red-600 hover:bg-red-100"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {holiday.isExpanded ? (
+                        <ChevronUp className="h-5 w-5 text-purple-600" />
+                      ) : (
+                        <ChevronDown className="h-5 w-5 text-purple-600" />
+                      )}
+                    </div>
+                  </div>
+                </CardHeader>
+                {holiday.isExpanded && (
+                  <CardContent className="pt-6">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <HolidayFormRow
+                        formData={holiday}
+                        onUpdate={(field, value) => updateHoliday(holiday.id, field, value)}
+                      />
+                    </div>
+                  </CardContent>
+                )}
+              </Card>
             ))}
           </div>
 
@@ -182,10 +207,10 @@ export function AddHolidaysForm() {
             type="button"
             variant="outline"
             onClick={addHolidayRow}
-            className="w-full gap-2"
+            className="w-full border-2 border-dashed border-purple-300 text-purple-600 hover:bg-purple-50 hover:border-purple-400 py-3"
             disabled={isLoading}
           >
-            <Plus className="h-4 w-4" />
+            <Plus className="h-5 w-5 mr-2" />
             Add Another Holiday
           </Button>
         </div>
@@ -194,7 +219,11 @@ export function AddHolidaysForm() {
           <Button variant="outline" onClick={() => setOpen(false)} disabled={isLoading}>
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={isLoading} className="gap-2">
+          <Button 
+            onClick={handleSubmit} 
+            disabled={isLoading} 
+            className="bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700 gap-2"
+          >
             {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
             {holidays.length === 1 ? "Create Holiday" : `Create ${holidays.length} Holidays`}
           </Button>

@@ -28,20 +28,18 @@ export interface Teacher {
     role?: string;
     gender?: string;
     blood_group?: string;
+    date_of_birth?: string;
     organization_role?: string;
     supervisor?: {
       email: string;
       full_name: string;
     };
     address?: Address;
-    [key: string]: unknown;
   };
   employee_id: string;
   full_name: string;
   email: string;
   phone: string;
-  first_name: string;
-  last_name: string;
   highest_qualification?: string;
   joining_date?: string;
   specialization?: string;
@@ -50,21 +48,13 @@ export interface Teacher {
   subjects?: Array<{ public_id: string; name: string; code?: string }>;
   emergency_contact_name?: string;
   emergency_contact_number?: string;
-  blood_group?: string;
-  gender?: string;
-  organization_role?: string;
   is_first_login?: boolean;
-  addresses?: Address[];
   created_at: string;
   updated_at: string;
 }
 
 export interface TeacherCreatePayload {
   employee_id: string;
-  email: string;
-  phone?: string;
-  first_name: string;
-  last_name: string;
   highest_qualification?: string;
   joining_date?: string;
   specialization?: string;
@@ -73,17 +63,22 @@ export interface TeacherCreatePayload {
   subjects?: number[];
   emergency_contact_name?: string;
   emergency_contact_number?: string;
-  blood_group?: string;
-  gender?: string;
-  organization_role?: string;
-  supervisor_email?: string;
+  user: {
+    email: string;
+    phone?: string;
+    first_name: string;
+    last_name: string;
+    blood_group?: string;
+    date_of_birth?: string;
+    gender?: string;
+    organization_role?: string;
+    supervisor_email?: string;
+    address?: Address;
+  };
 }
 
 export interface TeacherUpdatePayload {
   employee_id?: string;
-  phone?: string;
-  first_name?: string;
-  last_name?: string;
   highest_qualification?: string;
   joining_date?: string;
   specialization?: string;
@@ -92,8 +87,18 @@ export interface TeacherUpdatePayload {
   subjects?: number[];
   emergency_contact_name?: string;
   emergency_contact_number?: string;
-  blood_group?: string;
-  gender?: string;
+  user?: {
+    email?: string;
+    phone?: string;
+    first_name?: string;
+    last_name?: string;
+    blood_group?: string;
+    date_of_birth?: string;
+    gender?: string;
+    organization_role?: string;
+    supervisor_email?: string;
+    address?: Address;
+  };
 }
 
 export interface Subject {
@@ -128,18 +133,6 @@ interface ApiResponse<T> {
   pagination?: unknown;
 }
 
-interface PaginatedResponse<T> {
-  success: boolean;
-  message: string;
-  data: {
-    count: number;
-    next: string | null;
-    previous: string | null;
-    results: T[];
-  };
-  code: number;
-}
-
 interface TeachersResponse {
   success: boolean;
   message: string;
@@ -168,12 +161,24 @@ export async function fetchTeachers(params?: {
 }): Promise<TeachersResponse> {
   const queryParams = new URLSearchParams();
 
-  if (params?.page) queryParams.append("page", params.page.toString());
-  if (params?.page_size) queryParams.append("page_size", params.page_size.toString());
-  if (params?.specialization) queryParams.append("specialization", params.specialization);
-  if (params?.designation) queryParams.append("designation", params.designation);
-  if (params?.search) queryParams.append("search", params.search);
-  if (params?.is_deleted !== undefined) queryParams.append("is_deleted", params.is_deleted.toString());
+  if (params?.page) {
+    queryParams.append("page", params.page.toString());
+  }
+  if (params?.page_size) {
+    queryParams.append("page_size", params.page_size.toString());
+  }
+  if (params?.specialization) {
+    queryParams.append("specialization", params.specialization);
+  }
+  if (params?.designation) {
+    queryParams.append("designation", params.designation);
+  }
+  if (params?.search) {
+    queryParams.append("search", params.search);
+  }
+  if (params?.is_deleted !== undefined) {
+    queryParams.append("is_deleted", params.is_deleted.toString());
+  }
 
   const url = `${API_BASE_URL}/api/teacher/admin/${
     queryParams.toString() ? `?${queryParams.toString()}` : ""
@@ -202,6 +207,7 @@ const teacherService = createEntityService<Teacher, TeacherCreatePayload, Teache
  * Export teacher CRUD functions
  */
 export const fetchTeacherDetail = teacherService.fetchDetail;
+export const fetchTeacherById = teacherService.fetchDetail; // Alias for consistency
 export const createTeacher = teacherService.create;
 export const updateTeacher = teacherService.update;
 export const deleteTeacher = teacherService.delete;

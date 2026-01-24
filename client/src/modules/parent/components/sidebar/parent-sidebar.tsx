@@ -28,7 +28,7 @@ export function ParentSidebar({ activeMenu, onMenuChange }: ParentSidebarProps) 
       <Button
         variant="ghost"
         size="icon"
-        className="fixed top-4 left-4 z-40 md:hidden"
+        className="fixed top-4 left-4 z-[60] md:hidden text-white hover:bg-white/20"
         onClick={() => setIsOpen(!isOpen)}
         data-testid="button-mobile-menu"
       >
@@ -37,7 +37,7 @@ export function ParentSidebar({ activeMenu, onMenuChange }: ParentSidebarProps) 
 
       {isOpen && (
         <div
-          className="fixed inset-0 z-30 bg-black/50 md:hidden"
+          className="fixed inset-0 z-40 bg-black/50 md:hidden"
           onClick={() => setIsOpen(false)}
           onKeyDown={(e) => e.key === "Escape" && setIsOpen(false)}
           role="button"
@@ -93,7 +93,8 @@ export function ParentSidebar({ activeMenu, onMenuChange }: ParentSidebarProps) 
                 return (
                   <button
                     key={menuItem.id}
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.preventDefault();
                       onMenuChange(menuItem.id);
                       setIsOpen(false);
                     }}

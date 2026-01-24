@@ -5,6 +5,7 @@
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+
 import {
   Select,
   SelectContent,
@@ -14,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { HOLIDAY_TYPE_OPTIONS } from "@/lib/api/holiday-api";
 import type { CreateHolidayPayload } from "@/lib/api/holiday-api";
+
 
 interface HolidayFormFieldsProps {
   formData: CreateHolidayPayload;
@@ -106,34 +108,36 @@ export function HolidayFormRow({ formData, onUpdate }: HolidayFormRowProps) {
   return (
     <>
       {/* Start Date */}
-      <div className="col-span-3">
+      <div className="space-y-2">
+        <Label>Start Date *</Label>
         <Input
           type="date"
           value={formData.start_date}
           onChange={(e) => onUpdate("start_date", e.target.value)}
-          className="text-sm"
+          required
         />
       </div>
 
       {/* End Date */}
-      <div className="col-span-3">
+      <div className="space-y-2">
+        <Label>End Date (Optional)</Label>
         <Input
           type="date"
           value={formData.end_date || ""}
           onChange={(e) => onUpdate("end_date", e.target.value || undefined)}
           min={formData.start_date}
           placeholder="Same as start"
-          className="text-sm"
         />
       </div>
 
       {/* Holiday Type */}
-      <div className="col-span-2">
+      <div className="space-y-2">
+        <Label>Type *</Label>
         <Select
           value={formData.holiday_type}
           onValueChange={(value) => onUpdate("holiday_type", value)}
         >
-          <SelectTrigger className="text-sm">
+          <SelectTrigger>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -147,13 +151,14 @@ export function HolidayFormRow({ formData, onUpdate }: HolidayFormRowProps) {
       </div>
 
       {/* Description */}
-      <div className="col-span-3">
+      <div className="space-y-2">
+        <Label>Description *</Label>
         <Input
           type="text"
           value={formData.description}
           onChange={(e) => onUpdate("description", e.target.value)}
           placeholder="e.g., Diwali"
-          className="text-sm"
+          required
         />
       </div>
     </>

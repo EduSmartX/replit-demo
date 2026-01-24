@@ -2,16 +2,17 @@
 
 import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import * as React from "react";
-import { DayButton, DayPicker, getDefaultClassNames } from "react-day-picker";
+import { DayPicker, getDefaultClassNames } from "react-day-picker";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import type { DayButton} from "react-day-picker";
 
 function Calendar({
   className,
   classNames,
   showOutsideDays = false,
   captionLayout = "buttons",
-  buttonVariant = "ghost",
+  buttonVariant: _buttonVariant = "ghost",
   formatters,
   components,
   ...props
@@ -145,7 +146,7 @@ function CalendarDayButton({
 
   const ref = React.useRef<HTMLButtonElement>(null);
   React.useEffect(() => {
-    if (modifiers.focused) ref.current?.focus();
+    if (modifiers.focused) {ref.current?.focus();}
   }, [modifiers.focused]);
 
   return (

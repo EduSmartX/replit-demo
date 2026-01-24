@@ -11,7 +11,7 @@ interface StudentsLoadingStateProps {
 
 export function StudentsLoadingState({ message = "Loading classes..." }: StudentsLoadingStateProps) {
   return (
-    <div className="mx-auto max-w-7xl">
+    <div>
       <Card>
         <CardContent className="flex items-center justify-center p-12">
           <div className="text-center">

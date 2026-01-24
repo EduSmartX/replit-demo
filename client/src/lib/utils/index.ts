@@ -2,3 +2,4 @@ export * from "./form-utils";
 export * from "./api-service-utils";
 export * from "./holiday-utils";
 export * from "./date-utils";
+export * from "./validation-utils";

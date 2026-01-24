@@ -1,14 +1,14 @@
-import { Control } from "react-hook-form";
 import {
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
+    FormControl,
+    FormDescription,
+    FormField,
+    FormItem,
+    FormLabel,
+    FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { formatDateForInput } from "@/lib/utils/date-utils";
+import type { Control } from "react-hook-form";
 
 interface DateRangeFieldsProps {
   control: Control<{
@@ -31,7 +31,7 @@ export function DateRangeFields({
         control={control}
         name="effective_from"
         render={({ field }) => (
-          <FormItem className="flex flex-col">
+          <FormItem>
             <FormLabel>Effective From *</FormLabel>
             <FormControl>
               <Input
@@ -41,7 +41,7 @@ export function DateRangeFields({
                 onChange={(e) => {
                   const value = e.target.value;
                   if (value) {
-                    field.onChange(new Date(value + "T00:00:00"));
+                    field.onChange(new Date(`${value  }T00:00:00`));
                   } else {
                     field.onChange(undefined);
                   }
@@ -59,7 +59,7 @@ export function DateRangeFields({
         control={control}
         name="effective_to"
         render={({ field }) => (
-          <FormItem className="flex flex-col">
+          <FormItem>
             <FormLabel>Effective To (Optional)</FormLabel>
             <FormControl>
               <Input
@@ -69,7 +69,7 @@ export function DateRangeFields({
                 onChange={(e) => {
                   const value = e.target.value;
                   if (value) {
-                    field.onChange(new Date(value + "T00:00:00"));
+                    field.onChange(new Date(`${value  }T00:00:00`));
                   } else {
                     field.onChange(undefined);
                   }

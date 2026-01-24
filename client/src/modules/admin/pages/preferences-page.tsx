@@ -7,13 +7,16 @@
  * @route /preferences
  */
 
-import { OrganizationPreferences } from "@/features/preferences";
+import { PageWrapper } from "@/common/components";
 import { DashboardLayout } from "@/common/layouts";
+import { OrganizationPreferences } from "@/features/preferences";
 
 export default function PreferencesPage() {
   return (
     <DashboardLayout>
-      <OrganizationPreferences />
+      <PageWrapper>
+        <OrganizationPreferences />
+      </PageWrapper>
     </DashboardLayout>
   );
 }

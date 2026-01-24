@@ -12,7 +12,7 @@ interface StudentsErrorStateProps {
 
 export function StudentsErrorState({ onRetry }: StudentsErrorStateProps) {
   return (
-    <div className="mx-auto max-w-7xl">
+    <div>
       <Card className="border-red-200 bg-red-50">
         <CardHeader>
           <CardTitle className="text-red-700">Error Loading Students</CardTitle>

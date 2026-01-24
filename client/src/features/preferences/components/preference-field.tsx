@@ -4,7 +4,9 @@
  * Supports various field types with proper validation and user interaction patterns.
  */
 
+import { X } from "lucide-react";
 import { useState } from "react";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -15,8 +17,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { X } from "lucide-react";
 import type { Preference } from "@/lib/api/preferences-api";
 import { cn } from "@/lib/utils";
 
@@ -100,7 +100,7 @@ export function PreferenceField({
     preference.field_type === "multi-choice" ? parseMultiChoiceValue(value) : [];
 
   switch (preference.field_type) {
-    case "string":
+    case "string": {
       // Check if this is the time field for student absence notification
       const isTimeField = preference.display_name.includes("Preferred Time") && 
                          preference.display_name.includes("Student Absence");
@@ -132,8 +132,9 @@ export function PreferenceField({
           )}
         </div>
       );
+    }
 
-    case "number":
+    case "number": {
       // Check if this is the deadline day field
       const isDeadlineField = preference.display_name.includes("Teacher Timesheet Deadline") &&
                              preference.display_name.includes("Day");
@@ -171,8 +172,9 @@ export function PreferenceField({
           )}
         </div>
       );
+    }
 
-    case "radio":
+    case "radio": {
       return (
         <div className="space-y-1.5">
           <Label>{preference.display_name}</Label>
@@ -195,8 +197,9 @@ export function PreferenceField({
           </RadioGroup>
         </div>
       );
+    }
 
-    case "choice":
+    case "choice": {
       return (
         <div className="space-y-1.5">
           <Label htmlFor={preference.key}>{preference.display_name}</Label>
@@ -214,8 +217,9 @@ export function PreferenceField({
           </Select>
         </div>
       );
+    }
 
-    case "multi-choice":
+    case "multi-choice": {
       return (
         <div className="space-y-1.5">
           <Label htmlFor={preference.key}>{preference.display_name}</Label>
@@ -265,6 +269,7 @@ export function PreferenceField({
           </div>
         </div>
       );
+    }
 
     default:
       return null;

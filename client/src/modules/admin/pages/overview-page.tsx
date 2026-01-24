@@ -8,13 +8,13 @@
  */
 
 import { RoleDashboard } from "@/common/components";
-import { useUser } from "@/core/contexts";
 import { DashboardLayout } from "@/common/layouts";
+import { useUser } from "@/core/contexts";
 
 export default function OverviewPage() {
   const { user } = useUser();
 
-  if (!user) return null;
+  if (!user) {return null;}
 
   return (
     <DashboardLayout>

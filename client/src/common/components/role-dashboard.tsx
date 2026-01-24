@@ -4,10 +4,10 @@
  * Acts as a routing switch between AdminDashboard, TeacherDashboard, and ParentDashboard.
  */
 
+import type { UserRole } from "@/core/contexts";
 import { AdminDashboard } from "@/modules/admin";
 import { ParentDashboard } from "@/modules/parent";
 import { TeacherDashboard } from "@/modules/teacher";
-import { UserRole } from "@/core/contexts";
 
 interface RoleDashboardProps {
   role: UserRole;

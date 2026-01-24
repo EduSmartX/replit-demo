@@ -128,7 +128,9 @@ export async function fetchClasses(params?: {
   page_size?: number;
   search?: string;
   is_active?: boolean;
+  is_deleted?: boolean;
   class_master?: number;
+  class_teacher?: string;
 }): Promise<ClassesResponse> {
   const queryParams = new URLSearchParams();
 
@@ -136,7 +138,9 @@ export async function fetchClasses(params?: {
   if (params?.page_size) {queryParams.append("page_size", params.page_size.toString());}
   if (params?.search) {queryParams.append("search", params.search);}
   if (params?.is_active !== undefined) {queryParams.append("is_active", params.is_active.toString());}
+  if (params?.is_deleted !== undefined) {queryParams.append("is_deleted", params.is_deleted.toString());}
   if (params?.class_master) {queryParams.append("class_master", params.class_master.toString());}
+  if (params?.class_teacher) {queryParams.append("class_teacher", params.class_teacher);}
 
   const url = `${API_ENDPOINTS.classes.list}${
     queryParams.toString() ? `?${queryParams.toString()}` : ""
@@ -175,10 +179,16 @@ export async function fetchClass(publicId: string): Promise<ClassResponse> {
  * Create a new class (single or multiple)
  */
 export async function createClass(
-  payload: ClassCreatePayload | ClassCreatePayload[]
+  payload: ClassCreatePayload | ClassCreatePayload[],
+  forceCreate: boolean = false
 ): Promise<ClassResponse | ApiResponse<MasterClass[]>> {
+  // Build URL with query parameter if forceCreate is true
+  const url = forceCreate 
+    ? `${API_ENDPOINTS.classes.list}?force_create=true`
+    : API_ENDPOINTS.classes.list;
+
   const response = await apiRequest<ClassResponse | ApiResponse<MasterClass[]>>(
-    API_ENDPOINTS.classes.list,
+    url,
     {
       method: "POST",
       body: JSON.stringify(payload),
@@ -186,6 +196,26 @@ export async function createClass(
   );
 
   if (!response.success || response.code < 200 || response.code >= 300) {
+    // Check if this is a deleted duplicate error
+    // For single create: errors.has_deleted_duplicate
+    // For bulk create: errors.detail[0].has_deleted_duplicate
+    let hasDeletedDuplicate = false;
+    
+    if (response.errors?.has_deleted_duplicate === true ||
+        response.errors?.has_deleted_duplicate?.[0] === "True") {
+      hasDeletedDuplicate = true;
+    }
+    
+    // Check wrapped structure for bulk operations
+    if (Array.isArray(response.errors?.detail) && response.errors.detail.length > 0) {
+      const firstDetail = response.errors.detail[0];
+      if (firstDetail?.has_deleted_duplicate === true ||
+          firstDetail?.has_deleted_duplicate?.[0] === "True") {
+        hasDeletedDuplicate = true;
+      }
+    }
+    
+    // Always attach response object to error for consistent error handling
     let errorMessage = response.message || "Failed to create class";
 
     if (response.errors) {
@@ -210,7 +240,10 @@ export async function createClass(
       }
     }
 
-    throw new Error(errorMessage);
+    const error = new Error(errorMessage);
+    (error as any).response = response;
+    (error as any).isDeletedDuplicate = hasDeletedDuplicate;
+    throw error;
   }
 
   return response;
@@ -263,6 +296,24 @@ export async function deleteClass(publicId: string): Promise<ApiResponse<null>> 
 
   if (!response.success || response.code < 200 || response.code >= 300) {
     throw new Error(response.message || "Failed to delete class");
+  }
+
+  return response;
+}
+
+/**
+ * Reactivate a deleted class/section
+ */
+export async function reactivateClass(publicId: string): Promise<ApiResponse<null>> {
+  const response = await apiRequest<ApiResponse<null>>(
+    `${API_ENDPOINTS.classes.detail(publicId)}activate/`,
+    {
+      method: "POST",
+    }
+  );
+
+  if (!response.success || response.code < 200 || response.code >= 300) {
+    throw new Error(response.message || "Failed to reactivate class");
   }
 
   return response;

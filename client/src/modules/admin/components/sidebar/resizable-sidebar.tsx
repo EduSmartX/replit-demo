@@ -1,5 +1,6 @@
-import { ReactNode, useState, useRef, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+import type { ReactNode } from "react";
 
 interface ResizableSidebarProps {
   children: (width: number) => ReactNode;
@@ -13,8 +14,8 @@ interface ResizableSidebarProps {
 export function ResizableSidebar({
   children,
   minWidth = 280,
-  maxWidth = 500,
-  defaultWidth = 256, // 64 in tailwind = 256px
+  maxWidth = 350,
+  defaultWidth = 330,
   className,
   isOpen,
 }: ResizableSidebarProps) {
@@ -78,7 +79,7 @@ export function ResizableSidebar({
       <aside
         ref={sidebarRef}
         className={cn(
-          "fixed left-0 z-20 flex flex-col border-r transition-transform duration-300 md:z-0 md:translate-x-0",
+          "fixed left-0 z-50 flex flex-col border-r transition-transform duration-300 md:z-0 md:translate-x-0",
           "top-0 h-screen md:top-16 md:h-[calc(100vh-4rem)]",
           isOpen ? "translate-x-0" : "-translate-x-full",
           className
@@ -114,7 +115,10 @@ export function ResizableSidebar({
       
       {/* Spacer for main content */}
       <div 
-        className="hidden md:block flex-shrink-0" 
+        className={cn(
+          "flex-shrink-0",
+          "hidden md:block"
+        )}
         style={{ width: `${sidebarWidth}px` }}
       />
     </>

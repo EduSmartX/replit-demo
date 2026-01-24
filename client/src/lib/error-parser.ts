@@ -5,8 +5,9 @@ import { ErrorMessages } from "./constants";
  * 
  * Multi-level error extraction strategy:
  * 1. Extract JSON from error.message string
- * 2. Prefer specific field validation error over generic message
- * 3. Fallback to error.message or defaultMessage
+ * 2. Handle nested error structures (errors.detail, non_field_errors)
+ * 3. Prefer specific field validation error over generic message
+ * 4. Fallback to error.message or defaultMessage
  * 
  * @param error - The error object from API call
  * @param defaultMessage - Default message if parsing fails
@@ -30,7 +31,25 @@ export function parseApiError(
         errorMessage = errorData.message;
 
         // Handle specific validation errors
-        if (errorData.errors) {
+        if (errorData.errors) {          
+          if (Array.isArray(errorData.errors.detail)) {
+            for (const detailError of errorData.errors.detail) {              
+              if (detailError.non_field_errors && Array.isArray(detailError.non_field_errors)) {
+                if (detailError.non_field_errors.length > 0) {
+                  return detailError.non_field_errors[0];
+                }
+              }              
+              const fieldKeys = Object.keys(detailError);
+              if (fieldKeys.length > 0) {
+                const firstField = detailError[fieldKeys[0]];
+                if (Array.isArray(firstField) && firstField.length > 0) {
+                  return firstField[0];
+                }
+              }
+            }
+          }
+          
+          // Handle direct field errors
           const errorFields = Object.keys(errorData.errors);
           if (errorFields.length > 0) {
             const firstError = errorData.errors[errorFields[0]];

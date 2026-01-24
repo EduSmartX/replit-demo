@@ -10,13 +10,13 @@ import { Plus, Pencil, MapPin, Loader2, Save, Navigation, Edit } from "lucide-re
 import { useState, useEffect, forwardRef, useImperativeHandle } from "react";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-import { TextInputField, SelectField } from "./form-fields";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { updateUserAddress, type Address } from "@/lib/api/address-api";
 import { parseApiError } from "@/lib/error-parser";
+import { TextInputField, SelectField } from "./form-fields";
 
 const addressFormSchema = z.object({
   street_address: z.string().min(1, "Street address is required"),
@@ -36,6 +36,7 @@ type AddressFormValues = z.infer<typeof addressFormSchema>;
 export interface AddressManagementFormRef {
   submitAddress: () => Promise<void>;
   isValid: () => boolean;
+  getAddressData: () => AddressFormValues | null;
 }
 
 interface AddressManagementFormProps {
@@ -83,7 +84,7 @@ export const AddressManagementForm = forwardRef<
 
     // Helper to parse coordinate values
     const parseCoordinate = (value: string | number | null | undefined): number | undefined => {
-      if (value === null || value === undefined) return undefined;
+      if (value === null || value === undefined) {return undefined;}
       const num = typeof value === "string" ? parseFloat(value) : value;
       return isNaN(num) ? undefined : num;
     };
@@ -140,6 +141,25 @@ export const AddressManagementForm = forwardRef<
         throw new Error("Address form validation failed");
       },
       isValid: () => form.formState.isValid,
+      getAddressData: () => {
+        // Return current form values if form is dirty (has changes)
+        if (form.formState.isDirty) {
+          return form.getValues();
+        }
+        // Return current address if no changes
+        return currentAddress ? {
+          street_address: currentAddress.street_address,
+          address_line_2: currentAddress.address_line_2,
+          city: currentAddress.city,
+          state: currentAddress.state,
+          zip_code: currentAddress.zip_code || "",
+          country: currentAddress.country,
+          address_type: currentAddress.address_type,
+          is_primary: currentAddress.is_primary,
+          latitude: typeof currentAddress.latitude === 'number' ? currentAddress.latitude : undefined,
+          longitude: typeof currentAddress.longitude === 'number' ? currentAddress.longitude : undefined,
+        } : null;
+      },
     }));
 
     // Update address mutation

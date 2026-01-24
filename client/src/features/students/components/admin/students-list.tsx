@@ -1,226 +1,322 @@
 /**
  * Students List Component
- * Displays filterable and paginated student list with CRUD operations
+ * Following Teacher pattern with all required features
  */
 
 import { useQuery } from "@tanstack/react-query";
-import { Filter } from "lucide-react";
-import { useState, useEffect } from "react";
+import { Plus } from "lucide-react";
+import { useState, useMemo } from "react";
+import { DeletedViewToggle } from "@/common/components";
+import { ResourceFilter, type FilterField } from "@/common/components/filters";
+import {
+  getCardDescription,
+  getCardTitle,
+  getEmptyMessage,
+  getListDescription,
+  getListTitle,
+} from "@/common/utils/deleted-view-helpers";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/data-table";
 import { TablePagination } from "@/components/ui/table-pagination";
-import { 
-  fetchStudents, 
-  fetchClassMasters, 
-  fetchSectionsByClassMaster, 
-  type Student 
+import { useDeleteMutation } from "@/hooks/use-delete-mutation";
+import { useDeletedView } from "@/hooks/use-deleted-view";
+import { fetchClasses, fetchCoreClasses } from "@/lib/api/class-api";
+import {
+  deleteStudent,
+  getStudents,
+  reactivateStudent,
+  type Student,
 } from "@/lib/api/student-api";
-import { StudentsHeader } from "./students-header";
-import { StudentsStats } from "./students-stats";
-import { StudentsFilters } from "./students-filters";
+import { BulkUploadStudents } from "./bulk-upload-students";
 import { getStudentColumns } from "./students-table-columns";
-import { StudentsErrorState } from "./students-error-state";
-import { StudentsLoadingState } from "./students-loading-state";
-import { StudentsEmptyState } from "./students-empty-state";
 
 interface StudentsListProps {
-  onCreateNew: (sectionId: string) => void;
-  onView: (student: Student) => void;
-  onEdit: (student: Student) => void;
-  onDelete: (publicId: string) => void;
+  onCreateNew?: () => void;
+  onView?: (student: Student) => void;
+  onEdit?: (student: Student) => void;
 }
 
-export function StudentsList({ onCreateNew, onView, onEdit, onDelete }: StudentsListProps) {
-  const [currentPage, setCurrentPage] = useState(1);
+export function StudentsList({ onCreateNew, onView: onViewProp, onEdit: onEditProp }: StudentsListProps = {}) {
+  const [filters, setFilters] = useState<Record<string, string>>({});
+  const [deleteStudentData, setDeleteStudentData] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  
-  // Two-tier state: UI selections (selectedX) vs applied filters (appliedX) for explicit search trigger
-  const [selectedClassMaster, setSelectedClassMaster] = useState<number | "">("");
-  const [selectedSection, setSelectedSection] = useState<string>("");
-  const [searchInput, setSearchInput] = useState<string>("");
-  
-  const [appliedClassMaster, setAppliedClassMaster] = useState<number | "">("");
-  const [appliedSection, setAppliedSection] = useState<string>("");
-  const [appliedSearch, setAppliedSearch] = useState<string>("");
 
-  const { data: classMasters = [], isLoading: loadingClassMasters } = useQuery({
-    queryKey: ["classMasters"],
-    queryFn: fetchClassMasters,
-  });
-
-  // Cascading dropdown: Sections depend on selected class master
-  const { data: sections = [], isLoading: loadingSections } = useQuery({
-    queryKey: ["sections", selectedClassMaster],
-    queryFn: () => fetchSectionsByClassMaster(selectedClassMaster),
-    enabled: !!selectedClassMaster,
-  });
-
-  // Auto-select first class and section on load
-  useEffect(() => {
-    if (classMasters.length > 0 && !selectedClassMaster) {
-      const firstClass = classMasters[0];
-      setSelectedClassMaster(firstClass.id);
-      setAppliedClassMaster(firstClass.id);
-    }
-  }, [classMasters, selectedClassMaster]);
-
-  useEffect(() => {
-    if (sections.length > 0 && selectedClassMaster && !selectedSection) {
-      const firstSection = sections[0];
-      setSelectedSection(firstSection.public_id);
-      setAppliedSection(firstSection.public_id);
-    } else if (sections.length === 0) {
-      setSelectedSection("");
-      setAppliedSection("");
-    }
-  }, [sections, selectedClassMaster, selectedSection]);
-  // Fetch students using applied filters (not UI state) - query fires only when appliedX values change
   const {
-    data: studentsData,
-    isLoading,
-    error,
-    refetch,
-  } = useQuery({
-    queryKey: ["students", appliedClassMaster, appliedSection, appliedSearch],
-    queryFn: () =>
-      fetchStudents({
-        page: 1,
-        page_size: 100,
-        class_master_id: appliedClassMaster ? appliedClassMaster.toString() : undefined,
-        section_id: appliedSection || undefined,
-        search: appliedSearch || undefined,
-      }),
-    enabled: !!appliedClassMaster,
-    refetchOnMount: "always",
-    refetchOnWindowFocus: true,
+    showDeleted,
+    toggleDeletedView,
+    handleReactivate: handleReactivateBase,
+  } = useDeletedView({
+    resourceName: "Student",
+    queryKey: ["students"],
+    reactivateFn: (publicId: string) => {
+      // Extract class_id from the student record
+      const student = students.find((s: Student) => s.public_id === publicId);
+      if (!student) {
+        throw new Error("Student not found");
+      }
+      return reactivateStudent(student.class_info.public_id, publicId);
+    },
+    onPageChange: setPage,
   });
 
-  const allStudents = studentsData?.results || [];
+  // Fetch core classes (master classes) for filter dropdown
+  const { data: coreClassesData } = useQuery({
+    queryKey: ["core-classes-list"],
+    queryFn: () => fetchCoreClasses({ page_size: 100 }),
+    staleTime: 5 * 60 * 1000,
+  });
 
-  // Client-side pagination
-  const totalRecords = allStudents.length;
-  const totalPages = Math.ceil(totalRecords / pageSize);
-  const startIndex = (currentPage - 1) * pageSize;
-  const endIndex = startIndex + pageSize;
-  const students = allStudents.slice(startIndex, endIndex);
+  // Fetch all classes (sections) for filter dropdown
+  const { data: classesData } = useQuery({
+    queryKey: ["classes-list"],
+    queryFn: () => fetchClasses({ page_size: 100 }),
+    staleTime: 5 * 60 * 1000,
+  });
 
-  // Apply UI selections to trigger API query (called by Search button)
-  const handleSearch = () => {
-    setAppliedClassMaster(selectedClassMaster);
-    setAppliedSection(selectedSection);
-    setAppliedSearch(searchInput);
-    setCurrentPage(1);
+  // Build API filters
+  const apiFilters = {
+    search: filters.search || undefined,
+    class_id: filters.class_id || undefined,
+    is_deleted: showDeleted,
+    page,
+    page_size: pageSize,
   };
 
-  const handleClearFilters = () => {
-    if (classMasters.length > 0) {
-      const firstClass = classMasters[0];
-      setSelectedClassMaster(firstClass.id);
-      setAppliedClassMaster(firstClass.id);
+  const { data, isLoading } = useQuery({
+    queryKey: ["students", apiFilters],
+    queryFn: () => getStudents(apiFilters),
+  });
+
+  const deleteMutation = useDeleteMutation({
+    resourceName: "Student",
+    deleteFn: (publicId: string) => {
+      const student = students.find((s: Student) => s.public_id === publicId);
+      if (!student) {
+        throw new Error("Student not found");
+      }
+      return deleteStudent(student.class_info.public_id, publicId);
+    },
+    queryKeys: ["students"],
+    refetchQueries: false,
+  });
+
+  const students = data?.data || [];
+  const totalRecords = data?.pagination?.count || 0;
+  const totalPages = data?.pagination?.total_pages || 1;
+
+  const handleView = (student: Student) => {
+    if (onViewProp) {
+      onViewProp(student);
     }
-    setSelectedSection("");
-    setAppliedSection("");
-    setSearchInput("");
-    setAppliedSearch("");
-    setCurrentPage(1);
   };
 
-  // Reset dependent section when class master changes
-  const handleClassMasterChange = (value: string) => {
-    const numValue = Number(value);
-    setSelectedClassMaster(numValue);
-    setSelectedSection("");
-    setCurrentPage(1);
+  const handleEdit = (student: Student) => {
+    if (onEditProp) {
+      onEditProp(student);
+    }
   };
 
-  const handleSectionChange = (value: string) => {
-    setSelectedSection(value);
-    setCurrentPage(1);
+  const handleDelete = (student: Student) => {
+    setDeleteStudentData(student.public_id);
   };
 
-  const handlePageSizeChange = (value: number) => {
-    setPageSize(value);
-    setCurrentPage(1);
+  const confirmDelete = () => {
+    if (deleteStudentData) {
+      deleteMutation.mutate(deleteStudentData);
+      setDeleteStudentData(null);
+    }
   };
 
-  const hasActiveFilters = appliedSection !== "" || appliedSearch !== "";
-  const columns = getStudentColumns({ onView, onEdit, onDelete });
+  const handleCreateClick = () => {
+    if (onCreateNew) {
+      onCreateNew();
+    }
+  };
 
-  if (error) {
-    return <StudentsErrorState onRetry={() => refetch()} />;
-  }
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage);
+  };
 
-  if (loadingClassMasters) {
-    return <StudentsLoadingState message="Loading classes..." />;
-  }
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setPage(1);
+  };
 
-  if (classMasters.length === 0) {
-    return <StudentsEmptyState />;
-  }
+  const handleFilter = (newFilters: Record<string, string>) => {
+    // If master class changed, clear class_id filter
+    if (newFilters.master_class_id !== filters.master_class_id) {
+      const { class_id: _class_id, ...rest } = newFilters;
+      setFilters(rest);
+    } else {
+      setFilters(newFilters);
+    }
+    setPage(1);
+  };
+
+  const handleResetFilters = () => {
+    setFilters({});
+    setPage(1);
+  };
+
+  const handleReactivate = (publicId: string) => {
+    handleReactivateBase(publicId);
+  };
+
+  // Prepare filter fields
+  const coreClasses = coreClassesData?.data || [];
+
+  // Filter sections based on selected master class
+  const filteredSections = useMemo(() => {
+    const allClasses = classesData?.data || [];
+    if (!filters.master_class_id) {
+      return allClasses;
+    }
+    return allClasses.filter(
+      (cls) => cls.class_master.code === filters.master_class_id
+    );
+  }, [filters.master_class_id, classesData?.data]);
+
+  const filterFields: FilterField[] = [
+    {
+      name: "search",
+      label: "Search",
+      type: "text",
+      placeholder: "Search by name, roll number, or email...",
+    },
+    {
+      name: "master_class_id",
+      label: "Master Class",
+      type: "select",
+      placeholder: "All",
+      options: coreClasses.map((cls) => ({
+        value: cls.code,
+        label: cls.name,
+      })),
+    },
+    {
+      name: "class_id",
+      label: "Class Assigned",
+      type: "select",
+      placeholder: "All",
+      options: filteredSections.map((cls) => ({
+        value: cls.public_id,
+        label: cls.name,
+      })),
+      disabled: !filters.master_class_id,
+    },
+  ];
+
+  // Define table columns
+  const columns = showDeleted
+    ? getStudentColumns({
+        onReactivate: handleReactivate,
+      })
+    : getStudentColumns({
+        onView: handleView,
+        onEdit: handleEdit,
+        onDelete: handleDelete,
+      });
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
-      <StudentsHeader
-        onAddStudent={() => selectedSection && onCreateNew(selectedSection)}
-        canAddStudent={!!selectedSection}
-      />
+    <>
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h1 className="mb-3 text-3xl font-bold text-gray-900">
+            {getListTitle("Students", showDeleted)}
+          </h1>
+          <p className="text-base text-gray-600">
+            {getListDescription("Students", showDeleted)}
+          </p>
+        </div>
 
-      <StudentsStats
-        totalRecords={totalRecords}
-        displayedCount={students.length}
-        hasActiveFilters={hasActiveFilters}
-      />
-
-      <Card>
-        <CardHeader className="border-b">
-          <div className="flex items-center gap-2">
-            <Filter className="h-5 w-5 text-gray-500" />
-            <CardTitle>Filters & Search</CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent className="pt-6">
-          <StudentsFilters
-            selectedClassMaster={selectedClassMaster}
-            selectedSection={selectedSection}
-            searchInput={searchInput}
-            classMasters={classMasters}
-            sections={sections}
-            loadingSections={loadingSections}
-            onClassMasterChange={handleClassMasterChange}
-            onSectionChange={handleSectionChange}
-            onSearchInputChange={setSearchInput}
-            onSearch={handleSearch}
-            onClearFilters={handleClearFilters}
-            hasActiveFilters={hasActiveFilters}
-            pageSize={pageSize}
-            onPageSizeChange={handlePageSizeChange}
+        <div className="flex flex-wrap gap-3">
+          <DeletedViewToggle
+            showDeleted={showDeleted}
+            onToggle={toggleDeletedView}
           />
-        </CardContent>
-      </Card>
 
+          {!showDeleted && (
+            <>
+              <BulkUploadStudents />
+              <Button onClick={handleCreateClick}>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Student
+              </Button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Filters */}
+      <ResourceFilter
+        fields={filterFields}
+        onFilter={handleFilter}
+        onReset={handleResetFilters}
+        defaultValues={filters}
+      />
+
+      {/* Student List Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Students List</CardTitle>
+          <CardTitle>{getCardTitle("Students", totalRecords, showDeleted)}</CardTitle>
           <CardDescription>
-            {students.length > 0
-              ? `Showing ${startIndex + 1} to ${Math.min(endIndex, totalRecords)} of ${totalRecords} students`
-              : "No students found"}
+            {getCardDescription("students", Object.keys(filters).length > 0, showDeleted)}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <DataTable columns={columns} data={students} isLoading={isLoading} />
+          <DataTable
+            columns={columns}
+            data={students}
+            isLoading={isLoading}
+            emptyMessage={getEmptyMessage("students", Object.keys(filters).length > 0, showDeleted)}
+            getRowKey={(row) => row.public_id}
+          />
 
-          {totalPages > 1 && (
+          {totalRecords > 0 && (
             <div className="mt-4">
               <TablePagination
-                currentPage={currentPage}
+                currentPage={page}
                 totalPages={totalPages}
-                onPageChange={setCurrentPage}
+                totalRecords={totalRecords}
+                pageSize={pageSize}
+                onPageChange={handlePageChange}
+                onPageSizeChange={handlePageSizeChange}
               />
             </div>
           )}
         </CardContent>
       </Card>
-    </div>
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deleteStudentData} onOpenChange={() => setDeleteStudentData(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Student?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will remove the student. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

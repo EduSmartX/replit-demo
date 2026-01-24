@@ -1,5 +1,5 @@
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
-import { ReactNode, useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -10,6 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import type { ReactNode} from "react";
 
 export interface Column<T> {
   header: string;
@@ -18,6 +19,9 @@ export interface Column<T> {
   headerClassName?: string;
   sortable?: boolean;
   sortKey?: string; // Optional: custom key for sorting if different from display
+  width?: number; // Optional: initial width in pixels
+  minWidth?: number; // Optional: minimum width in pixels (default: 100)
+  maxWidth?: number; // Optional: maximum width in pixels
 }
 
 interface DataTableProps<T> {
@@ -44,18 +48,24 @@ export function DataTable<T>({
 }: DataTableProps<T>) {
   const [sortField, setSortField] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const [columnWidths, setColumnWidths] = useState<number[]>(
+    columns.map((col) => col.width || 200)
+  );
+  const [resizingIndex, setResizingIndex] = useState<number | null>(null);
+  const startXRef = useRef<number>(0);
+  const startWidthRef = useRef<number>(0);
 
   // Client-side sorting: Sort data based on selected column and direction
   // Handles both direct property access and function accessors via sortKey
   const sortedData = [...data].sort((rowA, rowB) => {
-    if (!sortField) return 0;
+    if (!sortField) {return 0;}
 
     // Find the column configuration
     const column = columns.find(
       (col) => (col.sortKey || col.header.toLowerCase().replace(/\s+/g, "_")) === sortField
     );
 
-    if (!column || !column.sortable) return 0;
+    if (!column || !column.sortable) {return 0;}
 
     let aValue: unknown;
     let bValue: unknown;
@@ -73,25 +83,25 @@ export function DataTable<T>({
     }
 
     // Handle null/undefined
-    if (aValue == null) aValue = "";
-    if (bValue == null) bValue = "";
+    if (aValue == null) {aValue = "";}
+    if (bValue == null) {bValue = "";}
 
     // Convert to lowercase for string comparison
-    if (typeof aValue === "string") aValue = aValue.toLowerCase();
-    if (typeof bValue === "string") bValue = bValue.toLowerCase();
+    if (typeof aValue === "string") {aValue = aValue.toLowerCase();}
+    if (typeof bValue === "string") {bValue = bValue.toLowerCase();}
 
     // Type assertion for comparison after normalization
     const normalizedA = aValue as string | number;
     const normalizedB = bValue as string | number;
 
-    if (normalizedA < normalizedB) return sortDirection === "asc" ? -1 : 1;
-    if (normalizedA > normalizedB) return sortDirection === "asc" ? 1 : -1;
+    if (normalizedA < normalizedB) {return sortDirection === "asc" ? -1 : 1;}
+    if (normalizedA > normalizedB) {return sortDirection === "asc" ? 1 : -1;}
     return 0;
   });
 
   // Toggle sort: Click same column to flip direction, click new column to sort asc
   const handleSort = (column: Column<T>) => {
-    if (!column.sortable) return;
+    if (!column.sortable) {return;}
 
     const field = column.sortKey || column.header.toLowerCase().replace(/\s+/g, "_");
 
@@ -104,7 +114,7 @@ export function DataTable<T>({
   };
 
   const getSortIcon = (column: Column<T>) => {
-    if (!column.sortable) return null;
+    if (!column.sortable) {return null;}
 
     const field = column.sortKey || column.header.toLowerCase().replace(/\s+/g, "_");
 
@@ -117,6 +127,48 @@ export function DataTable<T>({
       <ArrowDown className="ml-1 h-4 w-4 text-blue-600" />
     );
   };
+
+  // Handle column resize
+  const handleResizeStart = (index: number, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setResizingIndex(index);
+    startXRef.current = e.clientX;
+    startWidthRef.current = columnWidths[index];
+  };
+
+  useEffect(() => {
+    if (resizingIndex === null) {return;}
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const deltaX = e.clientX - startXRef.current;
+      const newWidth = Math.max(
+        columns[resizingIndex].minWidth || 100,
+        Math.min(
+          columns[resizingIndex].maxWidth || 600,
+          startWidthRef.current + deltaX
+        )
+      );
+      
+      setColumnWidths((prev) => {
+        const updated = [...prev];
+        updated[resizingIndex] = newWidth;
+        return updated;
+      });
+    };
+
+    const handleMouseUp = () => {
+      setResizingIndex(null);
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [resizingIndex, columns]);
 
   if (isLoading) {
     return (
@@ -155,7 +207,8 @@ export function DataTable<T>({
               {columns.map((column, index) => (
                 <TableHead
                   key={index}
-                  className={`bg-gray-50 font-semibold whitespace-nowrap ${column.headerClassName || ""}`}
+                  className={`bg-gray-50 font-semibold relative border-r border-gray-200 last:border-r-0 ${column.headerClassName || ""}`}
+                  style={{ width: `${columnWidths[index]}px`, minWidth: `${columnWidths[index]}px` }}
                 >
                   {column.sortable ? (
                     <button
@@ -168,6 +221,16 @@ export function DataTable<T>({
                   ) : (
                     column.header
                   )}
+                  {/* Resize handle */}
+                  <button
+                    type="button"
+                    aria-label="Resize column"
+                    className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-blue-400 active:bg-blue-500 border-0 p-0"
+                    onMouseDown={(e) => handleResizeStart(index, e as any)}
+                    style={{
+                      backgroundColor: resizingIndex === index ? "#3b82f6" : "transparent",
+                    }}
+                  ></button>
                 </TableHead>
               ))}
             </TableRow>
@@ -182,7 +245,8 @@ export function DataTable<T>({
                 {columns.map((column, colIndex) => (
                   <TableCell
                     key={colIndex}
-                    className={`whitespace-nowrap ${column.className || ""}`}
+                    className={`border-r border-gray-200 last:border-r-0 break-words ${column.className || ""}`}
+                    style={{ width: `${columnWidths[colIndex]}px`, maxWidth: `${columnWidths[colIndex]}px` }}
                   >
                     {typeof column.accessor === "function"
                       ? column.accessor(row)

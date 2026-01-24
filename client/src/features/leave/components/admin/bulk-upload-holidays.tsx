@@ -3,8 +3,8 @@
  * Uses the generic BulkUploadDialog with holiday-specific configuration
  */
 
-import { downloadHolidayTemplate, bulkUploadHolidays } from "@/lib/api/holiday-api";
 import { BulkUploadDialog } from "@/common/components/dialogs";
+import { downloadHolidayTemplate, bulkUploadHolidays } from "@/lib/api/holiday-api";
 
 export function BulkUploadHolidays() {
   return (

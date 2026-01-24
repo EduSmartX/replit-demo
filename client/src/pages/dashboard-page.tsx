@@ -6,15 +6,14 @@
 
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
+import { RoleDashboard } from "@/common/components";
+import { useUser } from "@/core/contexts";
+import { OrganizationHolidayCalendar } from "@/features/leave";
+import { OrganizationPreferences } from "@/features/preferences";
+import { useToast } from "@/hooks/use-toast";
 import { AdminSidebar } from "@/modules/admin";
 import { ParentSidebar } from "@/modules/parent";
 import { TeacherSidebar } from "@/modules/teacher";
-import { RoleDashboard } from "@/common/components";
-import { OrganizationHolidayCalendar } from "@/features/leave";
-import { OrganizationPreferences } from "@/features/preferences";
-import { useUser } from "@/core/contexts";
-import { useToast } from "@/hooks/use-toast";
-import { useToast } from "@/hooks/use-toast";
 
 export default function DashboardPage() {
   const [location, setLocation] = useLocation();
@@ -61,7 +60,7 @@ export default function DashboardPage() {
     return null;
   }
 
-  const handleLogout = () => {
+  const _handleLogout = () => {
     toast({
       title: "Logged out",
       description: "You have been successfully logged out.",
@@ -70,7 +69,7 @@ export default function DashboardPage() {
     setLocation("/auth");
   };
 
-  const getRoleColor = () => {
+  const _getRoleColor = () => {
     switch (user.role) {
       case "admin":
         return "from-blue-600 via-teal-500 to-green-600";
@@ -112,12 +111,12 @@ export default function DashboardPage() {
       {/* Main Content */}
       <main className="flex flex-1 flex-col">
         {/* Top Bar */}
-        <DashboardTopBar
+        {/* <DashboardTopBar
           organization={organization}
           user={user}
           roleColor={getRoleColor()}
           onLogout={handleLogout}
-        />
+        /> */}
 
         {/* Scrollable Content Area */}
         <div className="mt-16 flex-1 pb-8">
@@ -127,7 +126,7 @@ export default function DashboardPage() {
             )}
 
             {/* Leave Allocations */}
-            {activeMenu === "allocations" && user.role === "admin" && <LeaveAllocationsSection />}
+            {/* {activeMenu === "allocations" && user.role === "admin" && <LeaveAllocationsSection />} */}
 
             {/* Organization Holiday Calendar */}
             {activeMenu === "organization" && user.role === "admin" && (
@@ -138,16 +137,16 @@ export default function DashboardPage() {
             {activeMenu === "preferences" && user.role === "admin" && <OrganizationPreferences />}
 
             {/* Teachers Management */}
-            {activeMenu === "teachers" && user.role === "admin" && <TeachersManagementSection />}
+            {/* {activeMenu === "teachers" && user.role === "admin" && <TeachersManagementSection />} */}
 
             {/* Placeholder for other menu items */}
-            {activeMenu !== "overview" &&
+            {/* {activeMenu !== "overview" &&
               activeMenu !== "allocations" &&
               activeMenu !== "organization" &&
               activeMenu !== "preferences" &&
               activeMenu !== "teachers" && (
                 <ComingSoonPlaceholder activeMenu={activeMenu} roleColor={getRoleColor()} />
-              )}
+              )} */}
           </div>
         </div>
       </main>

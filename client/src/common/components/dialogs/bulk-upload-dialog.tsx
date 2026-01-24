@@ -5,8 +5,8 @@
  */
 
 import { useQueryClient } from "@tanstack/react-query";
-import { Download, Upload, Loader2, AlertCircle, CheckCircle2, X } from "lucide-react";
-import { useState, useRef, useCallback } from "react";
+import { AlertCircle, CheckCircle2, Download, Loader2, Upload, X } from "lucide-react";
+import { useCallback, useRef, useState } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,9 +33,10 @@ export interface BulkUploadError {
 // Generic result type for bulk uploads
 export interface BulkUploadResult {
   success?: boolean;
-  created_count: number;
+  created_count?: number;
+  successful_count?: number; // Some APIs use this instead of created_count
   failed_count: number;
-  total_rows: number;
+  total_rows?: number;
   errors: BulkUploadError[];
 }
 
@@ -142,6 +143,76 @@ export function BulkUploadDialog({
     }
   };
 
+  // Allow re-selecting the same file
+  const handleFileInputClick = (event: React.MouseEvent<HTMLInputElement>) => {
+    event.currentTarget.value = '';
+  };
+  
+  const transformErrors = (errors: any): BulkUploadError[] => {
+    if (!errors) {return [];}
+        
+    if (typeof errors === 'object' && !Array.isArray(errors)) {
+      return Object.entries(errors).map(([rowKey, errorData]: [string, any]) => {        
+        const rowMatch = rowKey.match(/Row (\d+)/i);
+        const rowNumber = rowMatch ? parseInt(rowMatch[1], 10) : 0;
+                
+        let errorMessage = 'Validation error';
+        if (typeof errorData === 'object') {
+          const firstKey = Object.keys(errorData)[0];
+          errorMessage = errorData[firstKey] || errorMessage;
+        } else if (typeof errorData === 'string') {
+          errorMessage = errorData;
+        }
+        
+        return {
+          row: rowNumber,
+          error: errorMessage,
+          data: typeof errorData === 'object' ? errorData : {},
+        };
+      });
+    }
+    
+    // Handle array format
+    if (Array.isArray(errors)) {
+      if (errors.length === 0) {return [];}
+      
+      return errors.map((error) => {
+        // Handle new backend format: { row_number, errors: {...} } or { row, errors: {...} }
+        const rowNum = error.row_number ?? error.row;
+        if (rowNum !== undefined && error.errors && typeof error.errors === 'object') {
+          // For file-level errors (row: 0), extract the file error message
+          if (rowNum === 0 && error.errors.file) {
+            return {
+              row: 0,
+              error: error.errors.file,
+              data: {},
+            };
+          }
+          // Extract first error message from errors object
+          const errorKeys = Object.keys(error.errors);
+          const firstErrorKey = errorKeys[0];
+          const errorMessage = errorKeys.length > 1 
+            ? `${errorKeys.length} validation errors`
+            : error.errors[firstErrorKey] || 'Validation error';
+          
+          return {
+            row: rowNum,
+            error: errorMessage,
+            data: error.errors,
+          };
+        }
+        // Handle old format: { row, error, data }
+        return {
+          row: error.row || 0,
+          error: error.error || 'Unknown error',
+          data: error.data || {},
+        };
+      });
+    }
+    
+    return [];
+  };
+
   // Upload handler
   const handleUpload = async () => {
     if (!selectedFile) {
@@ -153,15 +224,34 @@ export function BulkUploadDialog({
       return;
     }
 
+    setUploadResult(null);
     setIsUploading(true);
     try {
       const response = await uploadFile(selectedFile);
       const result = response.data;
+      
+      if (result.successful_count !== undefined && result.created_count === undefined) {
+        result.created_count = result.successful_count;
+      }
+            
+      if (result.total_rows === undefined) {
+        result.total_rows = (result.created_count || 0) + (result.failed_count || 0);
+      }
+            
+      if (result.errors) {
+        result.errors = transformErrors(result.errors);
+      } else if (result.errors === null) {
+        result.errors = [];
+      }
+      
       setUploadResult(result);
 
       // Invalidate cache
       invalidateQueryKeys.forEach((key) => {
-        queryClient.invalidateQueries({ queryKey: [key] });
+        queryClient.invalidateQueries({ 
+          queryKey: [key],
+          exact: false,
+        });
       });
 
       // Show success/partial success toast
@@ -177,7 +267,20 @@ export function BulkUploadDialog({
       });
     } catch (error: any) {
       const result = error?.data;
-      if (result) {
+      if (result) {        
+        if (result.successful_count !== undefined && result.created_count === undefined) {
+          result.created_count = result.successful_count;
+        }
+                
+        if (result.total_rows === undefined) {
+          result.total_rows = (result.created_count || 0) + (result.failed_count || 0);
+        }
+            
+        if (result.errors) {
+          result.errors = transformErrors(result.errors);
+        } else if (result.errors === null) {
+          result.errors = [];
+        }
         setUploadResult(result);
       } else {
         toast({
@@ -268,6 +371,7 @@ export function BulkUploadDialog({
                 type="file"
                 accept={acceptedFileTypes}
                 onChange={handleFileChange}
+                onClick={handleFileInputClick}
                 className="file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 flex-1 cursor-pointer font-sans text-sm file:mr-4 file:cursor-pointer file:rounded file:border-0 file:px-4 file:py-2 file:text-sm file:font-semibold"
               />
               {selectedFile && (
@@ -314,21 +418,25 @@ export function BulkUploadDialog({
                     className="border-destructive/30 bg-destructive/5 rounded-lg border p-3"
                   >
                     <div className="flex items-start gap-2">
-                      <Badge variant="destructive" className="mt-0.5">
-                        Row {error.row}
-                      </Badge>
+                      {error.row !== 0 && (
+                        <Badge variant="destructive" className="mt-0.5">
+                          Row {error.row}
+                        </Badge>
+                      )}
                       <div className="flex-1 space-y-1">
                         <p className="text-destructive text-sm font-medium">{error.error}</p>
-                        <div className="text-muted-foreground space-y-0.5 text-xs">
-                          {Object.entries(error.data).map(([key, value]) => (
-                            <div key={key}>
-                              <span className="font-medium capitalize">
-                                {key.replace(/_/g, " ")}:
-                              </span>{" "}
-                              {String(value)}
-                            </div>
-                          ))}
-                        </div>
+                        {error.data && typeof error.data === 'object' && Object.keys(error.data).length > 0 && (
+                          <div className="text-muted-foreground space-y-0.5 text-xs">
+                            {Object.entries(error.data).map(([key, value]) => (
+                              <div key={key}>
+                                <span className="font-medium capitalize">
+                                  {key.replace(/_/g, " ")}:
+                                </span>{" "}
+                                {String(value)}
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
