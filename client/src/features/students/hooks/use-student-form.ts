@@ -94,7 +94,7 @@ export function useReactivateStudent(
 
   return useMutation({
     mutationFn: (publicId: string) => reactivateStudent(classId, publicId),
-    onSuccess: () => {
+    onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["students"] });
       await queryClient.invalidateQueries({ queryKey: ["classes"] });
       onSuccess?.();
