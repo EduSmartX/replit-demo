@@ -39,6 +39,10 @@ export default function ClassesPage() {
   });
 
   const getClassIdFromPath = () => {
+    // Skip if creating new class
+    if (location.endsWith('/classes/new')) {
+      return null;
+    }
     const match = location.match(/\/classes\/([a-zA-Z0-9]+)$/);
     return match ? match[1] : null;
   };
@@ -60,6 +64,13 @@ export default function ClassesPage() {
   });
 
   useEffect(() => {
+    // Check for "new" path to enter create mode
+    if (location.endsWith("/classes/new")) {
+      setViewMode("create");
+      setSelectedClass(null);
+      return;
+    }
+    
     if (classId && classDetail) {
       setSelectedClass(classDetail);
       setViewMode("view");
@@ -67,7 +78,7 @@ export default function ClassesPage() {
       setViewMode("list");
       setSelectedClass(null);
     }
-  }, [classId, classDetail]);
+  }, [classId, classDetail, location]);
 
   const deleteClassMutation = useDeleteMutation({
     resourceName: "Section",
@@ -130,6 +141,7 @@ export default function ClassesPage() {
   const handleCreateNew = () => {
     setSelectedClass(null);
     setViewMode("create");
+    setLocation("/classes/new");
   };
 
   const handleSuccess = (isCreate: boolean = false) => {

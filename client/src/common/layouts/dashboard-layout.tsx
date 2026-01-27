@@ -3,15 +3,15 @@
  * Provides the common layout structure (sidebar + topbar) for all dashboard pages
  */
 
-import { LogOut, Building2 } from "lucide-react";
-import { useEffect, useRef } from "react";
-import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useUser } from "@/core/contexts";
 import { useToast } from "@/hooks/use-toast";
 import { AdminSidebar } from "@/modules/admin";
 import { ParentSidebar } from "@/modules/parent";
 import { TeacherSidebar } from "@/modules/teacher";
+import { Building2, LogOut } from "lucide-react";
+import { useEffect, useRef } from "react";
+import { useLocation } from "wouter";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -27,6 +27,18 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   // Get active menu from URL path
   const getActiveMenuFromPath = () => {
     const path = location.replace("/", "");
+    
+    // Handle student detail pages: /classes/:classId/students/:studentId
+    if (path.includes("/students/") || path === "students") {
+      return "students";
+    }
+    
+    // Handle teacher detail pages: /teachers/:id
+    if (path.startsWith("teachers")) {
+      return "teachers";
+    }
+    
+    // Handle other detail pages - extract first segment
     return path === "dashboard" || path === "" ? "overview" : path.split("/")[0];
   };
 

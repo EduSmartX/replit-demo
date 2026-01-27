@@ -19,7 +19,8 @@ import {
   Menu,
   Settings,
   Users,
-  X
+  X,
+  AlertOctagon,
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -38,6 +39,7 @@ const adminMenuItems = [
   { id: "subjects", label: "Subjects", icon: BookOpen, section: "admin" },
   { id: "students", label: "Students", icon: Users, section: "admin" },
   { divider: true, label: "Operations" },
+  { id: "exceptional-work", label: "Exceptional Work Policy", icon: AlertOctagon, section: "admin" },
   { id: "attendance", label: "Attendance", icon: CheckCircle2, section: "admin" },
   { id: "requests", label: "Leave Requests", icon: Briefcase, section: "admin" },
 ];

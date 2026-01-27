@@ -306,7 +306,7 @@ export async function deleteClass(publicId: string): Promise<ApiResponse<null>> 
  */
 export async function reactivateClass(publicId: string): Promise<ApiResponse<null>> {
   const response = await apiRequest<ApiResponse<null>>(
-    `${API_ENDPOINTS.classes.detail(publicId)}activate/`,
+    API_ENDPOINTS.classes.activate(publicId),
     {
       method: "POST",
     }

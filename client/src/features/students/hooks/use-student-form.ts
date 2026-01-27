@@ -1,25 +1,25 @@
-import { useQuery, useMutation, useQueryClient, type UseQueryResult, type UseMutationResult } from "@tanstack/react-query";
-import { toast } from "sonner";
 import { fetchClasses, type MasterClass as Class } from "@/lib/api/class-api";
 import {
-  createStudent,
-  updateStudent,
-  reactivateStudent,
-  type StudentCreatePayload,
-  type StudentUpdatePayload,
-  type StudentDetail,
+    createStudent,
+    reactivateStudent,
+    updateStudent,
+    type StudentCreatePayload,
+    type StudentDetail,
+    type StudentUpdatePayload,
 } from "@/lib/api/student-api";
 import { fetchOrganizationRoles, fetchOrganizationUsers, type OrganizationRole } from "@/lib/api/teacher-api";
 import { STUDENT_FIELD_MAP } from "@/lib/constants/form-field-maps";
 import {
-  isDeletedDuplicateError,
-  getDeletedDuplicateMessage,
-  getDeletedRecordId,
-  getApiErrorMessage,
+    getApiErrorMessage,
+    getDeletedDuplicateMessage,
+    getDeletedRecordId,
+    isDeletedDuplicateError,
 } from "@/lib/error-utils";
 import { setFormFieldErrors } from "@/lib/utils/form-error-handler";
-import type { StudentFormValues } from "../schemas/student-form-schema";
+import { useMutation, useQuery, useQueryClient, type UseMutationResult, type UseQueryResult } from "@tanstack/react-query";
 import type { UseFormSetError } from "react-hook-form";
+import { toast } from "sonner";
+import type { StudentFormValues } from "../schemas/student-form-schema";
 
 type OrganizationUser = {
   email: string;
@@ -56,7 +56,7 @@ export function useCreateStudent(
   setError: UseFormSetError<StudentFormValues>,
   onSuccess?: () => void,
   onDeletedDuplicate?: (message: string, payload: StudentCreatePayload, deletedRecordId: string | null) => void
-): UseMutationResult<StudentDetail, Error, { payload: StudentCreatePayload; forceCreate?: boolean }> {
+): UseMutationResult<StudentDetail, unknown, { payload: StudentCreatePayload; forceCreate?: boolean }> {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -67,13 +67,12 @@ export function useCreateStudent(
       await queryClient.invalidateQueries({ queryKey: ["classes"] });
       onSuccess?.();
     },
-    onError: (error: unknown) => {
+    onError: (error: unknown, variables) => {
       if (isDeletedDuplicateError(error) && onDeletedDuplicate) {
         const message = getDeletedDuplicateMessage(error);
         const deletedRecordId = getDeletedRecordId(error);
-        const errorObj = error as any;
-        const payload = errorObj.payload as StudentCreatePayload;
-        onDeletedDuplicate(message, payload, deletedRecordId);
+        // Use the payload from the mutation variables
+        onDeletedDuplicate(message, variables.payload, deletedRecordId);
       } else {
         const hasFieldErrors = setFormFieldErrors(error, setError, STUDENT_FIELD_MAP);
         
@@ -111,7 +110,7 @@ export function useUpdateStudent(
   publicId: string | undefined,
   setError: UseFormSetError<StudentFormValues>,
   onSuccess?: () => void
-): UseMutationResult<StudentDetail, Error, StudentUpdatePayload> {
+): UseMutationResult<StudentDetail, unknown, StudentUpdatePayload> {
   const queryClient = useQueryClient();
 
   return useMutation({

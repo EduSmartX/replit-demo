@@ -4,7 +4,7 @@
  */
 
 import { Plus, Trash2, Calendar, Loader2, ChevronDown, ChevronUp } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
@@ -27,8 +27,18 @@ interface HolidayFormData extends CreateHolidayPayload {
   isExpanded?: boolean;
 }
 
-export function AddHolidaysForm() {
-  const [open, setOpen] = useState(false);
+interface AddHolidaysFormProps {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  defaultDate?: string;
+  isException?: boolean;
+}
+
+export function AddHolidaysForm({ open: controlledOpen, onOpenChange, defaultDate, isException = false }: AddHolidaysFormProps = {}) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const setOpen = onOpenChange || setInternalOpen;
+  
   const [holidays, setHolidays] = useState<HolidayFormData[]>([
     {
       id: crypto.randomUUID(),
@@ -37,6 +47,20 @@ export function AddHolidaysForm() {
     },
   ]);
   const { toast } = useToast();
+
+  // Pre-fill date when defaultDate is provided
+  useEffect(() => {
+    if (defaultDate && open) {
+      setHolidays([
+        {
+          id: crypto.randomUUID(),
+          isExpanded: true,
+          ...getDefaultHolidayFormData(),
+          start_date: defaultDate,
+        },
+      ]);
+    }
+  }, [defaultDate, open]);
 
   // Mutations with reusable hooks
   const createSingleMutation = useCreateHoliday({
@@ -133,6 +157,109 @@ export function AddHolidaysForm() {
 
   const isLoading = createSingleMutation.isPending || createBulkMutation.isPending;
 
+  const dialogContent = (
+    <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+      <DialogHeader>
+        <DialogTitle className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+          <Calendar className="h-5 w-5 text-blue-600" />
+          {isException ? "Add Exception Policy" : "Add Organization Holidays"}
+        </DialogTitle>
+        <DialogDescription>
+          {isException 
+            ? "Add exception or additional holiday for this date. You can specify a date range for continuous exceptions."
+            : "Add single or multiple holidays. You can specify a date range for continuous holidays."}
+        </DialogDescription>
+      </DialogHeader>
+
+      <div className="space-y-4">
+        {/* Holiday Sections */}
+        <div className="space-y-3">
+          {holidays.map((holiday, index) => (
+            <Card key={holiday.id} className="border border-blue-200">
+              <CardHeader
+                className="cursor-pointer bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 transition-colors py-3"
+                onClick={() => toggleExpand(holiday.id)}
+              >
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-blue-900">
+                    Holiday {index + 1}
+                    {holiday.description && ` - ${holiday.description}`}
+                  </h3>
+                  <div className="flex items-center gap-2">
+                    {holidays.length > 1 && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeHolidayRow(holiday.id);
+                        }}
+                        className="h-8 w-8 text-red-600 hover:bg-red-100"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                    {holiday.isExpanded ? (
+                      <ChevronUp className="h-5 w-5 text-blue-600" />
+                    ) : (
+                      <ChevronDown className="h-5 w-5 text-blue-600" />
+                    )}
+                  </div>
+                </div>
+              </CardHeader>
+              {holiday.isExpanded && (
+                <CardContent className="pt-6">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <HolidayFormRow
+                      formData={holiday}
+                      onUpdate={(field, value) => updateHoliday(holiday.id, field, value)}
+                    />
+                  </div>
+                </CardContent>
+              )}
+            </Card>
+          ))}
+        </div>
+
+        {/* Add Row Button */}
+        <Button
+          type="button"
+          variant="outline"
+          onClick={addHolidayRow}
+          className="w-full border-2 border-dashed border-blue-300 text-blue-600 hover:bg-blue-50 hover:border-blue-400 py-3"
+          disabled={isLoading}
+        >
+          <Plus className="h-5 w-5 mr-2" />
+          Add Another Holiday
+        </Button>
+      </div>
+
+      <DialogFooter>
+        <Button variant="outline" onClick={() => setOpen(false)} disabled={isLoading}>
+          Cancel
+        </Button>
+        <Button 
+          onClick={handleSubmit} 
+          disabled={isLoading} 
+          className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 gap-2"
+        >
+          {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+          {holidays.length === 1 ? "Create Holiday" : `Create ${holidays.length} Holidays`}
+        </Button>
+      </DialogFooter>
+    </DialogContent>
+  );
+
+  // If controlled (open/onOpenChange provided), don't render trigger
+  if (controlledOpen !== undefined) {
+    return (
+      <Dialog open={open} onOpenChange={setOpen}>
+        {dialogContent}
+      </Dialog>
+    );
+  }
+
+  // Default: render with trigger button
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -141,94 +268,7 @@ export function AddHolidaysForm() {
           Add Holidays
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-            <Calendar className="h-5 w-5 text-purple-600" />
-            Add Organization Holidays
-          </DialogTitle>
-          <DialogDescription>
-            Add single or multiple holidays. You can specify a date range for continuous holidays.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-4">
-          {/* Holiday Sections */}
-          <div className="space-y-3">
-            {holidays.map((holiday, index) => (
-              <Card key={holiday.id} className="border border-purple-200">
-                <CardHeader
-                  className="cursor-pointer bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 transition-colors py-3"
-                  onClick={() => toggleExpand(holiday.id)}
-                >
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-purple-900">
-                      Holiday {index + 1}
-                      {holiday.description && ` - ${holiday.description}`}
-                    </h3>
-                    <div className="flex items-center gap-2">
-                      {holidays.length > 1 && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            removeHolidayRow(holiday.id);
-                          }}
-                          className="h-8 w-8 text-red-600 hover:bg-red-100"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
-                      {holiday.isExpanded ? (
-                        <ChevronUp className="h-5 w-5 text-purple-600" />
-                      ) : (
-                        <ChevronDown className="h-5 w-5 text-purple-600" />
-                      )}
-                    </div>
-                  </div>
-                </CardHeader>
-                {holiday.isExpanded && (
-                  <CardContent className="pt-6">
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                      <HolidayFormRow
-                        formData={holiday}
-                        onUpdate={(field, value) => updateHoliday(holiday.id, field, value)}
-                      />
-                    </div>
-                  </CardContent>
-                )}
-              </Card>
-            ))}
-          </div>
-
-          {/* Add Row Button */}
-          <Button
-            type="button"
-            variant="outline"
-            onClick={addHolidayRow}
-            className="w-full border-2 border-dashed border-purple-300 text-purple-600 hover:bg-purple-50 hover:border-purple-400 py-3"
-            disabled={isLoading}
-          >
-            <Plus className="h-5 w-5 mr-2" />
-            Add Another Holiday
-          </Button>
-        </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)} disabled={isLoading}>
-            Cancel
-          </Button>
-          <Button 
-            onClick={handleSubmit} 
-            disabled={isLoading} 
-            className="bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700 gap-2"
-          >
-            {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
-            {holidays.length === 1 ? "Create Holiday" : `Create ${holidays.length} Holidays`}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
+      {dialogContent}
     </Dialog>
   );
 }

@@ -1,10 +1,10 @@
-import { z } from "zod";
-import { GENDER_VALUES, BLOOD_GROUP_CHOICES } from "@/lib/constants/choices";
-import { 
-  tenDigitPhoneRegex, 
-  ValidationMessages,
-  cleanPhoneNumber 
+import { BLOOD_GROUP_CHOICES, GENDER_VALUES } from "@/lib/constants/choices";
+import {
+  cleanPhoneNumber,
+  tenDigitPhoneRegex,
+  ValidationMessages
 } from "@/lib/utils/validation-utils";
+import { z } from "zod";
 
 // Regex patterns for input validation
 const admissionNumberRegex = /^[A-Z0-9_-]+$/i;
@@ -86,6 +86,18 @@ export const studentFormSchema = z
       .refine(
         (val) => !val || !isNaN(Date.parse(val)),
         "Please enter a valid admission date"
+      )
+      .refine(
+        (val) => {
+          if (!val) {
+            return true;
+          }
+          const admissionDate = new Date(val);
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          return admissionDate <= today;
+        },
+        "Admission date cannot be in the future"
       ),
     
     date_of_birth: z
@@ -226,6 +238,43 @@ export const studentFormSchema = z
       .max(50, "Previous school class must not exceed 50 characters")
       .optional()
       .transform((val) => val?.trim() || ""),
+    
+    // Address fields (for create mode)
+    street_address: z
+      .string()
+      .max(255, "Street address must not exceed 255 characters")
+      .optional()
+      .transform((val) => val?.trim() || ""),
+    
+    address_line_2: z
+      .string()
+      .max(255, "Address line 2 must not exceed 255 characters")
+      .optional()
+      .transform((val) => val?.trim() || ""),
+    
+    city: z
+      .string()
+      .max(100, "City must not exceed 100 characters")
+      .optional()
+      .transform((val) => val?.trim() || ""),
+    
+    state: z
+      .string()
+      .max(100, "State must not exceed 100 characters")
+      .optional()
+      .transform((val) => val?.trim() || ""),
+    
+    postal_code: z
+      .string()
+      .max(20, "Postal code must not exceed 20 characters")
+      .optional()
+      .transform((val) => val?.trim() || ""),
+    
+    country: z
+      .string()
+      .max(100, "Country must not exceed 100 characters")
+      .optional()
+      .transform((val) => val?.trim() || "India"),
   })
   // Cross-field validation: Emergency contact consistency
   .refine(

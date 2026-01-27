@@ -10,6 +10,7 @@ import { CheckCircle2, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useScrollToError } from "@/common/hooks/use-scroll-to-error";
 import {
     Form,
     FormControl,
@@ -71,10 +72,14 @@ export function LeaveAllocationForm({
   // Initialize form
   const form = useForm<LeaveAllocationFormValues>({
     resolver: zodResolver(createLeaveAllocationSchema(mode)),
+    shouldFocusError: true,
     defaultValues: initialData
       ? getFormValuesFromAllocation(initialData, roles)
       : getDefaultFormValues(),
   });
+
+  // Auto-scroll to first error field
+  useScrollToError(form.formState.errors);
 
   // Reset form when initialData changes
   useEffect(() => {

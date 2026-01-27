@@ -3,24 +3,27 @@
  * Displays organization holidays in both calendar and tabular views
  */
 
-import { useQuery } from "@tanstack/react-query";
-import { addMonths, endOfMonth, format, isSameDay, isSameMonth, isWithinInterval, parseISO, startOfDay, startOfMonth, subMonths } from "date-fns";
-import {
-  AlertCircle,
-  Calendar as CalendarIcon,
-  ChevronLeft,
-  ChevronRight,
-  List,
-  Loader2,
-  Pencil,
-  Trash2,
-} from "lucide-react";
-import { useMemo, useState } from "react";
 import { ConfirmationDialog } from "@/common/components/dialogs";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -30,7 +33,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 import { useDeleteHoliday } from "@/hooks/use-holiday-mutations";
+import { useToast } from "@/hooks/use-toast";
+import { fetchClasses } from "@/lib/api/class-api";
 import type { Holiday } from "@/lib/api/holiday-api";
 import { calculateDuration, fetchHolidayCalendar, fetchWorkingDayPolicy, formatHolidayType, getHolidayTypeColor, isNthWeekdayOfMonth } from "@/lib/api/holiday-api";
 import { cn } from "@/lib/utils";
@@ -42,6 +48,20 @@ import {
   isWeekendHoliday,
   sortHolidaysByDate
 } from "@/lib/utils/holiday-utils";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { addMonths, endOfMonth, format, isSameDay, isSameMonth, isWithinInterval, parseISO, startOfDay, startOfMonth, subMonths } from "date-fns";
+import {
+  AlertCircle,
+  Calendar as CalendarIcon,
+  ChevronLeft,
+  ChevronRight,
+  List,
+  Loader2,
+  Pencil,
+  Plus,
+  Trash2,
+} from "lucide-react";
+import { useMemo, useState } from "react";
 import { AddHolidaysForm } from "./add-holidays-form";
 import { BulkUploadHolidays } from "./bulk-upload-holidays";
 import { EditHolidayDialog } from "./edit-holiday-dialog";
@@ -290,7 +310,28 @@ interface CalendarViewProps {
 }
 
 function CalendarView({ currentDate, holidays }: CalendarViewProps) {
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showExceptionDialog, setShowExceptionDialog] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedDateHolidays, setSelectedDateHolidays] = useState<Holiday[]>([]);
+  const [isAddingException, setIsAddingException] = useState(false);
   const today = startOfDay(new Date());
+  
+  const handleDateClick = (date: Date, isCurrentMonth: boolean, dayHolidays: Holiday[]) => {
+    if (isCurrentMonth) {
+      setSelectedDate(date);
+      setSelectedDateHolidays(dayHolidays);
+      setIsAddingException(false);
+      
+      // If date already has holidays (excluding weekends), show exception dialog
+      const nonWeekendHolidays = filterNonWeekendHolidays(dayHolidays);
+      if (nonWeekendHolidays.length > 0) {
+        setShowExceptionDialog(true);
+      } else {
+        setShowAddDialog(true);
+      }
+    }
+  };
   
   // Get calendar grid data
   const calendarDays = useMemo(() => {
@@ -385,16 +426,35 @@ function CalendarView({ currentDate, holidays }: CalendarViewProps) {
           {calendarDays.map((day, index) => {
             const primaryHoliday = day.holidays[0];
             const colors = primaryHoliday ? getHolidayTypeColor(primaryHoliday.holiday_type) : null;
+            
+            let titleText = "";
+            if (day.isCurrentMonth) {
+              if (day.holidays.length > 0) {
+                titleText = "Click to manage holidays";
+              } else {
+                titleText = "Click to add holiday";
+              }
+            }
 
             return (
               <div
                 key={index}
+                role="button"
+                tabIndex={day.isCurrentMonth ? 0 : -1}
                 className={cn(
-                  "min-h-[60px] p-1.5 border-b border-r",
-                  !day.isCurrentMonth && "bg-muted/20 text-muted-foreground",
+                  "min-h-[60px] p-1.5 border-b border-r cursor-pointer transition-colors hover:bg-muted/50",
+                  !day.isCurrentMonth && "bg-muted/20 text-muted-foreground cursor-default hover:bg-muted/20",
                   day.isToday && "bg-blue-50 border-blue-300",
                   colors && day.isCurrentMonth && colors.bg
                 )}
+                onClick={() => handleDateClick(day.date, day.isCurrentMonth, day.holidays)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    handleDateClick(day.date, day.isCurrentMonth, day.holidays);
+                  }
+                }}
+                title={titleText}
               >
                 <div
                   className={cn(
@@ -477,7 +537,419 @@ function CalendarView({ currentDate, holidays }: CalendarViewProps) {
           </CardContent>
         </Card>
       )}
+
+      {/* Add Holiday Dialog */}
+      <AddHolidaysForm 
+        open={showAddDialog} 
+        onOpenChange={setShowAddDialog}
+        defaultDate={selectedDate ? format(selectedDate, "yyyy-MM-dd") : undefined}
+        isException={isAddingException}
+      />
+
+      {/* Exception Policy Dialog - for managing existing holidays */}
+      <ExceptionPolicyDialog
+        open={showExceptionDialog}
+        onOpenChange={setShowExceptionDialog}
+        date={selectedDate}
+        holidays={selectedDateHolidays}
+        onAddException={() => {
+          setShowExceptionDialog(false);
+          setIsAddingException(true);
+          setShowAddDialog(true);
+        }}
+      />
     </div>
+  );
+}
+
+// ============================================================================
+// Exception Policy Dialog Component
+// ============================================================================
+
+interface ExceptionPolicyDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  date: Date | null;
+  holidays: Holiday[];
+  onAddException: () => void;
+}
+
+function ExceptionPolicyDialog({ 
+  open, 
+  onOpenChange, 
+  date, 
+  holidays,
+  onAddException 
+}: ExceptionPolicyDialogProps) {
+  const [editingHoliday, setEditingHoliday] = useState<Holiday | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [holidayToDelete, setHolidayToDelete] = useState<Holiday | null>(null);
+  const [showExceptionForm, setShowExceptionForm] = useState(false);
+  
+  const deleteMutation = useDeleteHoliday();
+
+  const handleEdit = (holiday: Holiday) => {
+    setEditingHoliday(holiday);
+    setEditDialogOpen(true);
+  };
+
+  const handleDelete = (holiday: Holiday) => {
+    setHolidayToDelete(holiday);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleCreateException = () => {
+    setShowExceptionForm(true);
+  };
+
+  const confirmDelete = () => {
+    if (holidayToDelete) {
+      deleteMutation.mutate(holidayToDelete.public_id);
+      setDeleteDialogOpen(false);
+      setHolidayToDelete(null);
+      // Close exception dialog if no more holidays
+      const remainingHolidays = filterNonWeekendHolidays(holidays).filter(
+        h => h.public_id !== holidayToDelete.public_id
+      );
+      if (remainingHolidays.length === 0) {
+        onOpenChange(false);
+      }
+    }
+  };
+
+  const nonWeekendHolidays = filterNonWeekendHolidays(holidays);
+
+  return (
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CalendarIcon className="h-5 w-5 text-blue-600" />
+              Manage Holidays - {date ? format(date, "MMMM dd, yyyy") : ""}
+            </DialogTitle>
+            <DialogDescription>
+              This date has existing holidays. You can edit or delete them, add more holidays, or create an exception policy (Force Working/Holiday).
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            {nonWeekendHolidays.map((holiday) => {
+              const colors = getHolidayTypeColor(holiday.holiday_type);
+              const duration = calculateDuration(holiday.start_date, holiday.end_date);
+              
+              return (
+                <Card key={holiday.public_id} className="border">
+                  <CardContent className="pt-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <div className={cn("h-2.5 w-2.5 rounded-full", colors.badge)} />
+                          <span className="font-semibold text-sm">{holiday.description}</span>
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {format(parseISO(holiday.start_date), "MMM dd, yyyy")}
+                          {duration > 1 && ` - ${format(parseISO(holiday.end_date), "MMM dd, yyyy")}`}
+                        </div>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge variant="secondary" className="text-xs">
+                            {duration} {duration === 1 ? "Day" : "Days"}
+                          </Badge>
+                          <Badge className={cn(colors.badge, "text-xs")}>
+                            {formatHolidayType(holiday.holiday_type)}
+                          </Badge>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => handleEdit(holiday)}
+                          disabled={deleteMutation.isPending}
+                          title="Edit holiday"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:text-destructive"
+                          onClick={() => handleDelete(holiday)}
+                          disabled={deleteMutation.isPending}
+                          title="Delete holiday"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Close
+            </Button>
+            <Button 
+              onClick={onAddException}
+              className="gap-2"
+            >
+              <Plus className="h-4 w-4" />
+              Add Another Holiday
+            </Button>
+            <Button 
+              onClick={handleCreateException}
+              variant="secondary"
+              className="gap-2"
+            >
+              <CalendarIcon className="h-4 w-4" />
+              Create Exception Policy
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <EditHolidayDialog
+        holiday={editingHoliday}
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+      />
+
+      <ConfirmationDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title="Delete Holiday"
+        description={`Are you sure you want to delete "${holidayToDelete?.description}"? This action cannot be undone.`}
+        confirmLabel="Delete"
+        onConfirm={confirmDelete}
+        variant="destructive"
+      />
+
+      {/* Exception Form Dialog */}
+      <ExceptionFormDialog
+        open={showExceptionForm}
+        onOpenChange={setShowExceptionForm}
+        date={date}
+        onSuccess={() => {
+          setShowExceptionForm(false);
+          onOpenChange(false);
+        }}
+      />
+    </>
+  );
+}
+
+// ============================================================================
+// Exception Form Dialog Component
+// ============================================================================
+
+interface ExceptionFormDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  date: Date | null;
+  onSuccess: () => void;
+}
+
+function ExceptionFormDialog({ open, onOpenChange, date, onSuccess }: ExceptionFormDialogProps) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
+  const [overrideType, setOverrideType] = useState<"FORCE_WORKING" | "FORCE_HOLIDAY">("FORCE_WORKING");
+  const [isApplicableToAll, setIsApplicableToAll] = useState(false);
+  const [selectedClasses, setSelectedClasses] = useState<string[]>([]);
+  const [reason, setReason] = useState("");
+
+  // Fetch classes
+  const { data: classesResponse } = useQuery({
+    queryKey: ["classes"],
+    queryFn: () => fetchClasses({ page_size: 100 }),
+  });
+
+  const classes = classesResponse?.data || [];
+
+  const createMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await fetch("/api/calendar-exceptions/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) {throw new Error("Failed to create exception");}
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["calendar-exceptions"] });
+      queryClient.invalidateQueries({ queryKey: ["holiday-calendar"] });
+      toast({
+        title: "Exception Created!",
+        description: "The calendar exception has been created successfully.",
+      });
+      onSuccess();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create exception",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSubmit = () => {
+    if (!date) {
+      toast({
+        title: "Validation Error",
+        description: "Please select a date",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!reason.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Please provide a reason",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!isApplicableToAll && selectedClasses.length === 0) {
+      toast({
+        title: "Validation Error",
+        description: "Please select at least one class or apply to all classes",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const payload = {
+      date: format(date, "yyyy-MM-dd"),
+      override_type: overrideType,
+      is_applicable_to_all_classes: isApplicableToAll,
+      classes: isApplicableToAll ? [] : selectedClasses,
+      reason: reason.trim(),
+    };
+
+    createMutation.mutate(payload);
+  };
+
+  const handleClassToggle = (classId: string) => {
+    setSelectedClasses(prev =>
+      prev.includes(classId)
+        ? prev.filter(id => id !== classId)
+        : [...prev, classId]
+    );
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <CalendarIcon className="h-5 w-5 text-blue-600" />
+            Create Exception Policy - {date ? format(date, "MMMM dd, yyyy") : ""}
+          </DialogTitle>
+          <DialogDescription>
+            Create an exception to override the default working day policy for this date.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          {/* Exception Type */}
+          <div className="space-y-2">
+            <span className="text-sm font-medium">Exception Type</span>
+            <Select
+              value={overrideType}
+              onValueChange={(value: "FORCE_WORKING" | "FORCE_HOLIDAY") => setOverrideType(value)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="FORCE_WORKING">
+                  <div className="flex items-center gap-2">
+                    <div className="h-2 w-2 rounded-full bg-green-500" />
+                    <span>Force Working - Make holiday a working day</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="FORCE_HOLIDAY">
+                  <div className="flex items-center gap-2">
+                    <div className="h-2 w-2 rounded-full bg-red-500" />
+                    <span>Force Holiday - Give holiday on working day</span>
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Apply to All Classes */}
+          <div className="flex items-center space-x-3 rounded-md border p-4">
+            <Checkbox
+              checked={isApplicableToAll}
+              onCheckedChange={(checked) => setIsApplicableToAll(checked as boolean)}
+            />
+            <div className="space-y-1 leading-none">
+              <span className="text-sm font-medium">Apply to all classes</span>
+              <p className="text-sm text-muted-foreground">
+                This exception will apply to all classes in the organization
+              </p>
+            </div>
+          </div>
+
+          {/* Class Selection */}
+          {!isApplicableToAll && (
+            <div className="space-y-2">
+              <span className="text-sm font-medium">Select Classes</span>
+              <div className="max-h-40 overflow-y-auto rounded-md border p-4">
+                {classes.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {classes.map((cls: any) => (
+                      <div key={cls.public_id} className="flex items-center space-x-2">
+                        <Checkbox
+                          checked={selectedClasses.includes(cls.public_id)}
+                          onCheckedChange={() => handleClassToggle(cls.public_id)}
+                        />
+                        <label className="text-sm font-medium leading-none cursor-pointer">
+                          {cls.class_master.name} - {cls.name}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No classes available</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Reason */}
+          <div className="space-y-2">
+            <span className="text-sm font-medium">Reason *</span>
+            <Textarea
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="Enter reason for this exception..."
+              rows={3}
+              maxLength={500}
+            />
+            <p className="text-xs text-muted-foreground">{reason.length}/500 characters</p>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={createMutation.isPending}>
+            Cancel
+          </Button>
+          <Button onClick={handleSubmit} disabled={createMutation.isPending}>
+            {createMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Create Exception
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

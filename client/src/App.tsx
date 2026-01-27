@@ -27,6 +27,7 @@ import { ProtectedRoute } from "@/features/auth";
 import {
     AllocationsPage,
     ClassesPage,
+    ExceptionalWorkPage,
     OrganizationPage,
     OverviewPage,
     PreferencesPage,
@@ -72,6 +73,26 @@ function Router() {
           <PreferencesPage />
         </ProtectedRoute>
       </Route>
+      <Route path="/exceptional-work">
+        <ProtectedRoute>
+          <ExceptionalWorkPage />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/exceptional-work/new">
+        <ProtectedRoute>
+          <ExceptionalWorkPage />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/exceptional-work/:id">
+        <ProtectedRoute>
+          <ExceptionalWorkPage />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/exceptional-work/:id/edit">
+        <ProtectedRoute>
+          <ExceptionalWorkPage />
+        </ProtectedRoute>
+      </Route>
       <Route path="/teachers">
         <ProtectedRoute>
           <TeachersPage />
@@ -103,6 +124,11 @@ function Router() {
         </ProtectedRoute>
       </Route>
       <Route path="/students">
+        <ProtectedRoute>
+          <StudentsPage />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/classes/:classId/students/:id">
         <ProtectedRoute>
           <StudentsPage />
         </ProtectedRoute>

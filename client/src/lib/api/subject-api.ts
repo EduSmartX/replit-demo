@@ -141,7 +141,7 @@ export async function deleteSubject(publicId: string): Promise<void> {
  * Reactivate a deleted subject assignment
  */
 export async function reactivateSubject(publicId: string): Promise<Subject> {
-  return api.post<Subject>(`${API_ENDPOINTS.subjects.detail(publicId)}activate/`, {});
+  return api.post<Subject>(API_ENDPOINTS.subjects.activate(publicId), {});
 }
 
 /**

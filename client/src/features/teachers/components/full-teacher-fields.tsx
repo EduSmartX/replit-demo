@@ -31,7 +31,7 @@ export const FullTeacherFields = memo<FullTeacherFieldsProps>(
               control={control}
               name="employee_id"
               label="Employee ID"
-              placeholder="EMP001"
+              placeholder={isViewMode ? undefined : "EMP001"}
               disabled={isViewMode}
               required
             />
@@ -40,7 +40,7 @@ export const FullTeacherFields = memo<FullTeacherFieldsProps>(
               name="email"
               label="Email"
               type="email"
-              placeholder="teacher@example.com"
+              placeholder={isViewMode ? undefined : "teacher@example.com"}
               disabled={isViewMode}
               required
             />
@@ -48,7 +48,7 @@ export const FullTeacherFields = memo<FullTeacherFieldsProps>(
               control={control}
               name="first_name"
               label="First Name"
-              placeholder="John"
+              placeholder={isViewMode ? undefined : "John"}
               disabled={isViewMode}
               required
             />
@@ -56,7 +56,7 @@ export const FullTeacherFields = memo<FullTeacherFieldsProps>(
               control={control}
               name="last_name"
               label="Last Name"
-              placeholder="Doe"
+              placeholder={isViewMode ? undefined : "Doe"}
               disabled={isViewMode}
               required
             />
@@ -64,7 +64,7 @@ export const FullTeacherFields = memo<FullTeacherFieldsProps>(
               control={control}
               name="phone"
               label="Phone"
-              placeholder="1234567890"
+              placeholder={isViewMode ? undefined : "1234567890"}
               disabled={isViewMode}
             />
             <GenderField control={control} name="gender" disabled={isViewMode} required />
@@ -96,21 +96,21 @@ export const FullTeacherFields = memo<FullTeacherFieldsProps>(
               control={control}
               name="designation"
               label="Designation"
-              placeholder="Senior Teacher"
+              placeholder={isViewMode ? undefined : "Senior Teacher"}
               disabled={isViewMode}
             />
             <TextInputField
               control={control}
               name="highest_qualification"
               label="Highest Qualification"
-              placeholder="M.Ed"
+              placeholder={isViewMode ? undefined : "M.Ed"}
               disabled={isViewMode}
             />
             <TextInputField
               control={control}
               name="specialization"
               label="Specialization"
-              placeholder="Mathematics"
+              placeholder={isViewMode ? undefined : "Mathematics"}
               disabled={isViewMode}
             />
             <TextInputField
@@ -118,7 +118,7 @@ export const FullTeacherFields = memo<FullTeacherFieldsProps>(
               name="experience_years"
               label="Years of Experience"
               type="number"
-              placeholder="5"
+              placeholder={isViewMode ? undefined : "5"}
               disabled={isViewMode}
             />
           </CardContent>
@@ -133,15 +133,17 @@ export const FullTeacherFields = memo<FullTeacherFieldsProps>(
               control={control}
               name="emergency_contact_name"
               label="Contact Name"
-              placeholder="Jane Doe"
+              placeholder={isViewMode ? undefined : "Jane Doe"}
               disabled={isViewMode}
+              description={isViewMode ? "Emergency contact person for this teacher" : undefined}
             />
             <TextInputField
               control={control}
               name="emergency_contact_number"
               label="Contact Number"
-              placeholder="1234567890"
+              placeholder={isViewMode ? undefined : "1234567890"}
               disabled={isViewMode}
+              description={isViewMode ? "Contact number for emergency situations" : undefined}
             />
           </CardContent>
 

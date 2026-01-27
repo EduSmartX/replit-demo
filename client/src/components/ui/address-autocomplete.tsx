@@ -21,6 +21,7 @@ interface AddressAutocompleteProps {
   id?: string;
   testId?: string;
   name?: string;
+  disabled?: boolean;
 }
 
 export function AddressAutocomplete({
@@ -35,6 +36,7 @@ export function AddressAutocomplete({
   id = "address-autocomplete",
   testId = "address-autocomplete",
   name,
+  disabled = false,
 }: AddressAutocompleteProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -112,11 +114,11 @@ export function AddressAutocomplete({
           id={id}
           name={name}
           type="text"
-          placeholder={isLoading ? "Loading..." : placeholder}
+          placeholder={disabled ? undefined : (isLoading ? "Loading..." : placeholder)}
           value={value}
           defaultValue={defaultValue}
           onChange={handleInputChange}
-          disabled={isLoading}
+          disabled={isLoading || disabled}
           className="pl-9"
           data-testid={testId}
         />

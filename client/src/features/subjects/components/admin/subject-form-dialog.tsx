@@ -12,6 +12,7 @@ import { toast as sonnerToast } from "sonner";
 import * as z from "zod";
 import { DeletedDuplicateDialog } from "@/common/components/dialogs/deleted-duplicate-dialog";
 import { useDeletedDuplicateHandler } from "@/common/hooks/use-deleted-duplicate-handler";
+import { useScrollToError } from "@/common/hooks/use-scroll-to-error";
 import { Button } from "@/components/ui/button";
 import {
     Dialog,
@@ -163,6 +164,7 @@ export function SubjectFormDialog({ open, onClose, subject }: SubjectFormDialogP
 
   const form = useForm<SubjectFormValues>({
     resolver: zodResolver(subjectFormSchema),
+    shouldFocusError: true,
     defaultValues: {
       class_id: "",
       subject_id: "",
@@ -170,6 +172,9 @@ export function SubjectFormDialog({ open, onClose, subject }: SubjectFormDialogP
       description: "",
     },
   });
+
+  // Auto-scroll to first error field
+  useScrollToError(form.formState.errors);
 
   // Reset form when subject changes or dialog opens
   useEffect(() => {

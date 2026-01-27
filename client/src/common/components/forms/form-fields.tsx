@@ -120,8 +120,10 @@ export function SelectField<T extends FieldValues>({
               {label} {required && <span className="text-red-500">*</span>}
             </FormLabel>
             <Select
+              key={field.value as string}
               onValueChange={field.onChange}
               value={field.value as string}
+              defaultValue={field.value as string}
               disabled={disabled}
             >
               <FormControl>

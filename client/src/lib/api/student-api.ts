@@ -5,7 +5,7 @@
 
 import type { BulkUploadResponse } from "@/common/components/dialogs/bulk-upload-dialog";
 import { api, API_ENDPOINTS, getAccessToken } from "../api";
-import type { ApiListResponse } from "./types";
+import type { ApiListResponse, ApiResponse } from "./types";
 
 // Student interface for list view (matching API response structure)
 export interface Student {
@@ -35,35 +35,88 @@ export interface Student {
 // Detailed student interface for individual student view/edit
 export interface StudentDetail {
   public_id: string;
-  user?: {
+  user_info: {
     public_id: string;
     username: string;
+    first_name: string;
+    last_name: string;
     full_name: string;
-    first_name?: string;
-    last_name?: string;
-    email?: string;
-    phone?: string;
-    gender?: string;
+    email: string;
+    phone: string;
+    role: string;
+    gender: string;
     blood_group?: string;
-  };
-  user_info?: {
     date_of_birth?: string;
+    organization_role: string;
+    supervisor: {
+      email: string;
+      full_name: string;
+    } | null;
+    address?: {
+      public_id: string;
+      address_type: string;
+      street_address: string;
+      address_line_2?: string;
+      city: string;
+      state: string;
+      zip_code: string;
+      country: string;
+      latitude?: string;
+      longitude?: string;
+      full_address: string;
+      created_at: string;
+      updated_at: string;
+    };
+    notification_opt_in: boolean;
+    is_active: boolean;
+    is_email_verified: boolean;
+    full_address?: string;
+    location?: {
+      lat: number;
+      lng: number;
+    };
   };
-  class_assigned?: {
+  class_info: {
     public_id: string;
+    class_master: {
+      id: number;
+      name: string;
+      code: string;
+      display_order: number;
+    };
     name: string;
+    class_teacher: {
+      public_id: string;
+      full_name: string;
+      email: string;
+    } | null;
+    info: string;
+    capacity: number;
+    student_count: number;
+    is_full: boolean;
+    available_seats: number;
+    created_at: string;
+    updated_at: string;
+    created_by_public_id: string;
+    created_by_name: string;
+    updated_by_public_id: string;
+    updated_by_name: string;
   };
+  full_name: string;
   roll_number: string;
   admission_number: string;
-  admission_date?: string;
+  admission_date: string;
   guardian_name?: string;
   guardian_phone?: string;
   guardian_email?: string;
   guardian_relationship?: string;
+  description?: string;
+  medical_conditions?: string;
   emergency_contact_name?: string;
   emergency_contact_phone?: string;
-  medical_conditions?: string;
-  description?: string;
+  previous_school_name?: string;
+  previous_school_address?: string;
+  previous_school_class?: string;
   created_at: string;
   updated_at: string;
   created_by_public_id: string;
@@ -119,6 +172,14 @@ export interface StudentUpdatePayload {
     gender?: string;
     blood_group?: string;
     date_of_birth?: string;
+    address?: {
+      street_address: string;
+      address_line_2?: string;
+      city: string;
+      state: string;
+      zip_code: string;
+      country: string;
+    };
   };
   roll_number?: string;
   admission_number?: string;
@@ -131,6 +192,9 @@ export interface StudentUpdatePayload {
   emergency_contact_phone?: string;
   medical_conditions?: string;
   description?: string;
+  previous_school_name?: string;
+  previous_school_address?: string;
+  previous_school_class?: string;
 }
 
 export interface StudentListParams {
@@ -183,7 +247,15 @@ export async function createStudent(
  * Get student details
  */
 export async function getStudent(classId: string, publicId: string): Promise<StudentDetail> {
-  return api.get<StudentDetail>(API_ENDPOINTS.students.classDetail(classId, publicId));
+  const response = await api.get<ApiResponse<StudentDetail>>(
+    API_ENDPOINTS.students.classDetail(classId, publicId)
+  );
+  
+  if (!response.success || response.code < 200 || response.code >= 300) {
+    throw new Error(response.message || "Failed to fetch student details");
+  }
+  
+  return response.data;
 }
 
 /**
@@ -194,21 +266,38 @@ export async function updateStudent(
   publicId: string,
   payload: StudentUpdatePayload
 ): Promise<StudentDetail> {
-  return api.patch<StudentDetail>(API_ENDPOINTS.students.classDetail(classId, publicId), payload);
+  const response = await api.patch<ApiResponse<StudentDetail>>(
+    API_ENDPOINTS.students.classDetail(classId, publicId),
+    payload
+  );
+  
+  if (!response.success || response.code < 200 || response.code >= 300) {
+    throw new Error(response.message || "Failed to update student");
+  }
+  
+  return response.data;
 }
 
 /**
  * Delete a student (soft delete)
  */
 export async function deleteStudent(classId: string, publicId: string): Promise<void> {
-  return api.delete(API_ENDPOINTS.students.classDetail(classId, publicId));
+  await api.delete(API_ENDPOINTS.students.classDetail(classId, publicId));
 }
 
 /**
  * Reactivate a deleted student
  */
 export async function reactivateStudent(classId: string, publicId: string): Promise<StudentDetail> {
-  return api.post<StudentDetail>(API_ENDPOINTS.students.activate(classId, publicId));
+  const response = await api.post<ApiResponse<StudentDetail>>(
+    API_ENDPOINTS.students.activate(classId, publicId)
+  );
+  
+  if (!response.success || response.code < 200 || response.code >= 300) {
+    throw new Error(response.message || "Failed to reactivate student");
+  }
+  
+  return response.data;
 }
 
 /**

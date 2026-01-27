@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, User as UserIcon, Lock, ArrowRight } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useLocation } from "wouter";
 import * as z from "zod";
@@ -11,6 +11,7 @@ import { useUser } from "@/core/contexts";
 import { useToast } from "@/hooks/use-toast";
 import { api, API_ENDPOINTS, saveTokens } from "@/lib/api";
 import { ErrorMessages, SuccessMessages, ValidationErrorMessages } from "@/lib/constants";
+import { useScrollToError } from "@/common/hooks/use-scroll-to-error";
 import { AuthFormCard } from "./auth-form-card";
 
 const loginSchema = z.object({
@@ -30,8 +31,12 @@ export function LoginForm({ onForgotPassword }: LoginFormProps) {
 
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
+    shouldFocusError: true,
     defaultValues: { username: "", password: "" },
   });
+
+  // Auto-scroll to first error field
+  useScrollToError(form.formState.errors);
 
   const onSubmit = async (data: z.infer<typeof loginSchema>) => {
     setIsLoading(true);

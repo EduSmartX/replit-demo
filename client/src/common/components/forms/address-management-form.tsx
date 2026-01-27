@@ -13,6 +13,7 @@ import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form } from "@/components/ui/form";
+import { useScrollToError } from "@/common/hooks/use-scroll-to-error";
 import { useToast } from "@/hooks/use-toast";
 import { updateUserAddress, type Address } from "@/lib/api/address-api";
 import { parseApiError } from "@/lib/error-parser";
@@ -92,6 +93,7 @@ export const AddressManagementForm = forwardRef<
     // Initialize form with current address data
     const form = useForm<AddressFormValues>({
       resolver: zodResolver(addressFormSchema),
+      shouldFocusError: true,
       defaultValues: {
         street_address: currentAddress?.street_address || "",
         address_line_2: currentAddress?.address_line_2 || "",
@@ -105,6 +107,9 @@ export const AddressManagementForm = forwardRef<
         longitude: parseCoordinate(currentAddress?.longitude),
       },
     });
+
+    // Auto-scroll to first error field
+    useScrollToError(form.formState.errors);
 
     // Update form when address changes from parent (e.g., after teacher data refetch)
     useEffect(() => {
@@ -197,10 +202,6 @@ export const AddressManagementForm = forwardRef<
           { keepDirty: false }
         );
 
-        toast({
-          title: "Success",
-          description: "Address updated successfully",
-        });
         setIsEditing(false);
       },
       onError: (error: unknown) => {
@@ -485,17 +486,19 @@ export const AddressManagementForm = forwardRef<
                   control={form.control}
                   name="street_address"
                   label="Street Address"
-                  placeholder="Enter street address"
+                  placeholder={isViewMode ? undefined : "Enter street address"}
                   required
                   disabled={isViewMode}
+                  description={isViewMode ? "Enter your complete address manually" : undefined}
                 />
 
                 <TextInputField
                   control={form.control}
                   name="address_line_2"
                   label="Address Line 2"
-                  placeholder="Apartment, suite, unit, building, floor, etc. (optional)"
+                  placeholder={isViewMode ? undefined : "Apartment, suite, unit, building, floor, etc. (optional)"}
                   disabled={isViewMode}
+                  description={isViewMode ? "Suite, Building, Floor (optional)" : undefined}
                 />
 
                 <div className="grid grid-cols-2 gap-4">
@@ -503,7 +506,7 @@ export const AddressManagementForm = forwardRef<
                     control={form.control}
                     name="city"
                     label="City"
-                    placeholder="Enter city"
+                    placeholder={isViewMode ? undefined : "Enter city"}
                     required
                     disabled={isViewMode}
                   />
@@ -511,7 +514,7 @@ export const AddressManagementForm = forwardRef<
                     control={form.control}
                     name="state"
                     label="State"
-                    placeholder="Enter state"
+                    placeholder={isViewMode ? undefined : "Enter state"}
                     required
                     disabled={isViewMode}
                   />
@@ -522,7 +525,7 @@ export const AddressManagementForm = forwardRef<
                     control={form.control}
                     name="zip_code"
                     label="Zip Code"
-                    placeholder="Enter zip code"
+                    placeholder={isViewMode ? undefined : "Enter zip code"}
                     required
                     disabled={isViewMode}
                   />
@@ -530,7 +533,7 @@ export const AddressManagementForm = forwardRef<
                     control={form.control}
                     name="country"
                     label="Country"
-                    placeholder="Enter country"
+                    placeholder={isViewMode ? undefined : "Enter country"}
                     required
                     disabled={isViewMode}
                   />
@@ -540,7 +543,7 @@ export const AddressManagementForm = forwardRef<
                   control={form.control}
                   name="address_type"
                   label="Address Type"
-                  placeholder="Select address type"
+                  placeholder={isViewMode ? undefined : "Select address type"}
                   options={ADDRESS_TYPES}
                   disabled={isViewMode}
                 />

@@ -10,6 +10,7 @@ import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { TeacherField } from "@/common/components/forms";
 import { PageWrapper } from "@/common/components/layout";
+import { useScrollToError } from "@/common/hooks/use-scroll-to-error";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -76,6 +77,7 @@ export function SingleClassForm({
     defaultValues: initialData
       ? getSingleFormValuesFromClass(initialData)
       : getDefaultSingleFormValues(),
+    shouldFocusError: true,
   });
 
   // Reset form when initialData changes (only if form is not dirty)
@@ -101,6 +103,9 @@ export function SingleClassForm({
     }
     previousModeRef.current = mode;
   }, [mode]);
+
+  // Auto-scroll to first error field
+  useScrollToError(form.formState.errors);
 
   // Handle successful mutation
   const handleMutationSuccess = () => {

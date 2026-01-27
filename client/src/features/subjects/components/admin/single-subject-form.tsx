@@ -11,6 +11,7 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { DeletedDuplicateDialog } from "@/common/components/dialogs/deleted-duplicate-dialog";
 import { useDeletedDuplicateHandler } from "@/common/hooks/use-deleted-duplicate-handler";
+import { useScrollToError } from "@/common/hooks/use-scroll-to-error";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -102,6 +103,7 @@ export function SingleSubjectForm({ subject, onSuccess, onCancel }: SingleSubjec
 
   const form = useForm<SubjectFormValues>({
     resolver: zodResolver(subjectFormSchema),
+    shouldFocusError: true,
     defaultValues: subjectData ? {
       class_id: subjectData.class_info?.public_id || "",
       subject_id: subjectData.subject_info?.id?.toString() || "",
@@ -114,6 +116,9 @@ export function SingleSubjectForm({ subject, onSuccess, onCancel }: SingleSubjec
       description: "",
     },
   });
+
+  // Auto-scroll to first error field
+  useScrollToError(form.formState.errors);
 
   useEffect(() => {
     if (subjectData && subjectData.class_info && subjectData.subject_info) {

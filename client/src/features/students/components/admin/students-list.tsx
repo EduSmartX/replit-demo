@@ -3,9 +3,6 @@
  * Following Teacher pattern with all required features
  */
 
-import { useQuery } from "@tanstack/react-query";
-import { Plus } from "lucide-react";
-import { useState, useMemo } from "react";
 import { DeletedViewToggle } from "@/common/components";
 import { ResourceFilter, type FilterField } from "@/common/components/filters";
 import {
@@ -38,6 +35,9 @@ import {
   reactivateStudent,
   type Student,
 } from "@/lib/api/student-api";
+import { useQuery } from "@tanstack/react-query";
+import { Plus } from "lucide-react";
+import { useMemo, useState } from "react";
 import { BulkUploadStudents } from "./bulk-upload-students";
 import { getStudentColumns } from "./students-table-columns";
 
@@ -165,6 +165,21 @@ export function StudentsList({ onCreateNew, onView: onViewProp, onEdit: onEditPr
     setPage(1);
   };
 
+  const handleFieldChange = (name: string, value: string, allFilters: Record<string, string>) => {
+    // If master_class_id changes, immediately update filters to enable/populate class_id dropdown
+    if (name === "master_class_id") {
+      console.log("🎯 Master class changed immediately:", value);
+      const { class_id: _class_id, ...rest } = allFilters;
+      const activeFilters = Object.entries(rest).reduce((acc, [key, val]) => {
+        if (val && val !== "all") {
+          acc[key] = val;
+        }
+        return acc;
+      }, {} as Record<string, string>);
+      setFilters(activeFilters);
+    }
+  };
+
   const handleResetFilters = () => {
     setFilters({});
     setPage(1);
@@ -180,13 +195,39 @@ export function StudentsList({ onCreateNew, onView: onViewProp, onEdit: onEditPr
   // Filter sections based on selected master class
   const filteredSections = useMemo(() => {
     const allClasses = classesData?.data || [];
+    console.log("🔍 Filtering sections - master_class_id:", filters.master_class_id);
+    console.log("🔍 All classes data:", allClasses);
+    console.log("🔍 Core classes data:", coreClasses);
+    
     if (!filters.master_class_id) {
+      console.log("✅ No master class selected, returning all classes:", allClasses.length);
       return allClasses;
     }
-    return allClasses.filter(
-      (cls) => cls.class_master.code === filters.master_class_id
+    
+    // Find the selected master class to get its ID
+    const selectedMasterClass = coreClasses.find(c => c.code === filters.master_class_id);
+    console.log("🔍 Selected master class:", selectedMasterClass);
+    
+    if (!selectedMasterClass) {
+      console.log("⚠️ Master class not found for code:", filters.master_class_id);
+      return [];
+    }
+    
+    const filtered = allClasses.filter(
+      (cls) => {
+        console.log("🔍 Checking class:", cls.name, "- class_master.id:", cls.class_master.id, "- comparing with:", selectedMasterClass.id);
+        return cls.class_master.id === selectedMasterClass.id;
+      }
     );
-  }, [filters.master_class_id, classesData?.data]);
+    
+    console.log("✅ Filtered sections for master class", filters.master_class_id, "(ID:", selectedMasterClass.id, "):", filtered.length, "sections");
+    console.log("✅ Filtered sections:", filtered.map(c => c.name));
+    return filtered;
+  }, [filters.master_class_id, classesData?.data, coreClasses]);
+
+  console.log("📊 Current filters state:", filters);
+  console.log("📊 Filtered sections count:", filteredSections.length);
+  console.log("📊 Class Assigned dropdown should be:", !filters.master_class_id || filteredSections.length === 0 ? "DISABLED" : "ENABLED");
 
   const filterFields: FilterField[] = [
     {
@@ -214,7 +255,7 @@ export function StudentsList({ onCreateNew, onView: onViewProp, onEdit: onEditPr
         value: cls.public_id,
         label: cls.name,
       })),
-      disabled: !filters.master_class_id,
+      disabled: !filters.master_class_id || filteredSections.length === 0,
     },
   ];
 
@@ -266,6 +307,7 @@ export function StudentsList({ onCreateNew, onView: onViewProp, onEdit: onEditPr
         onFilter={handleFilter}
         onReset={handleResetFilters}
         defaultValues={filters}
+        onFieldChange={handleFieldChange}
       />
 
       {/* Student List Table */}

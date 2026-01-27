@@ -27,6 +27,10 @@ export default function TeachersPage() {
   });
 
   const getTeacherIdFromPath = () => {
+    // Skip if creating new teacher
+    if (location.endsWith('/teachers/new')) {
+      return null;
+    }
     const match = location.match(/\/teachers\/([a-zA-Z0-9-]+)$/);
     return match ? match[1] : null;
   };
@@ -48,6 +52,13 @@ export default function TeachersPage() {
   });
 
   useEffect(() => {
+    // Check for "new" path to enter create mode
+    if (location.endsWith("/teachers/new")) {
+      setViewMode("create");
+      setSelectedTeacher(null);
+      return;
+    }
+    
     if (teacherId && teacherDetail) {
       setSelectedTeacher(teacherDetail);
       setViewMode("view");
@@ -55,7 +66,7 @@ export default function TeachersPage() {
       setViewMode("list");
       setSelectedTeacher(null);
     }
-  }, [teacherId, teacherDetail]);
+  }, [teacherId, teacherDetail, location]);
 
   const deleteTeacherMutation = useDeleteMutation({
     resourceName: "Teacher",
@@ -118,6 +129,7 @@ export default function TeachersPage() {
   const handleCreateNew = () => {
     setSelectedTeacher(null);
     setViewMode("create");
+    setLocation("/teachers/new");
   };
 
   const handleSuccess = () => {
@@ -162,7 +174,7 @@ export default function TeachersPage() {
             onDelete={handleDeleteTeacher}
             onReactivate={handleReactivateTeacher}
           />
-        ) : (isLoadingTeacher || (teacherId && !selectedTeacher)) ? (
+        ) : (viewMode !== "create" && (isLoadingTeacher || (teacherId && !selectedTeacher))) ? (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
             <div className="flex flex-col items-center gap-2">
               <Loader2 className="h-12 w-12 animate-spin text-blue-600" />

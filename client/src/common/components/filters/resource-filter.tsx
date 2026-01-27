@@ -5,7 +5,7 @@
  */
 
 import { Filter, RotateCcw } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -34,6 +34,7 @@ interface ResourceFilterProps {
   onReset: () => void;
   defaultValues?: Record<string, string>;
   className?: string;
+  onFieldChange?: (name: string, value: string, allFilters: Record<string, string>) => void;
 }
 
 export function ResourceFilter({
@@ -42,11 +43,28 @@ export function ResourceFilter({
   onReset,
   defaultValues = {},
   className = "",
+  onFieldChange,
 }: ResourceFilterProps) {
   const [filters, setFilters] = useState<Record<string, string>>(defaultValues);
 
+  // Sync internal state with defaultValues prop changes
+  useEffect(() => {
+    setFilters(defaultValues);
+  }, [defaultValues]);
+
   const handleFilterChange = (name: string, value: string) => {
-    setFilters((prev) => ({ ...prev, [name]: value }));
+    console.log("🔄 Filter change:", name, "=", value);
+    setFilters((prev) => {
+      const newFilters = { ...prev, [name]: value };
+      console.log("🔄 New filter state:", newFilters);
+      
+      // Call onFieldChange callback if provided
+      if (onFieldChange) {
+        onFieldChange(name, value, newFilters);
+      }
+      
+      return newFilters;
+    });
   };
 
   const handleApplyFilters = () => {
@@ -56,6 +74,7 @@ export function ResourceFilter({
       }
       return acc;
     }, {} as Record<string, string>);
+    console.log("✅ Applying filters:", activeFilters);
     onFilter(activeFilters);
   };
 
@@ -93,8 +112,12 @@ export function ResourceFilter({
 
                 {field.type === "select" && field.options && (
                   <Select
+                    key={`${field.name}-${field.options.length}-${field.disabled}`}
                     value={filters[field.name] || "all"}
-                    onValueChange={(value) => handleFilterChange(field.name, value)}
+                    onValueChange={(value) => {
+                      console.log(`🎯 Select changed - ${field.name}:`, value, "- disabled:", field.disabled, "- options count:", field.options?.length);
+                      handleFilterChange(field.name, value);
+                    }}
                     disabled={field.disabled}
                   >
                     <SelectTrigger id={field.name}>

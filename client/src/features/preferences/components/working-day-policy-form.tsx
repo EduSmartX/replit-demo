@@ -10,6 +10,7 @@ import { AlertCircle, Loader2, Save } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { SuccessDialog } from "@/common/components/dialogs/success-dialog";
+import { useScrollToError } from "@/common/hooks/use-scroll-to-error";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -50,6 +51,7 @@ export function WorkingDayPolicyForm() {
   // Initialize form with react-hook-form and zod validation
   const form = useForm<WorkingDayPolicyFormValues>({
     resolver: zodResolver(workingDayPolicySchema),
+    shouldFocusError: true,
     defaultValues: {
       sunday_off: true,
       saturday_off_pattern: SaturdayOffPattern.SECOND_ONLY,
@@ -57,6 +59,9 @@ export function WorkingDayPolicyForm() {
       effective_to: null,
     },
   });
+
+  // Auto-scroll to first error field
+  useScrollToError(form.formState.errors);
 
   // Fetch current policy
   const {

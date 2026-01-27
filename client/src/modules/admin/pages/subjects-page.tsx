@@ -28,6 +28,10 @@ export default function SubjectsPage() {
   const [successMessage, setSuccessMessage] = useState({ title: "", description: "" });
 
   const getSubjectIdFromPath = () => {
+    // Skip if creating new subject
+    if (location.endsWith('/subjects/new')) {
+      return null;
+    }
     const match = location.match(/\/subjects\/([a-zA-Z0-9]+)$/);
     return match ? match[1] : null;
   };
@@ -46,6 +50,12 @@ export default function SubjectsPage() {
   });
 
   useEffect(() => {
+    // Check for "new" path to enter create mode
+    if (location.endsWith("/subjects/new")) {
+      setViewMode("create");
+      return;
+    }
+    
     if (subjectId && subjectDetail) {
       setViewMode("edit");
     } else if (!subjectId) {
@@ -55,6 +65,7 @@ export default function SubjectsPage() {
 
   const handleCreateNew = () => {
     setViewMode("create");
+    setLocation("/subjects/new");
   };
 
   const handleEdit = (subject: Subject) => {

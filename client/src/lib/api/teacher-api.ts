@@ -3,7 +3,7 @@
  * Using generic API service utilities for consistent CRUD operations
  */
 
-import { apiRequest, getAccessToken } from "../api";
+import { apiRequest, API_ENDPOINTS, getAccessToken } from "../api";
 import { createEntityService } from "../utils/api-service-utils";
 import type { Address } from "./address-api";
 
@@ -217,7 +217,7 @@ export const deleteTeacher = teacherService.delete;
  */
 export async function reactivateTeacher(publicId: string): Promise<ApiResponse<Teacher>> {
   const response = await apiRequest<ApiResponse<Teacher>>(
-    `${API_BASE_URL}/api/teacher/admin/${publicId}/activate/`,
+    API_ENDPOINTS.teacher.activate(publicId),
     {
       method: "POST",
     }

@@ -42,6 +42,7 @@ export const API_ENDPOINTS = {
   classes: {
     list: `${API_BASE_URL}/api/classes/admin/`,
     detail: (publicId: string) => `${API_BASE_URL}/api/classes/admin/${publicId}/`,
+    activate: (publicId: string) => `${API_BASE_URL}/api/classes/admin/${publicId}/activate/`,
     downloadTemplate: `${API_BASE_URL}/api/classes/admin/download-template/`,
     bulkUpload: `${API_BASE_URL}/api/classes/admin/bulk-upload/`,
   },
@@ -53,6 +54,9 @@ export const API_ENDPOINTS = {
   attendance: {
     holidayCalendar: `${API_BASE_URL}/api/attendance/admin/holiday-calendar/`,
     workingDayPolicy: `${API_BASE_URL}/api/attendance/admin/working-day-policy/`,
+    calendarException: `${API_BASE_URL}/api/attendance/calendar-exception/`,
+    calendarExceptionDetail: (publicId: string) => `${API_BASE_URL}/api/attendance/calendar-exception/${publicId}/`,
+    calendarExceptionBulkCreate: `${API_BASE_URL}/api/attendance/calendar-exception/bulk_create_exceptions/`,
   },
   teacher: {
     list: `${API_BASE_URL}/api/teacher/admin/`,
@@ -62,6 +66,7 @@ export const API_ENDPOINTS = {
   subjects: {
     list: `${API_BASE_URL}/api/subjects/`,
     detail: (publicId: string) => `${API_BASE_URL}/api/subjects/${publicId}/`,
+    activate: (publicId: string) => `${API_BASE_URL}/api/subjects/${publicId}/activate/`,
     downloadTemplate: `${API_BASE_URL}/api/subjects/download_template/`,
     bulkUpload: `${API_BASE_URL}/api/subjects/bulk_upload/`,
   },

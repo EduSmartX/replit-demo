@@ -8,6 +8,7 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { RoleDashboard } from "@/common/components";
 import { useUser } from "@/core/contexts";
+import { CalendarExceptionManagement } from "@/features/attendance";
 import { OrganizationHolidayCalendar } from "@/features/leave";
 import { OrganizationPreferences } from "@/features/preferences";
 import { useToast } from "@/hooks/use-toast";
@@ -131,6 +132,11 @@ export default function DashboardPage() {
             {/* Organization Holiday Calendar */}
             {activeMenu === "organization" && user.role === "admin" && (
               <OrganizationHolidayCalendar />
+            )}
+
+            {/* Exceptional Work Policy */}
+            {activeMenu === "exceptional-work" && user.role === "admin" && (
+              <CalendarExceptionManagement />
             )}
 
             {/* Organization Preferences */}

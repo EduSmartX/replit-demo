@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { DeletedDuplicateDialog } from "@/common/components/dialogs/deleted-duplicate-dialog";
 import { useDeletedDuplicateHandler } from "@/common/hooks/use-deleted-duplicate-handler";
+import { useScrollToError } from "@/common/hooks/use-scroll-to-error";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Form } from "@/components/ui/form";
@@ -54,7 +55,11 @@ function TeacherFormComponent({
   const form = useForm<TeacherFormValues>({
     resolver: zodResolver(teacherFormSchema),
     defaultValues: getFormValuesFromTeacher(initialData),
+    shouldFocusError: true,
   });
+
+  // Auto-scroll to first error field
+  useScrollToError(form.formState.errors);
 
   const handleAddressSelect = useCallback((address: any) => {
     if (address.streetAddress) {form.setValue("street_address", address.streetAddress);}

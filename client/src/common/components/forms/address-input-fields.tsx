@@ -84,6 +84,7 @@ export function AddressInputFields<T extends FieldValues>({
               country: data.address.country || "INDIA",
               latitude: latitude.toString(),
               longitude: longitude.toString(),
+              formattedAddress: data.display_name || "",
             };
 
             // Call the callback if provided
@@ -103,6 +104,7 @@ export function AddressInputFields<T extends FieldValues>({
               country: "INDIA",
               latitude: latitude.toString(),
               longitude: longitude.toString(),
+              formattedAddress: "",
             });
           }
         } finally {
@@ -164,6 +166,7 @@ export function AddressInputFields<T extends FieldValues>({
             id="streetAddress"
             testId="input-street-address"
             name={field.name}
+            disabled={disabled}
           />
         )}
       />
@@ -203,7 +206,7 @@ export function AddressInputFields<T extends FieldValues>({
             render={({ field }) => (
               <Input
                 id="city"
-                placeholder="Mumbai"
+                placeholder={disabled ? undefined : "Mumbai"}
                 disabled={disabled}
                 data-testid="input-city"
                 className="h-12 text-base"
@@ -224,7 +227,7 @@ export function AddressInputFields<T extends FieldValues>({
             render={({ field }) => (
               <Input
                 id="state"
-                placeholder="Maharashtra"
+                placeholder={disabled ? undefined : "Maharashtra"}
                 disabled={disabled}
                 data-testid="input-state"
                 className="h-12 text-base"
@@ -248,7 +251,7 @@ export function AddressInputFields<T extends FieldValues>({
             render={({ field }) => (
               <Input
                 id="zipCode"
-                placeholder="400001"
+                placeholder={disabled ? undefined : "400001"}
                 disabled={disabled}
                 data-testid="input-zip-code"
                 className="h-12 text-base"
@@ -270,7 +273,7 @@ export function AddressInputFields<T extends FieldValues>({
               <Input
                 id="country"
                 disabled={disabled}
-                placeholder="India"
+                placeholder={disabled ? undefined : "India"}
                 className="h-12 text-base"
                 {...field}
                 value={(field.value as string) || "India"}

@@ -3,7 +3,7 @@
  * Pure transformation functions for converting between form state, API payloads, and student entities
  */
 
-import type { StudentDetail, StudentCreatePayload, StudentUpdatePayload } from "@/lib/api/student-api";
+import type { StudentCreatePayload, StudentDetail, StudentUpdatePayload } from "@/lib/api/student-api";
 import type { StudentFormValues } from "../schemas/student-form-schema";
 
 export function getDefaultFormValues(): StudentFormValues {
@@ -32,6 +32,12 @@ export function getDefaultFormValues(): StudentFormValues {
     previous_school_name: "",
     previous_school_address: "",
     previous_school_class: "",
+    street_address: "",
+    address_line_2: "",
+    city: "",
+    state: "",
+    postal_code: "",
+    country: "India",
   };
 }
 
@@ -42,16 +48,16 @@ export function getFormValuesFromStudent(
 ): StudentFormValues {
   return {
     roll_number: student.roll_number || "",
-    first_name: student.user?.first_name || "",
-    last_name: student.user?.last_name || "",
+    first_name: student.user_info?.first_name || "",
+    last_name: student.user_info?.last_name || "",
     admission_number: student.admission_number || "",
-    email: student.user?.email || "",
-    phone: student.user?.phone || "",
+    email: student.user_info?.email || "",
+    phone: student.user_info?.phone || "",
     admission_date: student.admission_date || "",
     date_of_birth: student.user_info?.date_of_birth || "",
-    blood_group: student.user?.blood_group || "",
-    gender: student.user?.gender || "",
-    class_id: student.class_assigned?.public_id || "",
+    blood_group: student.user_info?.blood_group || "",
+    gender: student.user_info?.gender || "",
+    class_id: student.class_info?.public_id || "",
     guardian_name: student.guardian_name || "",
     guardian_phone: student.guardian_phone || "",
     guardian_email: student.guardian_email || "",
@@ -61,11 +67,16 @@ export function getFormValuesFromStudent(
     medical_conditions: student.medical_conditions || "",
     description: student.description || "",
     organization_role: organizationRoleCode || "",
-    supervisor_email:
-      (student.user as { supervisor?: { email?: string } })?.supervisor?.email || "",
-    previous_school_name: "",
-    previous_school_address: "",
-    previous_school_class: "",
+    supervisor_email: student.user_info?.supervisor?.email || "",
+    previous_school_name: student.previous_school_name || "",
+    previous_school_address: student.previous_school_address || "",
+    previous_school_class: student.previous_school_class || "",
+    street_address: student.user_info?.address?.street_address || "",
+    address_line_2: student.user_info?.address?.address_line_2 || "",
+    city: student.user_info?.address?.city || "",
+    state: student.user_info?.address?.state || "",
+    postal_code: student.user_info?.address?.zip_code || "",
+    country: student.user_info?.address?.country || "India",
   };
 }
 
@@ -84,6 +95,9 @@ export function getOrganizationRoleCode(
 
 // Form to API payload transformation: Map form values to nested user object structure
 export function formValuesToCreatePayload(values: StudentFormValues): StudentCreatePayload {
+  const hasAddress = values.street_address || values.address_line_2 || values.city || values.state || values.postal_code;
+  console.log("Has address:", hasAddress);
+  console.log("Form values:", values);
   const payload: StudentCreatePayload = {
     user: {
       username: values.email || undefined,
@@ -97,6 +111,17 @@ export function formValuesToCreatePayload(values: StudentFormValues): StudentCre
       date_of_birth: values.date_of_birth || undefined,
       organization_role_code: values.organization_role || "STUDENT",
       supervisor_email: values.supervisor_email || undefined,
+      ...(hasAddress && {
+        address: {
+          address_type: "student_address",
+          street_address: values.street_address ?? "",
+          address_line_2: values.address_line_2,
+          city: values.city ?? "",
+          state: values.state ?? "",
+          zip_code: values.postal_code ?? "",
+          country: values.country ?? "India"
+        }
+      })
     },
     roll_number: values.roll_number,
     admission_number: values.admission_number || undefined,
@@ -109,6 +134,9 @@ export function formValuesToCreatePayload(values: StudentFormValues): StudentCre
     emergency_contact_name: values.emergency_contact_name || undefined,
     emergency_contact_phone: values.emergency_contact_phone || undefined,
     description: values.description || undefined,
+    previous_school_name: values.previous_school_name || undefined,
+    previous_school_address: values.previous_school_address || undefined,
+    previous_school_class: values.previous_school_class || undefined,
   };
 
   // Remove undefined fields from user object
@@ -129,6 +157,9 @@ export function formValuesToCreatePayload(values: StudentFormValues): StudentCre
 }
 
 export function formValuesToUpdatePayload(values: StudentFormValues): StudentUpdatePayload {
+  const hasAddress = values.street_address || values.address_line_2 || values.city || values.state || values.postal_code;
+  console.log("Update Has address:", hasAddress);
+  console.log("Update Form values:", values);
   const payload: StudentUpdatePayload = {
     user: {
       first_name: values.first_name,
@@ -138,6 +169,16 @@ export function formValuesToUpdatePayload(values: StudentFormValues): StudentUpd
       gender: values.gender || undefined,
       blood_group: values.blood_group || undefined,
       date_of_birth: values.date_of_birth || undefined,
+      ...(hasAddress && {
+        address: {
+          street_address: values.street_address ?? "",
+          address_line_2: values.address_line_2,
+          city: values.city ?? "",
+          state: values.state ?? "",
+          zip_code: values.postal_code ?? "",
+          country: values.country ?? "India"
+        }
+      })
     },
     roll_number: values.roll_number,
     admission_number: values.admission_number || undefined,
@@ -150,19 +191,26 @@ export function formValuesToUpdatePayload(values: StudentFormValues): StudentUpd
     emergency_contact_phone: values.emergency_contact_phone || undefined,
     medical_conditions: values.medical_conditions || undefined,
     description: values.description || undefined,
+    previous_school_name: values.previous_school_name || undefined,
+    previous_school_address: values.previous_school_address || undefined,
+    previous_school_class: values.previous_school_class || undefined,
   };
 
   // Remove undefined fields from user object
-  Object.keys(payload.user).forEach(key => {
-    if (payload.user[key as keyof typeof payload.user] === undefined) {
-      delete payload.user[key as keyof typeof payload.user];
-    }
-  });
+  if (payload.user) {
+    Object.keys(payload.user).forEach(key => {
+      const userKey = key as keyof NonNullable<StudentUpdatePayload['user']>;
+      if (payload.user && payload.user[userKey] === undefined) {
+        delete payload.user[userKey];
+      }
+    });
+  }
 
   // Remove undefined fields from root payload
   Object.keys(payload).forEach(key => {
-    if (key !== 'user' && payload[key as keyof typeof payload] === undefined) {
-      delete payload[key as keyof typeof payload];
+    const payloadKey = key as keyof StudentUpdatePayload;
+    if (payloadKey !== 'user' && payload[payloadKey] === undefined) {
+      delete payload[payloadKey];
     }
   });
 
