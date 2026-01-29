@@ -60,11 +60,7 @@ export function LoginForm({ onForgotPassword }: LoginFormProps) {
         saveTokens(result.tokens.access, result.tokens.refresh);
       }
 
-      setAuth(
-        result.user as User,
-        result.organization as Organization,
-        result.tokens
-      );
+      setAuth(result.user as User, result.organization as Organization, result.tokens);
 
       toast({
         title: "Welcome back!",
@@ -108,7 +104,7 @@ export function LoginForm({ onForgotPassword }: LoginFormProps) {
       <AuthFormCard
         footer={
           <Button
-            className="w-full h-11 text-sm"
+            className="h-11 w-full text-sm"
             type="submit"
             disabled={isLoading}
             data-testid="button-login"
@@ -119,13 +115,15 @@ export function LoginForm({ onForgotPassword }: LoginFormProps) {
         }
       >
         <div className="space-y-2">
-          <Label htmlFor="username" className="text-sm">Username</Label>
+          <Label htmlFor="username" className="text-sm">
+            Username
+          </Label>
           <div className="relative">
             <UserIcon className="text-muted-foreground absolute top-3 left-3 h-4 w-4" />
             <Input
               id="username"
               placeholder="Enter your username"
-              className="pl-9 h-11 text-sm"
+              className="h-11 pl-9 text-sm"
               {...form.register("username")}
               data-testid="input-username"
             />
@@ -136,7 +134,9 @@ export function LoginForm({ onForgotPassword }: LoginFormProps) {
         </div>
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <Label htmlFor="password" className="text-sm">Password</Label>
+            <Label htmlFor="password" className="text-sm">
+              Password
+            </Label>
             <Button
               variant="link"
               className="text-primary h-auto px-0 text-sm"
@@ -152,7 +152,7 @@ export function LoginForm({ onForgotPassword }: LoginFormProps) {
             <Input
               id="password"
               type="password"
-              className="pl-9 h-11 text-sm"
+              className="h-11 pl-9 text-sm"
               {...form.register("password")}
               data-testid="input-password"
             />

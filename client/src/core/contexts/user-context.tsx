@@ -93,7 +93,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   // Don't render children until we've checked localStorage
   if (!isInitialized) {
-    return null;
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+      </div>
+    );
   }
 
   return (
