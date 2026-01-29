@@ -4,6 +4,7 @@
  */
 
 import { API_ENDPOINTS, apiRequest, getAccessToken } from "@/lib/api";
+import { ERROR_MESSAGES } from "@/lib/constants";
 import type { ApiListResponse, ApiResponse } from "./types";
 
 // Re-export for convenience
@@ -114,7 +115,7 @@ export async function fetchCoreClasses(params?: {
   });
 
   if (!response.success || response.code < 200 || response.code >= 300) {
-    throw new Error(response.message || "Failed to fetch core classes");
+    throw new Error(response.message || ERROR_MESSAGES.CORE_CLASS_FETCH_FAILED);
   }
 
   return response;
@@ -151,7 +152,7 @@ export async function fetchClasses(params?: {
   });
 
   if (!response.success || response.code < 200 || response.code >= 300) {
-    throw new Error(response.message || "Failed to fetch classes");
+    throw new Error(response.message || ERROR_MESSAGES.CLASS_FETCH_FAILED);
   }
 
   return response;
@@ -240,9 +241,9 @@ export async function createClass(
       }
     }
 
-    const error = new Error(errorMessage);
-    (error as any).response = response;
-    (error as any).isDeletedDuplicate = hasDeletedDuplicate;
+    const error = new Error(errorMessage) as Error & { response: unknown; isDeletedDuplicate: boolean };
+    error.response = response;
+    error.isDeletedDuplicate = hasDeletedDuplicate;
     throw error;
   }
 

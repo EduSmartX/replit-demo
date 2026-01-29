@@ -49,6 +49,7 @@ import {
     type SubjectCreatePayload
 } from "@/lib/api/subject-api";
 import { fetchTeachers } from "@/lib/api/teacher-api";
+import { SUCCESS_MESSAGES } from "@/lib/constants";
 import {
     isDeletedDuplicateError,
     getDeletedDuplicateMessage,
@@ -105,7 +106,7 @@ export function SubjectFormDialog({ open, onClose, subject }: SubjectFormDialogP
       createSubject(payload, forceCreate),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["subjects"] });
-      sonnerToast.success("Subject assigned successfully");
+      sonnerToast.success(SUCCESS_MESSAGES.SUBJECT_ASSIGNED);
       onClose();
     },
     onError: (error: Error) => {
@@ -116,7 +117,7 @@ export function SubjectFormDialog({ open, onClose, subject }: SubjectFormDialogP
         const payload: SubjectCreatePayload = {
           class_id: values.class_id,
           subject_id: Number(values.subject_id),
-          teacher_id: values.teacher_id,
+          teacher_id: values.teacher_id || "",
           description: values.description,
         };
         duplicateHandler.openDialog(message, { payload, deletedRecordId });
@@ -132,7 +133,7 @@ export function SubjectFormDialog({ open, onClose, subject }: SubjectFormDialogP
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["subjects"] });
       duplicateHandler.closeDialog();
-      sonnerToast.success("Subject reactivated successfully");
+      sonnerToast.success(SUCCESS_MESSAGES.SUBJECT_REACTIVATED);
       onClose();
     },
     onError: (error: Error) => {
@@ -146,7 +147,7 @@ export function SubjectFormDialog({ open, onClose, subject }: SubjectFormDialogP
       updateSubject(subject?.public_id || "", payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["subjects"] });
-      sonnerToast.success("Subject updated successfully");
+      sonnerToast.success(SUCCESS_MESSAGES.SUBJECT_UPDATED);
       onClose();
     },
     onError: (error: Error) => {
@@ -159,7 +160,7 @@ export function SubjectFormDialog({ open, onClose, subject }: SubjectFormDialogP
   // Handle both direct array and wrapped response
   const coreSubjects = Array.isArray(coreSubjectsData) 
     ? coreSubjectsData 
-    : (coreSubjectsData as any)?.data || [];
+    : (coreSubjectsData as unknown as { data?: CoreSubject[] })?.data || [];
   const teachers = teachersData?.data || [];
 
   const form = useForm<SubjectFormValues>({
@@ -210,7 +211,7 @@ export function SubjectFormDialog({ open, onClose, subject }: SubjectFormDialogP
       const payload: SubjectCreatePayload = {
         class_id: data.class_id,
         subject_id: Number(data.subject_id),
-        teacher_id: data.teacher_id,
+        teacher_id: data.teacher_id || "",
         description: data.description,
       };
       createMutation.mutate({ payload, forceCreate: false });
@@ -265,9 +266,9 @@ export function SubjectFormDialog({ open, onClose, subject }: SubjectFormDialogP
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {classes.map((classItem: any) => (
+                      {classes.map((classItem) => (
                         <SelectItem key={classItem.public_id} value={classItem.public_id}>
-                          {classItem.class_master?.name || classItem.class_master_name} - {classItem.name}
+                          {classItem.class_master?.name} - {classItem.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -295,7 +296,7 @@ export function SubjectFormDialog({ open, onClose, subject }: SubjectFormDialogP
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {coreSubjects.map((subject: any) => (
+                      {coreSubjects.map((subject) => (
                         <SelectItem key={subject.id} value={subject.id.toString()}>
                           {subject.name} ({subject.code})
                         </SelectItem>
@@ -325,7 +326,7 @@ export function SubjectFormDialog({ open, onClose, subject }: SubjectFormDialogP
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {teachers.map((teacher: any) => (
+                      {teachers.map((teacher) => (
                         <SelectItem key={teacher.public_id} value={teacher.public_id}>
                           {teacher.full_name} ({teacher.employee_id})
                         </SelectItem>

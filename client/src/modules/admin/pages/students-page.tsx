@@ -4,6 +4,10 @@
  * Complete student management interface following Teacher pattern with URL routing
  */
 
+import { useQuery } from "@tanstack/react-query";
+import { Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useLocation } from "wouter";
 import { DeleteConfirmationDialog, PageWrapper, SuccessDialog } from "@/common/components";
 import { DashboardLayout } from "@/common/layouts";
 import { StudentsList } from "@/features/students/components/admin/students-list";
@@ -12,10 +16,6 @@ import { useDeleteMutation } from "@/hooks/use-delete-mutation";
 import { useReactivateMutation } from "@/hooks/use-reactivate-mutation";
 import type { Student, StudentDetail } from "@/lib/api/student-api";
 import { deleteStudent, getStudent, reactivateStudent } from "@/lib/api/student-api";
-import { useQuery } from "@tanstack/react-query";
-import { Loader2 } from "lucide-react";
-import { useEffect, useState } from "react";
-import { useLocation } from "wouter";
 
 type ViewMode = "list" | "create" | "edit" | "view";
 

@@ -4,18 +4,20 @@
  */
 
 import { format, parseISO } from "date-fns";
-import { CheckCircle, Edit, Trash2, XCircle } from "lucide-react";
+import { CheckCircle, Edit, Eye, Trash2, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { Column } from "@/components/ui/data-table";
 import type { CalendarException } from "@/lib/api/calendar-exception-types";
 
 interface GetCalendarExceptionColumnsOptions {
+  onView: (exception: CalendarException) => void;
   onEdit: (exception: CalendarException) => void;
   onDelete: (exception: CalendarException) => void;
 }
 
 export function getCalendarExceptionColumns({
+  onView,
   onEdit,
   onDelete,
 }: GetCalendarExceptionColumnsOptions): Column<CalendarException>[] {
@@ -83,7 +85,16 @@ export function getCalendarExceptionColumns({
     {
       header: "Actions",
       accessor: (exception) => (
-        <div className="flex justify-end gap-2">
+        <div className="flex justify-start gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onView(exception)}
+            className="text-gray-600 hover:text-gray-800 hover:bg-gray-50"
+            title="View exception"
+          >
+            <Eye className="h-4 w-4" />
+          </Button>
           <Button
             variant="ghost"
             size="sm"
@@ -105,8 +116,8 @@ export function getCalendarExceptionColumns({
         </div>
       ),
       sortable: false,
-      width: 120,
-      className: "text-right",
+      width: 150,
+      className: "text-left",
     },
   ];
 }

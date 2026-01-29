@@ -3,6 +3,20 @@
  * Displays organization holidays in both calendar and tabular views
  */
 
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { addMonths, endOfMonth, format, isSameDay, isSameMonth, isWithinInterval, parseISO, startOfDay, startOfMonth, subMonths } from "date-fns";
+import {
+  AlertCircle,
+  Calendar as CalendarIcon,
+  ChevronLeft,
+  ChevronRight,
+  List,
+  Loader2,
+  Pencil,
+  Plus,
+  Trash2,
+} from "lucide-react";
+import { useMemo, useState } from "react";
 import { ConfirmationDialog } from "@/common/components/dialogs";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -37,7 +51,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useDeleteHoliday } from "@/hooks/use-holiday-mutations";
 import { useToast } from "@/hooks/use-toast";
 import { fetchClasses } from "@/lib/api/class-api";
-import type { Holiday } from "@/lib/api/holiday-api";
+import type { Holiday, CreateHolidayPayload } from "@/lib/api/holiday-api";
 import { calculateDuration, fetchHolidayCalendar, fetchWorkingDayPolicy, formatHolidayType, getHolidayTypeColor, isNthWeekdayOfMonth } from "@/lib/api/holiday-api";
 import { cn } from "@/lib/utils";
 import {
@@ -48,20 +62,6 @@ import {
   isWeekendHoliday,
   sortHolidaysByDate
 } from "@/lib/utils/holiday-utils";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { addMonths, endOfMonth, format, isSameDay, isSameMonth, isWithinInterval, parseISO, startOfDay, startOfMonth, subMonths } from "date-fns";
-import {
-  AlertCircle,
-  Calendar as CalendarIcon,
-  ChevronLeft,
-  ChevronRight,
-  List,
-  Loader2,
-  Pencil,
-  Plus,
-  Trash2,
-} from "lucide-react";
-import { useMemo, useState } from "react";
 import { AddHolidaysForm } from "./add-holidays-form";
 import { BulkUploadHolidays } from "./bulk-upload-holidays";
 import { EditHolidayDialog } from "./edit-holiday-dialog";
@@ -772,7 +772,7 @@ function ExceptionFormDialog({ open, onOpenChange, date, onSuccess }: ExceptionF
   const classes = classesResponse?.data || [];
 
   const createMutation = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data: CreateHolidayPayload) => {
       const response = await fetch("/api/calendar-exceptions/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -790,7 +790,7 @@ function ExceptionFormDialog({ open, onOpenChange, date, onSuccess }: ExceptionF
       });
       onSuccess();
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
         description: error.message || "Failed to create exception",
@@ -906,7 +906,7 @@ function ExceptionFormDialog({ open, onOpenChange, date, onSuccess }: ExceptionF
               <div className="max-h-40 overflow-y-auto rounded-md border p-4">
                 {classes.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {classes.map((cls: any) => (
+                    {classes.map((cls) => (
                       <div key={cls.public_id} className="flex items-center space-x-2">
                         <Checkbox
                           checked={selectedClasses.includes(cls.public_id)}

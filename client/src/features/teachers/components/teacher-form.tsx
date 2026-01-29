@@ -12,21 +12,22 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Form } from "@/components/ui/form";
 import { Label } from "@/components/ui/label";
 import { createTeacher, reactivateTeacher, updateTeacher } from "@/lib/api/teacher-api";
+import { SUCCESS_MESSAGES } from "@/lib/constants";
 import {
-    getApiErrorMessage,
-    getDeletedDuplicateMessage,
-    getDeletedRecordId,
-    isDeletedDuplicateError,
-    setFormFieldErrors,
+  getApiErrorMessage,
+  getDeletedDuplicateMessage,
+  getDeletedRecordId,
+  isDeletedDuplicateError,
+  setFormFieldErrors,
 } from "@/lib/error-utils";
 import { getFormConfig } from "@/lib/utils/form-utils";
 import {
-    teacherFormSchema,
-    type TeacherFormValues,
+  teacherFormSchema,
+  type TeacherFormValues,
 } from "../schemas/teacher-form-schema";
 import {
-    getFormValuesFromTeacher,
-    getTeacherPayloadFromForm,
+  getFormValuesFromTeacher,
+  getTeacherPayloadFromForm,
 } from "../utils/form-utils";
 import { FullTeacherFields } from "./full-teacher-fields";
 import { MinimalTeacherFields } from "./minimal-teacher-fields";
@@ -61,7 +62,7 @@ function TeacherFormComponent({
   // Auto-scroll to first error field
   useScrollToError(form.formState.errors);
 
-  const handleAddressSelect = useCallback((address: any) => {
+  const handleAddressSelect = useCallback((address: { streetAddress?: string; city?: string; state?: string; zipCode?: string; country?: string }) => {
     if (address.streetAddress) {form.setValue("street_address", address.streetAddress);}
     if (address.city) {form.setValue("city", address.city);}
     if (address.state) {form.setValue("state", address.state);}
@@ -74,7 +75,7 @@ function TeacherFormComponent({
       createTeacher(payload, forceCreate),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["teachers"] });
-      toast.success("Teacher created successfully");
+      toast.success(SUCCESS_MESSAGES.TEACHER_CREATED);
       onSuccess?.();
     },
     onError: (error: Error) => {
@@ -101,7 +102,7 @@ function TeacherFormComponent({
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["teachers"] });
       duplicateHandler.closeDialog();
-      toast.success("Teacher reactivated successfully");
+      toast.success(SUCCESS_MESSAGES.TEACHER_REACTIVATED);
       onSuccess?.();
     },
     onError: (error: Error) => {
@@ -116,7 +117,7 @@ function TeacherFormComponent({
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["teachers"] });
       await queryClient.invalidateQueries({ queryKey: ["teacher-detail", initialData?.public_id] });
-      toast.success("Teacher updated successfully");
+      toast.success(SUCCESS_MESSAGES.TEACHER_UPDATED);
       onSuccess?.();
     },
     onError: (error: Error) => {      
@@ -139,6 +140,8 @@ function TeacherFormComponent({
         createMutation.mutate({ payload, forceCreate: false });
       }
     },
+    // duplicateHandler is handled separately in handleCreateNew/handleReactivate callbacks
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [isEditMode, initialData, createMutation, updateMutation]
   );
 
@@ -154,7 +157,7 @@ function TeacherFormComponent({
       createMutation.mutate({ payload: duplicateHandler.pendingData.payload, forceCreate: true });
       duplicateHandler.closeDialog();
     }
-  }, [duplicateHandler.pendingData, duplicateHandler.closeDialog, createMutation]);
+  }, [duplicateHandler, createMutation]);
 
   const isLoading = createMutation.isPending || updateMutation.isPending || reactivateMutation.isPending;
 

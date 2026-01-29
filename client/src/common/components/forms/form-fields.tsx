@@ -198,7 +198,7 @@ export function GenderField<T extends FieldValues>({
       placeholder="Select gender"
       disabled={disabled}
       required={required}
-      options={GENDER_OPTIONS}
+      options={[...GENDER_OPTIONS] as { value: string; label: string }[]}
     />
   );
 }

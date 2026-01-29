@@ -5,6 +5,10 @@
  * Includes address management, guardian information, and class assignment.
  */
 
+import { zodResolver } from "@hookform/resolvers/zod";
+import { ArrowLeft, Edit, Loader2, Save } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { useForm } from "react-hook-form";
 import { DeletedDuplicateDialog } from "@/common/components/dialogs/deleted-duplicate-dialog";
 import { SuccessDialog } from "@/common/components/dialogs/success-dialog";
 import {
@@ -31,10 +35,6 @@ import { Textarea } from "@/components/ui/textarea";
 import type { StudentCreatePayload, StudentDetail } from "@/lib/api/student-api";
 import type { FormMode } from "@/lib/utils/form-utils";
 import { getFormConfig } from "@/lib/utils/form-utils";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, Edit, Loader2, Save } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
-import { useForm } from "react-hook-form";
 import {
   formValuesToCreatePayload,
   formValuesToUpdatePayload,
@@ -104,13 +104,13 @@ export function StudentForm({
       const formValues = getFormValuesFromStudent(initialData, organizationRoleCode);
       form.reset(formValues);
     }
-  }, [initialData, organizationRoleCode]);
+  }, [initialData, organizationRoleCode, form]);
 
   // Auto-select supervisor when class is selected
   useEffect(() => {
     const subscription = form.watch((value, { name }) => {
       if (name === "class_id" && value.class_id) {
-        const selectedClass = classes.find((cls: any) => cls.public_id === value.class_id);
+        const selectedClass = classes.find((cls) => cls.public_id === value.class_id);
         if (selectedClass?.class_teacher?.email) {
           form.setValue("supervisor_email", selectedClass.class_teacher.email);
         }

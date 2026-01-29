@@ -4,20 +4,20 @@
  * Uses backend API: PATCH /api/users/profile/{user_public_id}/update-address/
  */
 
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Pencil, MapPin, Loader2, Save, Navigation, Edit } from "lucide-react";
-import { useState, useEffect, forwardRef, useImperativeHandle } from "react";
-import { useForm } from "react-hook-form";
-import * as z from "zod";
+import { useScrollToError } from "@/common/hooks/use-scroll-to-error";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form } from "@/components/ui/form";
-import { useScrollToError } from "@/common/hooks/use-scroll-to-error";
 import { useToast } from "@/hooks/use-toast";
 import { updateUserAddress, type Address } from "@/lib/api/address-api";
 import { parseApiError } from "@/lib/error-parser";
-import { TextInputField, SelectField } from "./form-fields";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Edit, Loader2, MapPin, Navigation, Pencil, Plus, Save } from "lucide-react";
+import { forwardRef, useEffect, useImperativeHandle, useState } from "react";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
+import { SelectField, TextInputField } from "./form-fields";
 
 const addressFormSchema = z.object({
   street_address: z.string().min(1, "Street address is required"),
@@ -371,7 +371,7 @@ export const AddressManagementForm = forwardRef<
         </CardHeader>
 
         <CardContent>
-          {showEmptyState ? (
+          {showEmptyState && (
             <div className="rounded-lg border border-dashed border-gray-300 p-8 text-center">
               <MapPin className="mx-auto h-12 w-12 text-gray-400" />
               <h3 className="mt-2 text-sm font-semibold text-gray-900">No address found</h3>
@@ -393,7 +393,8 @@ export const AddressManagementForm = forwardRef<
                 </Button>
               )}
             </div>
-          ) : showViewOnly ? (
+          )}
+          {!showEmptyState && showViewOnly && (
             <div className="space-y-4">
               <div>
                 <p className="text-muted-foreground text-sm font-medium">Street Address</p>
@@ -454,7 +455,8 @@ export const AddressManagementForm = forwardRef<
                 </div>
               )}
             </div>
-          ) : showForm ? (
+          )}
+          {!showEmptyState && showForm && (
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 {/* Location Fetch Button */}
@@ -577,7 +579,7 @@ export const AddressManagementForm = forwardRef<
                 )}
               </form>
             </Form>
-          ) : null}
+          )}
         </CardContent>
       </Card>
     );

@@ -3,15 +3,15 @@
  * Provides the common layout structure (sidebar + topbar) for all dashboard pages
  */
 
+import { Building2, LogOut } from "lucide-react";
+import { useEffect, useRef } from "react";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useUser } from "@/core/contexts";
 import { useToast } from "@/hooks/use-toast";
 import { AdminSidebar } from "@/modules/admin";
 import { ParentSidebar } from "@/modules/parent";
 import { TeacherSidebar } from "@/modules/teacher";
-import { Building2, LogOut } from "lucide-react";
-import { useEffect, useRef } from "react";
-import { useLocation } from "wouter";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;

@@ -1,17 +1,17 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, User as UserIcon, Lock, ArrowRight } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useLocation } from "wouter";
 import * as z from "zod";
+import { useScrollToError } from "@/common/hooks/use-scroll-to-error";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useUser } from "@/core/contexts";
+import { useUser, type User, type Organization } from "@/core/contexts";
 import { useToast } from "@/hooks/use-toast";
 import { api, API_ENDPOINTS, saveTokens } from "@/lib/api";
 import { ErrorMessages, SuccessMessages, ValidationErrorMessages } from "@/lib/constants";
-import { useScrollToError } from "@/common/hooks/use-scroll-to-error";
 import { AuthFormCard } from "./auth-form-card";
 
 const loginSchema = z.object({
@@ -60,7 +60,11 @@ export function LoginForm({ onForgotPassword }: LoginFormProps) {
         saveTokens(result.tokens.access, result.tokens.refresh);
       }
 
-      setAuth(result.user as any, result.organization as any, result.tokens);
+      setAuth(
+        result.user as User,
+        result.organization as Organization,
+        result.tokens
+      );
 
       toast({
         title: "Welcome back!",

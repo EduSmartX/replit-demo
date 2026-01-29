@@ -272,8 +272,8 @@ export function EditCalendarExceptionDialog({
             {/* Class Selection */}
             {!isApplicableToAll && (
               <div className="space-y-2">
-                <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Select Classes</label>
-                <div className="max-h-48 overflow-y-auto rounded-md border p-4 space-y-2">
+                <label htmlFor="class-selection" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Select Classes</label>
+                <div id="class-selection" className="max-h-48 overflow-y-auto rounded-md border p-4 space-y-2">
                   {classes.length > 0 ? (
                     classes.map((cls: MasterClass) => (
                       <div key={cls.public_id} className="flex items-center space-x-2">

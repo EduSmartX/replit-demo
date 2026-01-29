@@ -13,7 +13,7 @@ import {
   Plus,
   X,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { ConfirmationDialog } from "@/common/components/dialogs";
 import { SuccessDialog } from "@/common/components/dialogs/success-dialog";
@@ -37,8 +37,9 @@ import {
   type CalendarExceptionFilters,
 } from "@/lib/api/calendar-exception-api";
 import type { CalendarException } from "@/lib/api/calendar-exception-types";
-import { fetchClasses } from "@/lib/api/class-api";
-import { getShortErrorMessage, parseApiError } from "@/lib/error-utils";
+import { QUERY_KEYS, STALE_TIMES, createFilteredQueryKey } from "@/lib/constants";
+import { parseApiError } from "@/lib/error-utils";
+import { useClasses } from "@/lib/hooks/use-shared-queries";
 import { cn } from "@/lib/utils";
 import { getCalendarExceptionColumns } from "./calendar-exception-table-columns";
 
@@ -60,15 +61,16 @@ export function CalendarExceptionManagement({
   const [pageSize, setPageSize] = useState(10);
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [selectedClasses, setSelectedClasses] = useState<string[]>([]);
+  const [tempSelectedClasses, setTempSelectedClasses] = useState<string[]>([]);
 
   // Fetch classes for filter
-  const { data: classesData } = useQuery({
-    queryKey: ["classes-list"],
-    queryFn: () => fetchClasses({ page_size: 100 }),
-    staleTime: 5 * 60 * 1000,
-  });
-
+  const { data: classesData } = useClasses();
   const classes = classesData?.data || [];
+
+  // Sync tempSelectedClasses with selectedClasses when they change
+  useEffect(() => {
+    setTempSelectedClasses(selectedClasses);
+  }, [selectedClasses]);
 
   // Build query filters
   const queryFilters: CalendarExceptionFilters = {
@@ -86,9 +88,9 @@ export function CalendarExceptionManagement({
     isError,
     error,
   } = useQuery({
-    queryKey: ["calendar-exceptions", queryFilters],
+    queryKey: createFilteredQueryKey(QUERY_KEYS.CALENDAR_EXCEPTIONS, queryFilters),
     queryFn: () => fetchCalendarExceptions(queryFilters),
-    staleTime: 2 * 60 * 1000,
+    staleTime: STALE_TIMES.MODERATE,
   });
 
   const exceptions = exceptionsData?.data || [];
@@ -99,7 +101,7 @@ export function CalendarExceptionManagement({
   const deleteMutation = useMutation({
     mutationFn: deleteCalendarException,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["calendar-exceptions"] });
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.CALENDAR_EXCEPTIONS] });
       setSuccessMessage({
         title: "Exception Deleted!",
         description: "Calendar exception has been deleted successfully.",
@@ -107,9 +109,7 @@ export function CalendarExceptionManagement({
       setShowSuccessDialog(true);
       setDeletingException(null);
     },
-    onError: (error: unknown) => {
-      const errorMessage = getShortErrorMessage(error);
-      console.error("Failed to delete exception:", errorMessage);
+    onError: () => {
       setDeletingException(null);
     },
   });
@@ -120,31 +120,35 @@ export function CalendarExceptionManagement({
     }
   };
 
+  const handleView = (exception: CalendarException) => {
+    setLocation(`/exceptional-work/${exception.public_id}/view`);
+  };
+
   const handleEdit = (exception: CalendarException) => {
     setLocation(`/exceptional-work/${exception.public_id}/edit`);
   };
 
   const handleFilter = (newFilters: Record<string, string>) => {
     setFilters(newFilters);
+    setSelectedClasses(tempSelectedClasses); // Apply the temp selected classes
     setPage(1); // Reset to first page when filtering
   };
 
   const handleResetFilters = () => {
     setFilters({});
     setSelectedClasses([]);
+    setTempSelectedClasses([]);
     setPage(1);
   };
 
   const handleClassSelect = (classId: string) => {
-    if (!selectedClasses.includes(classId)) {
-      setSelectedClasses([...selectedClasses, classId]);
-      setPage(1);
+    if (!tempSelectedClasses.includes(classId)) {
+      setTempSelectedClasses([...tempSelectedClasses, classId]);
     }
   };
 
   const handleClassRemove = (classId: string) => {
-    setSelectedClasses(selectedClasses.filter((id) => id !== classId));
-    setPage(1);
+    setTempSelectedClasses(tempSelectedClasses.filter((id) => id !== classId));
   };
 
   const handlePageChange = (newPage: number) => {
@@ -177,7 +181,7 @@ export function CalendarExceptionManagement({
             </SelectItem>
           ) : (
             classes
-              .filter((cls) => !selectedClasses.includes(cls.public_id))
+              .filter((cls) => !tempSelectedClasses.includes(cls.public_id))
               .map((cls) => (
                 <SelectItem key={cls.public_id} value={cls.public_id}>
                   {cls.name}
@@ -186,9 +190,9 @@ export function CalendarExceptionManagement({
           )}
         </SelectContent>
       </Select>
-      {selectedClasses.length > 0 && (
+      {tempSelectedClasses.length > 0 && (
         <div className="flex flex-wrap gap-2 mt-2">
-          {selectedClasses.map((classId) => {
+          {tempSelectedClasses.map((classId) => {
             const cls = classes.find((c) => c.public_id === classId);
             return cls ? (
               <Badge
@@ -216,12 +220,6 @@ export function CalendarExceptionManagement({
   // Filter fields configuration
   const filterFields: FilterField[] = [
     {
-      name: "search",
-      label: "Search",
-      type: "text",
-      placeholder: "Search by reason...",
-    },
-    {
       name: "override_type",
       label: "Exception Type",
       type: "select",
@@ -233,14 +231,14 @@ export function CalendarExceptionManagement({
     {
       name: "from_date",
       label: "From Date",
-      type: "text",
-      placeholder: "YYYY-MM-DD",
+      type: "date",
+      placeholder: "Select from date",
     },
     {
       name: "to_date",
       label: "To Date",
-      type: "text",
-      placeholder: "YYYY-MM-DD",
+      type: "date",
+      placeholder: "Select to date",
     },
     {
       name: "classes",
@@ -252,6 +250,7 @@ export function CalendarExceptionManagement({
 
   // Table columns
   const columns = getCalendarExceptionColumns({
+    onView: handleView,
     onEdit: handleEdit,
     onDelete: setDeletingException,
   });

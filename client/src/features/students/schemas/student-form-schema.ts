@@ -1,10 +1,10 @@
+import { z } from "zod";
 import { BLOOD_GROUP_CHOICES, GENDER_VALUES } from "@/lib/constants/choices";
 import {
   cleanPhoneNumber,
   tenDigitPhoneRegex,
   ValidationMessages
 } from "@/lib/utils/validation-utils";
-import { z } from "zod";
 
 // Regex patterns for input validation
 const admissionNumberRegex = /^[A-Z0-9_-]+$/i;

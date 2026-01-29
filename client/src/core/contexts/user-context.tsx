@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from "react";
+import { ERROR_MESSAGES } from "@/lib/constants";
 import type { ReactNode } from "react";
 
 export type UserRole = "admin" | "teacher" | "parent";
@@ -105,7 +106,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
 export function useUser() {
   const context = useContext(UserContext);
   if (!context) {
-    throw new Error("useUser must be used within UserProvider");
+    throw new Error(ERROR_MESSAGES.USE_USER_OUTSIDE_PROVIDER);
   }
   return context;
 }

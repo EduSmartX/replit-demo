@@ -5,6 +5,7 @@
 
 import type { BulkUploadResponse } from "@/common/components/dialogs/bulk-upload-dialog";
 import { api, API_ENDPOINTS, getAccessToken } from "../api";
+import { ERROR_MESSAGES } from "../constants";
 import type { ApiListResponse, ApiResponse } from "./types";
 
 // Student interface for list view (matching API response structure)
@@ -161,6 +162,9 @@ export interface StudentCreatePayload {
   emergency_contact_name?: string;
   emergency_contact_phone?: string;
   description?: string;
+  previous_school_name?: string;
+  previous_school_address?: string;
+  previous_school_class?: string;
 }
 
 export interface StudentUpdatePayload {
@@ -252,7 +256,7 @@ export async function getStudent(classId: string, publicId: string): Promise<Stu
   );
   
   if (!response.success || response.code < 200 || response.code >= 300) {
-    throw new Error(response.message || "Failed to fetch student details");
+    throw new Error(response.message || ERROR_MESSAGES.STUDENT_FETCH_FAILED);
   }
   
   return response.data;
@@ -272,7 +276,7 @@ export async function updateStudent(
   );
   
   if (!response.success || response.code < 200 || response.code >= 300) {
-    throw new Error(response.message || "Failed to update student");
+    throw new Error(response.message || ERROR_MESSAGES.STUDENT_UPDATE_FAILED);
   }
   
   return response.data;
@@ -367,8 +371,8 @@ export async function exportStudentsData(params?: Record<string, string>): Promi
   });
 
   if (!response.ok) {
-    throw new Error("Failed to export data");
+    throw new Error(ERROR_MESSAGES.EXPORT_FAILED);
   }
 
-  return response.blob();
+  return await response.blob();
 }

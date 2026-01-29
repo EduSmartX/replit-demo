@@ -6,7 +6,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format, isWithinInterval, parseISO } from "date-fns";
-import { ArrowLeft, Calendar as CalendarIcon, Loader2, Save } from "lucide-react";
+import { ArrowLeft, Calendar as CalendarIcon, Edit, Loader2, Save } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { z } from "zod";
@@ -27,9 +27,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { createCalendarException, fetchCalendarException, updateCalendarException } from "@/lib/api/calendar-exception-api";
 import type { CalendarExceptionCreate, CalendarExceptionUpdate } from "@/lib/api/calendar-exception-types";
-import { fetchClasses, type MasterClass } from "@/lib/api/class-api";
 import { fetchHolidayCalendar, fetchWorkingDayPolicy } from "@/lib/api/holiday-api";
+import { PAGE_SIZES, QUERY_KEYS, STALE_TIMES } from "@/lib/constants";
 import { getShortErrorMessage } from "@/lib/error-utils";
+import { useClasses } from "@/lib/hooks/use-shared-queries";
 import { cn } from "@/lib/utils";
 
 const exceptionSchema = z.object({
@@ -75,11 +76,7 @@ export function CalendarExceptionForm({ publicId, mode = "create" }: CalendarExc
   });
 
   // Fetch classes
-  const { data: classesResponse } = useQuery({
-    queryKey: ["classes"],
-    queryFn: () => fetchClasses({ page_size: 100 }),
-  });
-
+  const { data: classesResponse, isLoading: isLoadingClasses } = useClasses();
   const classes = classesResponse?.data || [];
 
   // Fetch existing exception for edit/view mode
@@ -87,23 +84,25 @@ export function CalendarExceptionForm({ publicId, mode = "create" }: CalendarExc
     data: existingException,
     isLoading: isLoadingException,
   } = useQuery({
-    queryKey: ["calendar-exception", publicId],
+    queryKey: [QUERY_KEYS.CALENDAR_EXCEPTION_DETAILS, publicId || ""],
     queryFn: () => fetchCalendarException(publicId as string),
     enabled: !!publicId && (isEditMode || isViewMode),
   });
 
   // Fetch holiday calendar (yearly scope for validation)
   const { data: holidayData } = useQuery({
-    queryKey: ["holiday-calendar"],
-    queryFn: () => fetchHolidayCalendar({ page_size: 500 }),
+    queryKey: [QUERY_KEYS.HOLIDAY_CALENDAR],
+    queryFn: () => fetchHolidayCalendar({ page_size: PAGE_SIZES.EXTRA_LARGE }),
+    staleTime: STALE_TIMES.STATIC,
   });
 
   const holidays = holidayData?.data || [];
 
   // Fetch working day policy
   const { data: workingDayPolicyData } = useQuery({
-    queryKey: ["working-day-policy"],
+    queryKey: [QUERY_KEYS.WORKING_DAY_POLICY],
     queryFn: fetchWorkingDayPolicy,
+    staleTime: STALE_TIMES.STATIC,
   });
 
   const workingDayPolicy = workingDayPolicyData?.data?.[0];
@@ -116,7 +115,7 @@ export function CalendarExceptionForm({ publicId, mode = "create" }: CalendarExc
         date: parseISO(existingException.date),
         override_type: existingException.override_type,
         is_applicable_to_all_classes: existingException.is_applicable_to_all_classes,
-        selected_classes: existingException.classes,
+        selected_classes: existingException.classes || [],
         reason: existingException.reason,
         isExpanded: true,
       });
@@ -135,9 +134,9 @@ export function CalendarExceptionForm({ publicId, mode = "create" }: CalendarExc
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["calendar-exceptions"] });
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.CALENDAR_EXCEPTIONS] });
       if (publicId) {
-        queryClient.invalidateQueries({ queryKey: ["calendar-exception", publicId] });
+        queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.CALENDAR_EXCEPTION_DETAILS, publicId] });
       }
       setSuccessMessage({
         title: isEditMode ? "Exception Updated!" : "Exception Created!",
@@ -346,6 +345,15 @@ export function CalendarExceptionForm({ publicId, mode = "create" }: CalendarExc
             </p>
           </div>
         </div>
+        {isViewMode && publicId && (
+          <Button 
+            onClick={() => setLocation(`/exceptional-work/${publicId}/edit`)} 
+            className="gap-2 bg-blue-600 hover:bg-blue-700"
+          >
+            <Edit className="h-4 w-4" />
+            Edit Exception
+          </Button>
+        )}
       </div>
 
       {/* Exception Form */}
@@ -437,9 +445,15 @@ export function CalendarExceptionForm({ publicId, mode = "create" }: CalendarExc
                   <div className="space-y-2">
                     <span className="text-sm font-medium">Select Classes</span>
                     <div className="max-h-60 overflow-y-auto rounded-md border p-4">
-                      {classes.length > 0 ? (
+                      {isLoadingClasses && (
+                        <div className="flex items-center justify-center py-8">
+                          <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+                          <span className="ml-2 text-sm text-gray-600">Loading classes...</span>
+                        </div>
+                      )}
+                      {!isLoadingClasses && classes.length > 0 && (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          {classes.map((cls: MasterClass) => (
+                          {classes.map((cls) => (
                             <div key={cls.public_id} className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded">
                               <Checkbox
                                 checked={exception.selected_classes.includes(cls.public_id)}
@@ -452,7 +466,8 @@ export function CalendarExceptionForm({ publicId, mode = "create" }: CalendarExc
                             </div>
                           ))}
                         </div>
-                      ) : (
+                      )}
+                      {!isLoadingClasses && classes.length === 0 && (
                         <p className="text-sm text-muted-foreground">No classes available</p>
                       )}
                     </div>
@@ -464,7 +479,7 @@ export function CalendarExceptionForm({ publicId, mode = "create" }: CalendarExc
 
                 {/* Reason */}
                 <div className="space-y-2">
-                  <span className="text-sm font-medium">Reason</span>
+                  <span className="text-sm font-medium">Reason <span className="text-red-500">*</span></span>
                   <Textarea
                     value={exception.reason}
                     onChange={(e) => updateException({ reason: e.target.value })}

@@ -9,7 +9,6 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { GroupedPreference, Preference } from "@/lib/api/preferences-api";
-
 import { PreferenceField } from "./preference-field";
 
 interface PreferenceCategoryCardProps {

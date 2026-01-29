@@ -1,6 +1,6 @@
-import type { Plugin } from 'vite';
 import fs from 'fs';
 import path from 'path';
+import type { Plugin } from 'vite';
 
 /**
  * Vite plugin that updates og:image and twitter:image meta tags
@@ -40,17 +40,17 @@ export function metaImagesPlugin(): Plugin {
 
       log('[meta-images] updating meta image tags to:', imageUrl);
 
-      html = html.replace(
+      let updatedHtml = html.replace(
         /<meta\s+property="og:image"\s+content="[^"]*"\s*\/>/g,
         `<meta property="og:image" content="${imageUrl}" />`
       );
 
-      html = html.replace(
+      updatedHtml = updatedHtml.replace(
         /<meta\s+name="twitter:image"\s+content="[^"]*"\s*\/>/g,
         `<meta name="twitter:image" content="${imageUrl}" />`
       );
 
-      return html;
+      return updatedHtml;
     },
   };
 }

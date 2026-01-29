@@ -4,6 +4,7 @@
  */
 
 import { apiRequest, API_ENDPOINTS, getAccessToken } from "../api";
+import { ERROR_MESSAGES } from "../constants";
 import { createEntityService } from "../utils/api-service-utils";
 import type { Address } from "./address-api";
 
@@ -189,9 +190,9 @@ export async function fetchTeachers(params?: {
   });
 
   if (!response.success || response.code < 200 || response.code >= 300) {
-    throw new Error(response.message || "Failed to fetch teachers");
+    throw new Error(response.message || ERROR_MESSAGES.TEACHER_FETCH_FAILED);
   }
-
+  
   return response;
 }
 

@@ -5,7 +5,6 @@
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-
 import {
   Select,
   SelectContent,
@@ -19,7 +18,7 @@ import type { CreateHolidayPayload } from "@/lib/api/holiday-api";
 
 interface HolidayFormFieldsProps {
   formData: CreateHolidayPayload;
-  onUpdate: (field: keyof CreateHolidayPayload, value: any) => void;
+  onUpdate: (field: keyof CreateHolidayPayload, value: string | Date | null) => void;
   showLabels?: boolean;
   compact?: boolean;
 }
@@ -101,7 +100,7 @@ export function HolidayFormFields({
  */
 interface HolidayFormRowProps {
   formData: CreateHolidayPayload;
-  onUpdate: (field: keyof CreateHolidayPayload, value: any) => void;
+  onUpdate: (field: keyof CreateHolidayPayload, value: string | Date | null) => void;
 }
 
 export function HolidayFormRow({ formData, onUpdate }: HolidayFormRowProps) {

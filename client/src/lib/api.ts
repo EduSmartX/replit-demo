@@ -3,6 +3,8 @@
  * Centralizes all API endpoint configurations and request utilities
  */
 
+import { ERROR_MESSAGES } from "./constants";
+
 // Re-export standard types
 export { isPaginatedResponse, isSuccessResponse } from "./api/types";
 export type { ApiErrorResponse, ApiListResponse, ApiResponse, Pagination } from "./api/types";
@@ -133,9 +135,9 @@ export async function apiRequest<T = unknown>(url: string, options: ApiRequestOp
   const { skipAuth, ...fetchOptions } = options;
   const accessToken = getAccessToken();
 
-  const headers: HeadersInit = {
+  const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    ...fetchOptions.headers,
+    ...(fetchOptions.headers as Record<string, string>),
   };
 
   // Add authorization header if token exists and skipAuth is not true
@@ -169,7 +171,7 @@ export async function apiRequest<T = unknown>(url: string, options: ApiRequestOp
       } else {
         // Refresh failed, clear tokens and throw error
         clearTokens();
-        throw new Error("Authentication failed. Please log in again.");
+        throw new Error(ERROR_MESSAGES.AUTH_FAILED);
       }
     }
 

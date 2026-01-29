@@ -96,21 +96,19 @@ export function getOrganizationRoleCode(
 // Form to API payload transformation: Map form values to nested user object structure
 export function formValuesToCreatePayload(values: StudentFormValues): StudentCreatePayload {
   const hasAddress = values.street_address || values.address_line_2 || values.city || values.state || values.postal_code;
-  console.log("Has address:", hasAddress);
-  console.log("Form values:", values);
   const payload: StudentCreatePayload = {
     user: {
-      username: values.email || undefined,
+      username: values.email,
       first_name: values.first_name,
       last_name: values.last_name,
-      email: values.email || undefined,
-      phone: values.phone || undefined,
+      email: values.email,
+      phone: values.phone || "",
       role: "student",
-      gender: values.gender || undefined,
-      blood_group: values.blood_group || undefined,
-      date_of_birth: values.date_of_birth || undefined,
+      gender: values.gender || "",
+      blood_group: values.blood_group,
+      date_of_birth: values.date_of_birth || "",
       organization_role_code: values.organization_role || "STUDENT",
-      supervisor_email: values.supervisor_email || undefined,
+      supervisor_email: values.supervisor_email,
       ...(hasAddress && {
         address: {
           address_type: "student_address",
@@ -124,12 +122,12 @@ export function formValuesToCreatePayload(values: StudentFormValues): StudentCre
       })
     },
     roll_number: values.roll_number,
-    admission_number: values.admission_number || undefined,
-    admission_date: values.admission_date || undefined,
-    guardian_name: values.guardian_name || undefined,
-    guardian_phone: values.guardian_phone || undefined,
-    guardian_email: values.guardian_email || undefined,
-    guardian_relationship: values.guardian_relationship || undefined,
+    admission_number: values.admission_number || "",
+    admission_date: values.admission_date || "",
+    guardian_name: values.guardian_name || "",
+    guardian_phone: values.guardian_phone || "",
+    guardian_email: values.guardian_email,
+    guardian_relationship: values.guardian_relationship || "",
     medical_conditions: values.medical_conditions || undefined,
     emergency_contact_name: values.emergency_contact_name || undefined,
     emergency_contact_phone: values.emergency_contact_phone || undefined,
@@ -158,8 +156,6 @@ export function formValuesToCreatePayload(values: StudentFormValues): StudentCre
 
 export function formValuesToUpdatePayload(values: StudentFormValues): StudentUpdatePayload {
   const hasAddress = values.street_address || values.address_line_2 || values.city || values.state || values.postal_code;
-  console.log("Update Has address:", hasAddress);
-  console.log("Update Form values:", values);
   const payload: StudentUpdatePayload = {
     user: {
       first_name: values.first_name,

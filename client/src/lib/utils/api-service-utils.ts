@@ -4,6 +4,7 @@
  */
 
 import { apiRequest } from "../api";
+import { ERROR_MESSAGES } from "../constants";
 
 /**
  * Generic API Response Types
@@ -45,7 +46,7 @@ export async function fetchList<T>(url: string): Promise<T[]> {
 
     if (!response.success || response.code < 200 || response.code >= 300) {
       console.error("Fetch list error:", response.message);
-      throw new Error(response.message || "Failed to fetch data");
+      throw new Error(response.message || ERROR_MESSAGES.FETCH_DATA_FAILED);
     }
 
     // Ensure data and results exist
@@ -72,15 +73,15 @@ export async function fetchDetail<T>(url: string): Promise<T> {
     });
 
     if (!response) {
-      throw new Error("No response received");
+      throw new Error(ERROR_MESSAGES.NO_RESPONSE);
     }
 
     if (!response.success || response.code < 200 || response.code >= 300) {
-      throw new Error(response.message || "Failed to fetch details");
+      throw new Error(response.message || ERROR_MESSAGES.FETCH_DATA_FAILED);
     }
 
     if (!response.data) {
-      throw new Error("Invalid response structure");
+      throw new Error(ERROR_MESSAGES.INVALID_RESPONSE);
     }
 
     return response.data;
@@ -94,7 +95,7 @@ export async function fetchDetail<T>(url: string): Promise<T> {
  * Sends POST request with JSON payload, unwraps response
  * Generic create function
  */
-export async function createEntity<T, P = any>(url: string, payload: P, forceCreate?: boolean): Promise<T> {
+export async function createEntity<T, P = unknown>(url: string, payload: P, forceCreate?: boolean): Promise<T> {
   const finalUrl = forceCreate ? `${url}?force_create=true` : url;
   const response = await apiRequest<ApiResponse<T>>(finalUrl, {
     method: "POST",
@@ -102,7 +103,7 @@ export async function createEntity<T, P = any>(url: string, payload: P, forceCre
   });
 
   if (!response.success || response.code < 200 || response.code >= 300) {
-    throw new Error(response.message || "Failed to create entity");
+    throw new Error(response.message || ERROR_MESSAGES.CREATE_FAILED);
   }
 
   return response.data;
@@ -111,14 +112,14 @@ export async function createEntity<T, P = any>(url: string, payload: P, forceCre
 /**
  * Generic update function
  */
-export async function updateEntity<T, P = any>(url: string, payload: Partial<P>): Promise<T> {
+export async function updateEntity<T, P = unknown>(url: string, payload: Partial<P>): Promise<T> {
   const response = await apiRequest<ApiResponse<T>>(url, {
     method: "PATCH",
     body: JSON.stringify(payload),
   });
 
   if (!response.success || response.code < 200 || response.code >= 300) {
-    throw new Error(response.message || "Failed to update entity");
+    throw new Error(response.message || ERROR_MESSAGES.UPDATE_FAILED);
   }
 
   return response.data;
@@ -133,7 +134,7 @@ export async function deleteEntity(url: string): Promise<void> {
   });
 
   if (!response.success || response.code < 200 || response.code >= 300) {
-    throw new Error(response.message || "Failed to delete entity");
+    throw new Error(response.message || ERROR_MESSAGES.DELETE_FAILED);
   }
 }
 
@@ -154,7 +155,7 @@ export async function bulkUpload<T>(url: string, file: File): Promise<T> {
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => null);
-    throw new Error(errorData?.message || "Failed to upload file");
+    throw new Error(errorData?.message || ERROR_MESSAGES.UPLOAD_FAILED);
   }
 
   return await response.json();
@@ -163,7 +164,7 @@ export async function bulkUpload<T>(url: string, file: File): Promise<T> {
 /**
  * Create a generic API service for an entity
  */
-export interface EntityService<T, CreatePayload = any, UpdatePayload = any> {
+export interface EntityService<T, CreatePayload = unknown, UpdatePayload = unknown> {
   fetchList: () => Promise<T[]>;
   fetchDetail: (id: string) => Promise<T>;
   create: (payload: CreatePayload, forceCreate?: boolean) => Promise<T>;
@@ -171,7 +172,7 @@ export interface EntityService<T, CreatePayload = any, UpdatePayload = any> {
   delete: (id: string) => Promise<void>;
 }
 
-export function createEntityService<T, CreatePayload = any, UpdatePayload = any>(
+export function createEntityService<T, CreatePayload = unknown, UpdatePayload = unknown>(
   baseUrl: string,
   detailUrl: (id: string) => string
 ): EntityService<T, CreatePayload, UpdatePayload> {
