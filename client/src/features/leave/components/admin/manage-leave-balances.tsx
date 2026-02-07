@@ -12,10 +12,12 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Combobox } from "@/components/ui/combobox";
 import type { Column } from "@/components/ui/data-table";
 import { DataTable } from "@/components/ui/data-table";
 import { Label } from "@/components/ui/label";
+import { useUser } from "@/core/contexts";
 import { fetchClasses } from "@/lib/api/class-api";
 import {
   deleteLeaveBalance,
@@ -30,10 +32,12 @@ import { LeaveBalanceDialog } from "./leave-balance-dialog";
 type ViewMode = "staff" | "student";
 
 export function ManageLeaveBalances() {
+  const { user: currentUser } = useUser();
   const queryClient = useQueryClient();
   const [viewMode, setViewMode] = useState<ViewMode>("staff");
   const [selectedClassId, setSelectedClassId] = useState<string>("");
   const [selectedUserId, setSelectedUserId] = useState<string>("");
+  const [manageSelf, setManageSelf] = useState(false);
   const [balanceDialog, setBalanceDialog] = useState<{
     open: boolean;
     balance: LeaveBalance | null;
@@ -68,9 +72,12 @@ export function ManageLeaveBalances() {
         role: viewMode,
         class_id: viewMode === "student" ? selectedClassId : undefined,
       }),
-    enabled: viewMode === "staff" || (viewMode === "student" && !!selectedClassId),
+    enabled: !manageSelf && (viewMode === "staff" || (viewMode === "student" && !!selectedClassId)),
     staleTime: 30000,
   });
+
+  // Use either the selected user ID or the current user's ID if managing self
+  const effectiveUserId = manageSelf ? currentUser?.public_id || "" : selectedUserId;
 
   // Fetch selected user's leave balances
   const {
@@ -78,18 +85,18 @@ export function ManageLeaveBalances() {
     isLoading: isLoadingBalances,
     error: balancesError,
   } = useQuery({
-    queryKey: ["user-leave-balances", selectedUserId],
-    queryFn: () => fetchUserLeaveBalances(selectedUserId),
-    enabled: !!selectedUserId,
+    queryKey: ["user-leave-balances", effectiveUserId],
+    queryFn: () => fetchUserLeaveBalances(effectiveUserId),
+    enabled: !!effectiveUserId,
     staleTime: 30000,
   });
 
   // Fetch leave allocations for the selected user (filtered by role and gender on backend)
   // Only fetch when dialog is open to avoid unnecessary requests
   const { data: allocationsData, isLoading: isLoadingAllocations } = useQuery({
-    queryKey: ["leave-allocations-for-user", selectedUserId],
-    queryFn: () => fetchLeaveAllocationsForUser(selectedUserId),
-    enabled: !!selectedUserId,
+    queryKey: ["leave-allocations-for-user", effectiveUserId],
+    queryFn: () => fetchLeaveAllocationsForUser(effectiveUserId),
+    enabled: !!effectiveUserId,
     staleTime: 300000, // 5 minutes
   });
 
@@ -99,7 +106,22 @@ export function ManageLeaveBalances() {
   const allocations = allocationsData?.data || [];
   const classes = classesData?.data || [];
 
-  const selectedUserDetails = users.find((u) => u.public_id === selectedUserId);
+  // Get user details - either from selected user or current user if managing self
+  const selectedUserDetails = (() => {
+    if (manageSelf) {
+      if (!currentUser) {
+        return null;
+      }
+      return {
+        public_id: currentUser.public_id,
+        full_name: currentUser.full_name,
+        email: currentUser.email,
+        role: currentUser.role,
+        role_display: currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1),
+      };
+    }
+    return users.find((u) => u.public_id === selectedUserId);
+  })();
 
   const existingAllocationIds = new Set(
     userBalances.map((balance) => balance.leave_allocation.public_id)
@@ -113,7 +135,7 @@ export function ManageLeaveBalances() {
   const deleteMutation = useMutation({
     mutationFn: (publicId: string) => deleteLeaveBalance(publicId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["user-leave-balances", selectedUserId] });
+      queryClient.invalidateQueries({ queryKey: ["user-leave-balances", effectiveUserId] });
       setSuccessMessage({
         title: "Leave Balance Deleted!",
         description: "The leave balance has been deleted successfully.",
@@ -133,6 +155,7 @@ export function ManageLeaveBalances() {
     setViewMode(value);
     setSelectedClassId("");
     setSelectedUserId("");
+    setManageSelf(false);
   };
 
   const handleClassChange = (classId: string) => {
@@ -144,11 +167,22 @@ export function ManageLeaveBalances() {
     setSelectedUserId(userId);
   };
 
+  const handleManageSelfChange = (checked: boolean) => {
+    setManageSelf(checked);
+    if (checked) {
+      // Clear other selections when managing self
+      setSelectedClassId("");
+      setSelectedUserId("");
+    }
+  };
+
   const handleAddBalance = () => {
-    if (!selectedUserId) {
+    if (!effectiveUserId) {
       setErrorMessage({
         title: "No User Selected",
-        description: "Please select a user first before adding a leave balance.",
+        description: manageSelf
+          ? "Unable to load your user information. Please refresh the page."
+          : "Please select a user first before adding a leave balance.",
       });
       setShowErrorDialog(true);
       return;
@@ -206,7 +240,7 @@ export function ManageLeaveBalances() {
 
   const handleDialogSuccess = () => {
     handleDialogClose();
-    queryClient.invalidateQueries({ queryKey: ["user-leave-balances", selectedUserId] });
+    queryClient.invalidateQueries({ queryKey: ["user-leave-balances", effectiveUserId] });
     setSuccessMessage({
       title: balanceDialog.mode === "create" ? "Leave Balance Created!" : "Leave Balance Updated!",
       description: `The leave balance has been ${balanceDialog.mode === "create" ? "created" : "updated"} successfully.`,
@@ -333,107 +367,131 @@ export function ManageLeaveBalances() {
         </div>
       </div>
 
-      {/* View Mode Toggle */}
-      <ViewModeTabs
-        value={viewMode}
-        onValueChange={(value) => handleViewModeChange(value as ViewMode)}
-      />
-
-      {/* User Selection */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Select User</CardTitle>
-          <CardDescription>
-            Choose a {viewMode === "staff" ? "staff member" : "student"} to manage their leave
-            balances
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {/* Class Selection for Students */}
-            {viewMode === "student" && (
-              <div className="flex-1">
-                <Label htmlFor="class-select">Select Class</Label>
-                {isLoadingClasses ? (
-                  <div className="flex items-center justify-center py-4">
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin text-indigo-600" />
-                    <span className="text-muted-foreground text-sm">Loading classes...</span>
-                  </div>
-                ) : (
-                  <Combobox
-                    options={classes.map((classItem) => ({
-                      value: classItem.public_id,
-                      label: `${classItem.class_master.name} (${classItem.name})`,
-                    }))}
-                    value={selectedClassId}
-                    onValueChange={handleClassChange}
-                    placeholder="Select a class"
-                    searchPlaceholder="Search classes..."
-                    emptyText="No classes found."
-                    className="mt-2"
-                  />
-                )}
-              </div>
-            )}
-
-            {/* User Selection */}
-            {(viewMode === "staff" || (viewMode === "student" && selectedClassId)) && (
-              <>
-                {(() => {
-                  if (isLoadingUsers) {
-                    return (
-                      <div className="flex items-center justify-center py-8">
-                        <Loader2 className="mr-2 h-6 w-6 animate-spin text-indigo-600" />
-                        <span className="text-muted-foreground text-sm">Loading users...</span>
-                      </div>
-                    );
-                  }
-                  if (usersError) {
-                    return (
-                      <Alert variant="destructive">
-                        <AlertDescription>{getApiErrorMessage(usersError)}</AlertDescription>
-                      </Alert>
-                    );
-                  }
-                  if (users.length === 0) {
-                    return (
-                      <Alert>
-                        <AlertDescription>
-                          No manageable {viewMode === "staff" ? "staff members" : "students"} found
-                          {viewMode === "student" ? " in this class" : ""}.
-                        </AlertDescription>
-                      </Alert>
-                    );
-                  }
-                  return (
-                    <div className="flex-1">
-                      <Label htmlFor="user-select">Select User</Label>
-                      <Combobox
-                        options={users.map((user) => ({
-                          value: user.public_id,
-                          label:
-                            viewMode === "student" && user.roll_number
-                              ? `${user.full_name} (${user.roll_number})`
-                              : `${user.full_name} (${user.email})`,
-                        }))}
-                        value={selectedUserId}
-                        onValueChange={handleUserChange}
-                        placeholder={`Select a ${viewMode === "staff" ? "staff member" : "student"}`}
-                        searchPlaceholder="Search by name or email..."
-                        emptyText="No users found."
-                        className="mt-2"
-                      />
-                    </div>
-                  );
-                })()}
-              </>
-            )}
+      {/* Manage Self Toggle */}
+      <Card className="border-blue-200 bg-blue-50">
+        <CardContent className="pt-6">
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="manage-self"
+              checked={manageSelf}
+              onCheckedChange={handleManageSelfChange}
+            />
+            <Label
+              htmlFor="manage-self"
+              className="cursor-pointer text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            >
+              Manage my own leave balance
+            </Label>
           </div>
         </CardContent>
       </Card>
 
+      {/* View Mode Toggle - only show when not managing self */}
+      {!manageSelf && (
+        <ViewModeTabs
+          value={viewMode}
+          onValueChange={(value) => handleViewModeChange(value as ViewMode)}
+        />
+      )}
+
+      {/* User Selection - only show when not managing self */}
+      {!manageSelf && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Select User</CardTitle>
+            <CardDescription>
+              Choose a {viewMode === "staff" ? "staff member" : "student"} to manage their leave
+              balances
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {/* Class Selection for Students */}
+              {viewMode === "student" && (
+                <div className="flex-1">
+                  <Label htmlFor="class-select">Select Class</Label>
+                  {isLoadingClasses ? (
+                    <div className="flex items-center justify-center py-4">
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin text-indigo-600" />
+                      <span className="text-muted-foreground text-sm">Loading classes...</span>
+                    </div>
+                  ) : (
+                    <Combobox
+                      options={classes.map((classItem) => ({
+                        value: classItem.public_id,
+                        label: `${classItem.class_master.name} (${classItem.name})`,
+                      }))}
+                      value={selectedClassId}
+                      onValueChange={handleClassChange}
+                      placeholder="Select a class"
+                      searchPlaceholder="Search classes..."
+                      emptyText="No classes found."
+                      className="mt-2"
+                    />
+                  )}
+                </div>
+              )}
+
+              {/* User Selection */}
+              {(viewMode === "staff" || (viewMode === "student" && selectedClassId)) && (
+                <>
+                  {(() => {
+                    if (isLoadingUsers) {
+                      return (
+                        <div className="flex items-center justify-center py-8">
+                          <Loader2 className="mr-2 h-6 w-6 animate-spin text-indigo-600" />
+                          <span className="text-muted-foreground text-sm">Loading users...</span>
+                        </div>
+                      );
+                    }
+                    if (usersError) {
+                      return (
+                        <Alert variant="destructive">
+                          <AlertDescription>{getApiErrorMessage(usersError)}</AlertDescription>
+                        </Alert>
+                      );
+                    }
+                    if (users.length === 0) {
+                      return (
+                        <Alert>
+                          <AlertDescription>
+                            No manageable {viewMode === "staff" ? "staff members" : "students"}{" "}
+                            found
+                            {viewMode === "student" ? " in this class" : ""}.
+                          </AlertDescription>
+                        </Alert>
+                      );
+                    }
+                    return (
+                      <div className="flex-1">
+                        <Label htmlFor="user-select">Select User</Label>
+                        <Combobox
+                          options={users.map((user) => ({
+                            value: user.public_id,
+                            label:
+                              viewMode === "student" && user.roll_number
+                                ? `${user.full_name} (${user.roll_number})`
+                                : `${user.full_name} (${user.email})`,
+                          }))}
+                          value={selectedUserId}
+                          onValueChange={handleUserChange}
+                          placeholder={`Select a ${viewMode === "staff" ? "staff member" : "student"}`}
+                          searchPlaceholder="Search by name or email..."
+                          emptyText="No users found."
+                          className="mt-2"
+                        />
+                      </div>
+                    );
+                  })()}
+                </>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* User Info Card */}
-      {selectedUserId && selectedUserDetails && (
+      {effectiveUserId && selectedUserDetails && (
         <Card className="border-blue-200 bg-blue-50">
           <CardHeader>
             <CardTitle className="text-lg">User Information</CardTitle>
@@ -512,7 +570,7 @@ export function ManageLeaveBalances() {
       )}
 
       {/* Leave Balances Display */}
-      {selectedUserId && (
+      {effectiveUserId && (
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -568,8 +626,12 @@ export function ManageLeaveBalances() {
         onSuccess={handleDialogSuccess}
         balance={balanceDialog.balance}
         mode={balanceDialog.mode}
-        userPublicId={selectedUserId}
-        userName={selectedUser?.name || ""}
+        userPublicId={effectiveUserId}
+        userName={
+          manageSelf
+            ? currentUser?.full_name || "You"
+            : selectedUser?.name || selectedUserDetails?.full_name || ""
+        }
         availableAllocations={availableAllocations}
         isLoadingAllocations={isLoadingAllocations}
       />
