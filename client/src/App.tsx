@@ -23,7 +23,6 @@ import { Route, Switch, useLocation } from "wouter";
 import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { UserProvider } from "@/core/contexts";
 import { ProtectedRoute } from "@/features/auth";
 import { ProfileSettingsPage } from "@/features/profile/pages/profile-settings-page";
 import {
@@ -198,13 +197,11 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <UserProvider>
-        <TooltipProvider>
-          <Toaster />
-          <SonnerToaster />
-          <Router />
-        </TooltipProvider>
-      </UserProvider>
+      <TooltipProvider>
+        <Toaster />
+        <SonnerToaster />
+        <Router />
+      </TooltipProvider>
     </QueryClientProvider>
   );
 }
