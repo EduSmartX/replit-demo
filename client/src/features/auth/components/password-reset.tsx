@@ -66,11 +66,16 @@ export function PasswordReset({ onBack, onSuccess }: PasswordResetProps) {
       const isEmail = data.identifier.includes("@");
       const requestData = isEmail ? { email: data.identifier } : { username: data.identifier };
 
-      const response = await api.post(API_ENDPOINTS.auth.passwordResetRequest, requestData);
+      const response = (await api.post(
+        API_ENDPOINTS.auth.passwordResetRequest,
+        requestData
+      )) as Record<string, unknown>;
 
-      if (response.message) {
+      if (typeof response.message === "string") {
         setIdentifier(data.identifier);
-        setExpiresInMinutes(response.expires_in_minutes || 10);
+        setExpiresInMinutes(
+          typeof response.expires_in_minutes === "number" ? response.expires_in_minutes : 10
+        );
         toast({
           title: "OTP Sent",
           description: response.message,
@@ -78,7 +83,7 @@ export function PasswordReset({ onBack, onSuccess }: PasswordResetProps) {
         setStep(2);
       }
     } catch (error: unknown) {
-      let errorMessage = ErrorMessages.Auth.RESET_CODE_SEND_FAILED;
+      let errorMessage: string = ErrorMessages.Auth.RESET_CODE_SEND_FAILED;
 
       // Safely extract error message
       const err = error as {
@@ -88,7 +93,7 @@ export function PasswordReset({ onBack, onSuccess }: PasswordResetProps) {
           non_field_errors?: string[];
           username?: string[];
           email?: string[];
-          [key: string]: any;
+          [key: string]: unknown;
         };
         non_field_errors?: string[];
       };
@@ -101,9 +106,9 @@ export function PasswordReset({ onBack, onSuccess }: PasswordResetProps) {
         errorMessage = err.errors.email[0];
       } else if (err?.non_field_errors?.[0]) {
         errorMessage = err.non_field_errors[0];
-      } else if (err?.detail && typeof err.detail === 'string') {
+      } else if (err?.detail && typeof err.detail === "string") {
         errorMessage = err.detail;
-      } else if (err?.message && typeof err.message === 'string' && !err.message.includes('<')) {        
+      } else if (err?.message && typeof err.message === "string" && !err.message.includes("<")) {
         errorMessage = err.message;
       }
 
@@ -130,9 +135,12 @@ export function PasswordReset({ onBack, onSuccess }: PasswordResetProps) {
         confirm_password: data.confirmPassword,
       };
 
-      const response = await api.post(API_ENDPOINTS.auth.passwordResetVerify, requestData);
+      const response = (await api.post(
+        API_ENDPOINTS.auth.passwordResetVerify,
+        requestData
+      )) as Record<string, unknown>;
 
-      if (response.message) {
+      if (typeof response.message === "string") {
         toast({
           title: "Success",
           description: SuccessMessages.Auth.PASSWORD_RESET_SUCCESS,
@@ -144,7 +152,7 @@ export function PasswordReset({ onBack, onSuccess }: PasswordResetProps) {
         }, 1500);
       }
     } catch (error: unknown) {
-      let errorMessage = ErrorMessages.Auth.PASSWORD_RESET_FAILED;
+      let errorMessage: string = ErrorMessages.Auth.PASSWORD_RESET_FAILED;
 
       // Safely extract error message
       const err = error as {
@@ -155,7 +163,7 @@ export function PasswordReset({ onBack, onSuccess }: PasswordResetProps) {
           otp?: string[];
           new_password?: string[];
           confirm_password?: string[];
-          [key: string]: any;
+          [key: string]: unknown;
         };
         non_field_errors?: string[];
       };
@@ -183,9 +191,9 @@ export function PasswordReset({ onBack, onSuccess }: PasswordResetProps) {
         errorMessage = err.errors.non_field_errors[0];
       } else if (err?.non_field_errors?.[0]) {
         errorMessage = err.non_field_errors[0];
-      } else if (err?.detail && typeof err.detail === 'string') {
+      } else if (err?.detail && typeof err.detail === "string") {
         errorMessage = err.detail;
-      } else if (err?.message && typeof err.message === 'string' && !err.message.includes('<')) {
+      } else if (err?.message && typeof err.message === "string" && !err.message.includes("<")) {
         // Only use message if it doesn't contain HTML/debug info
         errorMessage = err.message;
       }

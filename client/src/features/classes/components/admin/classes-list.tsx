@@ -22,7 +22,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { DataTable } from "@/components/ui/data-table";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { useDeletedView } from "@/hooks/use-deleted-view";
-import { fetchClasses, fetchCoreClasses, reactivateClass, type MasterClass } from "@/lib/api/class-api";
+import {
+  fetchClasses,
+  fetchCoreClasses,
+  reactivateClass,
+  type MasterClass,
+} from "@/lib/api/class-api";
 import { fetchTeachers } from "@/lib/api/teacher-api";
 import { BulkUploadClasses } from "./bulk-upload-classes";
 import { getClassColumns } from "./classes-table-columns";
@@ -35,12 +40,12 @@ interface ClassesListProps {
   onReactivate?: (classData: MasterClass) => void;
 }
 
-export function ClassesList({ 
-  onCreateNew, 
-  onView, 
-  onEdit, 
+export function ClassesList({
+  onCreateNew,
+  onView,
+  onEdit,
   onDelete,
-  onReactivate
+  onReactivate,
 }: ClassesListProps) {
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [page, setPage] = useState(1);
@@ -85,7 +90,7 @@ export function ClassesList({
         search: filters.search,
         class_master: filters.class_master ? parseInt(filters.class_master) : undefined,
         class_teacher: filters.class_teacher || undefined,
-        is_deleted: showDeleted
+        is_deleted: showDeleted,
       }),
     refetchOnMount: "always",
     refetchOnWindowFocus: true,
@@ -95,12 +100,12 @@ export function ClassesList({
   const totalCount = classesData?.pagination?.count || 0;
   const totalPages = Math.ceil(totalCount / pageSize);
 
-  const columns = showDeleted 
-    ? getClassColumns({ 
-        onView, 
-        onEdit: () => {}, 
+  const columns = showDeleted
+    ? getClassColumns({
+        onView,
+        onEdit: () => {},
         onDelete: onReactivate || (() => {}),
-        isDeletedView: true 
+        isDeletedView: true,
       })
     : getClassColumns({ onView, onEdit, onDelete });
 
@@ -130,7 +135,10 @@ export function ClassesList({
       type: "select",
       placeholder: "All Class Teachers",
       options: teachers.map((teacher) => ({
-        label: teacher.full_name || `${teacher.user?.first_name || ''} ${teacher.user?.last_name || ''}`.trim() || teacher.email,
+        label:
+          teacher.full_name ||
+          `${teacher.user?.first_name || ""} ${teacher.user?.last_name || ""}`.trim() ||
+          teacher.email,
         value: teacher.public_id,
       })),
     },
@@ -160,8 +168,8 @@ export function ClassesList({
       <Card className="mx-auto max-w-7xl">
         <CardContent className="flex flex-col items-center justify-center py-12">
           <div className="text-center">
-            <h3 className="text-lg font-semibold text-red-600 mb-2">Error Loading Classes</h3>
-            <p className="text-gray-600 mb-4">Failed to fetch classes. Please try again.</p>
+            <h3 className="mb-2 text-lg font-semibold text-red-600">Error Loading Classes</h3>
+            <p className="mb-4 text-gray-600">Failed to fetch classes. Please try again.</p>
             <Button onClick={() => refetch()}>Retry</Button>
           </div>
         </CardContent>
@@ -171,16 +179,14 @@ export function ClassesList({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="mb-3 text-3xl font-bold text-gray-900">
             {getListTitle("Classes", showDeleted)}
           </h1>
-          <p className="text-base text-gray-600">
-            {getListDescription("Classes", showDeleted)}
-          </p>
+          <p className="text-base text-gray-600">{getListDescription("Classes", showDeleted)}</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-3">
           <DeletedViewToggle
             showDeleted={showDeleted}
             onToggle={toggleDeletedView}
@@ -217,7 +223,11 @@ export function ClassesList({
             columns={columns}
             data={classes}
             isLoading={isLoading}
-            emptyMessage={getEmptyMessage("classes", showDeleted)}
+            emptyMessage={getEmptyMessage(
+              "classes",
+              Object.keys(filters).some((key) => filters[key]),
+              showDeleted
+            )}
             emptyAction={
               !showDeleted
                 ? {
@@ -226,7 +236,7 @@ export function ClassesList({
                   }
                 : undefined
             }
-            getRowKey={(row) => row.public_id}
+            getRowKey={(row, _index) => row.public_id}
           />
 
           <div className="mt-4">

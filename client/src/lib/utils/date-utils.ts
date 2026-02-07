@@ -23,11 +23,15 @@ export const DATE_API_FORMAT = "yyyy-MM-dd";
  * @returns Formatted date string (e.g., "Aug 16, 2025") or empty string
  */
 export function formatDateForDisplay(date: Date | string | undefined | null): string {
-  if (!date) {return "";}
+  if (!date) {
+    return "";
+  }
 
   try {
     const dateObj = typeof date === "string" ? parseISO(date) : date;
-    if (!isValid(dateObj)) {return "";}
+    if (!isValid(dateObj)) {
+      return "";
+    }
     return format(dateObj, DATE_DISPLAY_FORMAT);
   } catch {
     return "";
@@ -40,11 +44,15 @@ export function formatDateForDisplay(date: Date | string | undefined | null): st
  * @returns Formatted date string (e.g., "2025-08-16") or empty string
  */
 export function formatDateForAPI(date: Date | string | undefined | null): string {
-  if (!date) {return "";}
+  if (!date) {
+    return "";
+  }
 
   try {
     const dateObj = typeof date === "string" ? parseISO(date) : date;
-    if (!isValid(dateObj)) {return "";}
+    if (!isValid(dateObj)) {
+      return "";
+    }
     return format(dateObj, DATE_API_FORMAT);
   } catch {
     return "";
@@ -58,21 +66,31 @@ export function formatDateForAPI(date: Date | string | undefined | null): string
  * @returns Date object or undefined if invalid
  */
 export function parseDateInput(dateString: string | Date | undefined | null): Date | undefined {
-  if (!dateString) {return undefined;}
-  if (dateString instanceof Date) {return isValid(dateString) ? dateString : undefined;}
+  if (!dateString) {
+    return undefined;
+  }
+  if (dateString instanceof Date) {
+    return isValid(dateString) ? dateString : undefined;
+  }
 
   try {
     // Try parsing as display format first (e.g., "Aug 16, 2025")
     let dateObj = parse(dateString, DATE_DISPLAY_FORMAT, new Date());
-    if (isValid(dateObj)) {return dateObj;}
+    if (isValid(dateObj)) {
+      return dateObj;
+    }
 
     // Try parsing as ISO format (e.g., "2025-08-16")
     dateObj = parseISO(dateString);
-    if (isValid(dateObj)) {return dateObj;}
+    if (isValid(dateObj)) {
+      return dateObj;
+    }
 
     // Try parsing as API format
     dateObj = parse(dateString, DATE_API_FORMAT, new Date());
-    if (isValid(dateObj)) {return dateObj;}
+    if (isValid(dateObj)) {
+      return dateObj;
+    }
 
     return undefined;
   } catch {
@@ -86,9 +104,13 @@ export function parseDateInput(dateString: string | Date | undefined | null): Da
  * @returns Date object or undefined
  */
 export function parseLocalDate(dateString: string | null | undefined): Date | undefined {
-  if (!dateString) {return undefined;}
+  if (!dateString) {
+    return undefined;
+  }
   const [year, month, day] = dateString.split("-").map(Number);
-  if (!year || !month || !day) {return undefined;}
+  if (!year || !month || !day) {
+    return undefined;
+  }
   return new Date(year, month - 1, day); // month is 0-indexed
 }
 
@@ -98,24 +120,14 @@ export function parseLocalDate(dateString: string | null | undefined): Date | un
  * @returns Formatted date string or empty string
  */
 export function formatDateForInput(date: string | Date | undefined | null): string {
-  if (!date) {return "";}
+  if (!date) {
+    return "";
+  }
   const dateObj = typeof date === "string" ? parseISO(date) : date;
-  if (!isValid(dateObj)) {return "";}
+  if (!isValid(dateObj)) {
+    return "";
+  }
   return format(dateObj, DATE_API_FORMAT);
-}
-
-/**
- * Format date range for display
- * @param startDate - Start date
- * @param endDate - End date (optional)
- * @returns Formatted date range string
- */
-export function formatDateRange(startDate: string | Date, endDate?: string | Date): string {
-  const start = formatDateForDisplay(startDate);
-  if (!endDate) {return start;}
-
-  const end = formatDateForDisplay(endDate);
-  return `${start} - ${end}`;
 }
 
 /**

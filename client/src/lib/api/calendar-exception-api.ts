@@ -23,6 +23,7 @@ export interface CalendarExceptionFilters {
   to_date?: string;
   is_applicable_to_all_classes?: string;
   classes?: string[]; // Array of class public IDs
+  [key: string]: string | number | string[] | undefined;
 }
 
 /**
@@ -32,7 +33,7 @@ export async function fetchCalendarExceptions(
   filters?: CalendarExceptionFilters
 ): Promise<ApiListResponse<CalendarException>> {
   const params = new URLSearchParams();
-  
+
   if (filters?.page) {
     params.append("page", filters.page.toString());
   }
@@ -64,7 +65,7 @@ export async function fetchCalendarExceptions(
   }
 
   const queryString = params.toString();
-  const url = queryString 
+  const url = queryString
     ? `${API_ENDPOINTS.attendance.calendarException}?${queryString}`
     : API_ENDPOINTS.attendance.calendarException;
 

@@ -3,7 +3,7 @@
  * Uses the generic BulkUploadDialog with subject-specific configuration
  */
 
-import { BulkUploadDialog } from "@/common/components/dialogs";
+import { BulkUploadDialog, type BulkUploadResponse } from "@/common/components/dialogs";
 import { bulkUploadSubjects, downloadSubjectTemplate } from "@/lib/api/subject-api";
 
 export function BulkUploadSubjects() {
@@ -18,7 +18,9 @@ export function BulkUploadSubjects() {
       triggerLabel="Bulk Upload"
       triggerVariant="outline"
       downloadTemplate={handleDownloadTemplate}
-      uploadFile={bulkUploadSubjects}
+      uploadFile={async (file: File): Promise<BulkUploadResponse> => {
+        return (await bulkUploadSubjects(file)) as BulkUploadResponse;
+      }}
       invalidateQueryKeys={["subjects"]}
       templateFileName="subject_import_template.xlsx"
       acceptedFileTypes=".xlsx,.xls"

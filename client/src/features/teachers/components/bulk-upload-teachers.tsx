@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { BulkUploadDialog } from "@/common/components/dialogs";
+import { BulkUploadDialog, type BulkUploadResponse } from "@/common/components/dialogs";
 import { bulkUploadTeachers, downloadTeacherTemplate } from "@/lib/api/teacher-api";
 
 export function BulkUploadTeachers() {
@@ -26,7 +26,9 @@ export function BulkUploadTeachers() {
       triggerLabel="Bulk Upload"
       triggerVariant="outline"
       downloadTemplate={handleDownloadTemplate}
-      uploadFile={bulkUploadTeachers}
+      uploadFile={async (file: File): Promise<BulkUploadResponse> => {
+        return (await bulkUploadTeachers(file)) as BulkUploadResponse;
+      }}
       invalidateQueryKeys={["teachers"]}
       templateFileName={getTemplateFileName()}
       acceptedFileTypes=".xlsx,.xls"

@@ -9,6 +9,20 @@ import { ERROR_MESSAGES } from "../constants";
 import type { ApiListResponse, ApiResponse } from "./types";
 
 // Student interface for list view (matching API response structure)
+export interface Class {
+  public_id: string;
+  name: string;
+  class_master?: {
+    id: number;
+    name: string;
+  };
+}
+
+export interface ClassMaster {
+  id: number;
+  name: string;
+}
+
 export interface Student {
   public_id: string;
   user_info: {
@@ -203,6 +217,7 @@ export interface StudentUpdatePayload {
 
 export interface StudentListParams {
   class_id?: string;
+  class_master_id?: string;
   search?: string;
   is_deleted?: boolean;
   page?: number;
@@ -214,9 +229,12 @@ export interface StudentListParams {
  */
 export async function getStudents(params?: StudentListParams): Promise<ApiListResponse<Student>> {
   const queryParams = new URLSearchParams();
-  
+
   if (params?.class_id) {
     queryParams.append("class_id", params.class_id);
+  }
+  if (params?.class_master_id) {
+    queryParams.append("class_master_id", params.class_master_id);
   }
   if (params?.search) {
     queryParams.append("search", params.search);
@@ -230,7 +248,7 @@ export async function getStudents(params?: StudentListParams): Promise<ApiListRe
   if (params?.page_size) {
     queryParams.append("page_size", params.page_size.toString());
   }
-  
+
   const url = `${API_ENDPOINTS.students.list}?${queryParams.toString()}`;
   return api.get<ApiListResponse<Student>>(url);
 }
@@ -254,11 +272,11 @@ export async function getStudent(classId: string, publicId: string): Promise<Stu
   const response = await api.get<ApiResponse<StudentDetail>>(
     API_ENDPOINTS.students.classDetail(classId, publicId)
   );
-  
+
   if (!response.success || response.code < 200 || response.code >= 300) {
     throw new Error(response.message || ERROR_MESSAGES.STUDENT_FETCH_FAILED);
   }
-  
+
   return response.data;
 }
 
@@ -274,11 +292,11 @@ export async function updateStudent(
     API_ENDPOINTS.students.classDetail(classId, publicId),
     payload
   );
-  
+
   if (!response.success || response.code < 200 || response.code >= 300) {
     throw new Error(response.message || ERROR_MESSAGES.STUDENT_UPDATE_FAILED);
   }
-  
+
   return response.data;
 }
 
@@ -296,11 +314,11 @@ export async function reactivateStudent(classId: string, publicId: string): Prom
   const response = await api.post<ApiResponse<StudentDetail>>(
     API_ENDPOINTS.students.activate(classId, publicId)
   );
-  
+
   if (!response.success || response.code < 200 || response.code >= 300) {
     throw new Error(response.message || "Failed to reactivate student");
   }
-  
+
   return response.data;
 }
 
@@ -362,7 +380,7 @@ export async function downloadStudentTemplate(isLimitedFields: boolean = false):
 export async function exportStudentsData(params?: Record<string, string>): Promise<Blob> {
   const queryParams = new URLSearchParams(params);
   const url = `${API_ENDPOINTS.students.exportData}${queryParams.toString() ? `?${queryParams.toString()}` : ""}`;
-  
+
   const response = await fetch(url, {
     method: "POST",
     headers: {

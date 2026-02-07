@@ -22,9 +22,7 @@ export function PreferenceCategoryCard({
   onSave,
   isSaving = false,
 }: PreferenceCategoryCardProps) {
-  const [preferences, setPreferences] = useState<Preference[]>(
-    groupedPreference.preferences
-  );
+  const [preferences, setPreferences] = useState<Preference[]>(groupedPreference.preferences);
   const [hasChanges, setHasChanges] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [hasValidationErrors, setHasValidationErrors] = useState(false);
@@ -86,8 +84,8 @@ export function PreferenceCategoryCard({
   };
 
   return (
-    <Card className="shadow-lg hover:shadow-xl transition-shadow">
-      <CardHeader className="bg-gradient-to-r from-blue-50 to-green-50 border-b py-3">
+    <Card className="shadow-lg transition-shadow hover:shadow-xl">
+      <CardHeader className="border-b bg-gradient-to-r from-blue-50 to-green-50 py-3">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-2">
             <span className="text-2xl">{getCategoryIcon(groupedPreference.category)}</span>
@@ -101,7 +99,7 @@ export function PreferenceCategoryCard({
             </div>
           </div>
           {savedSuccess && (
-            <div className="flex items-center gap-2 text-green-600 bg-green-50 px-3 py-1 rounded-full">
+            <div className="flex items-center gap-2 rounded-full bg-green-50 px-3 py-1 text-green-600">
               <CheckCircle2 className="h-4 w-4" />
               <span className="text-sm font-medium">Saved</span>
             </div>
@@ -111,7 +109,7 @@ export function PreferenceCategoryCard({
       <CardContent className="pt-4 pb-4">
         <div className="space-y-3">
           {preferences.map((preference, index) => (
-            <div key={preference.public_id} className="pb-3 border-b last:border-b-0 last:pb-0">
+            <div key={preference.public_id} className="border-b pb-3 last:border-b-0 last:pb-0">
               <PreferenceField
                 preference={preference}
                 value={preference.value}
@@ -123,7 +121,7 @@ export function PreferenceCategoryCard({
         </div>
 
         {hasChanges && (
-          <div className="flex items-center justify-end gap-3 mt-4 pt-4 border-t">
+          <div className="mt-4 flex flex-wrap items-center justify-end gap-3 border-t pt-4">
             <Button
               type="button"
               variant="outline"

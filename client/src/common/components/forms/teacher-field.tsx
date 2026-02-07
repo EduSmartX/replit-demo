@@ -8,10 +8,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { fetchTeachers } from "@/lib/api/teacher-api";
 import { SelectField } from "./form-fields";
-import type { Control } from "react-hook-form";
+import type { Control, FieldValues } from "react-hook-form";
 
 interface TeacherFieldProps {
-  control: Control<any>;
+  control: Control<FieldValues>;
   name: string;
   disabled?: boolean;
   description?: string;

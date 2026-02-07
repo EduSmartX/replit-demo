@@ -1,11 +1,11 @@
 /**
  * Classes Management Page
- * 
+ *
  * Administrative interface for managing classes and sections.
  * Supports creating, viewing, editing, and deleting sections.
  * Handles routing for list view and detail views.
  * Implements modular approach with reusable hooks and centralized dialogs.
- * 
+ *
  * @route /classes
  * @route /classes/:id (for viewing/editing specific class)
  */
@@ -19,6 +19,7 @@ import { DashboardLayout } from "@/common/layouts";
 import { ClassesList, MultiRowClassForm, SingleClassForm } from "@/features/classes";
 import { useDeleteMutation } from "@/hooks/use-delete-mutation";
 import { useReactivateMutation } from "@/hooks/use-reactivate-mutation";
+import { useToast } from "@/hooks/use-toast";
 import { deleteClass, fetchClass, reactivateClass, type MasterClass } from "@/lib/api/class-api";
 
 type ViewMode = "list" | "create" | "view" | "edit";
@@ -29,18 +30,25 @@ export default function ClassesPage() {
   const [selectedClass, setSelectedClass] = useState<MasterClass | null>(null);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [successMessage, setSuccessMessage] = useState({ title: "", description: "" });
-  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; classData: MasterClass | null }>({
+  const { toast } = useToast();
+  const [deleteDialog, setDeleteDialog] = useState<{
+    open: boolean;
+    classData: MasterClass | null;
+  }>({
     open: false,
     classData: null,
   });
-  const [reactivateDialog, setReactivateDialog] = useState<{ open: boolean; classData: MasterClass | null }>({
+  const [reactivateDialog, setReactivateDialog] = useState<{
+    open: boolean;
+    classData: MasterClass | null;
+  }>({
     open: false,
     classData: null,
   });
 
   const getClassIdFromPath = () => {
     // Skip if creating new class
-    if (location.endsWith('/classes/new')) {
+    if (location.endsWith("/classes/new")) {
       return null;
     }
     const match = location.match(/\/classes\/([a-zA-Z0-9]+)$/);
@@ -70,7 +78,7 @@ export default function ClassesPage() {
       setSelectedClass(null);
       return;
     }
-    
+
     if (classId && classDetail) {
       setSelectedClass(classDetail);
       setViewMode("view");
@@ -91,6 +99,13 @@ export default function ClassesPage() {
       });
       setShowSuccessDialog(true);
     },
+    onErrorCallback: (error: Error) => {
+      toast({
+        title: "Failed to Delete Section",
+        description: error.message || "An error occurred while deleting the section.",
+        variant: "destructive",
+      });
+    },
   });
 
   const reactivateClassMutation = useReactivateMutation({
@@ -103,6 +118,13 @@ export default function ClassesPage() {
         description: "The section has been successfully reactivated.",
       });
       setShowSuccessDialog(true);
+    },
+    onErrorCallback: (error: Error) => {
+      toast({
+        title: "Failed to Reactivate Section",
+        description: error.message || "An error occurred while reactivating the section.",
+        variant: "destructive",
+      });
     },
   });
 
@@ -156,7 +178,7 @@ export default function ClassesPage() {
 
   const handleSuccessDialogClose = () => {
     setShowSuccessDialog(false);
-    
+
     if (successMessage.title.includes("Deleted") || successMessage.title.includes("Reactivated")) {
       setViewMode("list");
       setSelectedClass(null);
@@ -184,35 +206,43 @@ export default function ClassesPage() {
   return (
     <DashboardLayout>
       <PageWrapper>
-        {viewMode === "list" ? (
-          <ClassesList
-            onCreateNew={handleCreateNew}
-            onView={handleView}
-            onEdit={handleEdit}
-            onDelete={handleDeleteClass}
-            onReactivate={handleReactivateClass}
-          />
-        ) : viewMode === "create" ? (
-          <MultiRowClassForm
-            onSuccess={() => handleSuccess(true)}
-            onCancel={handleCancel}
-          />
-        ) : (isLoadingClass || (classId && !selectedClass)) ? (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-            <div className="flex flex-col items-center gap-2">
-              <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
-              <p className="text-sm text-muted-foreground">Loading class data...</p>
-            </div>
-          </div>
-        ) : (
-          <SingleClassForm
-            mode={viewMode}
-            initialData={selectedClass}
-            onEdit={() => setViewMode("edit")}
-            onSuccess={() => handleSuccess(false)}
-            onCancel={handleCancel}
-          />
-        )}
+        {(() => {
+          if (viewMode === "list") {
+            return (
+              <ClassesList
+                onCreateNew={handleCreateNew}
+                onView={handleView}
+                onEdit={handleEdit}
+                onDelete={handleDeleteClass}
+                onReactivate={handleReactivateClass}
+              />
+            );
+          }
+          if (viewMode === "create") {
+            return (
+              <MultiRowClassForm onSuccess={() => handleSuccess(true)} onCancel={handleCancel} />
+            );
+          }
+          if (isLoadingClass || (classId && !selectedClass)) {
+            return (
+              <div className="bg-background/80 fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm">
+                <div className="flex flex-col items-center gap-2">
+                  <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
+                  <p className="text-muted-foreground text-sm">Loading class data...</p>
+                </div>
+              </div>
+            );
+          }
+          return (
+            <SingleClassForm
+              mode={viewMode}
+              initialData={selectedClass}
+              onEdit={() => setViewMode("edit")}
+              onSuccess={() => handleSuccess(false)}
+              onCancel={handleCancel}
+            />
+          );
+        })()}
       </PageWrapper>
 
       <SuccessDialog

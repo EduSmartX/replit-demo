@@ -2,12 +2,8 @@ import { Loader2, MapPin } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type {
-  AddressComponents} from "@/lib/google-places";
-import {
-  loadGoogleMapsScript,
-  initializeAutocompleteLegacy
-} from "@/lib/google-places";
+import type { AddressComponents } from "@/lib/google-places";
+import { loadGoogleMapsScript, initializeAutocompleteLegacy } from "@/lib/google-places";
 
 interface AddressAutocompleteProps {
   onAddressSelect: (address: AddressComponents) => void;
@@ -42,7 +38,7 @@ export function AddressAutocomplete({
   const [isLoading, setIsLoading] = useState(true);
   const [scriptError, setScriptError] = useState(false);
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
-  
+
   // Conditional Google API usage: Only load in dev mode with API key to avoid production billing
   const isGoogleApiEnabled = import.meta.env.VITE_GOOGLE_API_KEY && import.meta.env.DEV;
 
@@ -60,7 +56,9 @@ export function AddressAutocomplete({
       try {
         await loadGoogleMapsScript();
 
-        if (!mounted || !inputRef.current) {return;}
+        if (!mounted || !inputRef.current) {
+          return;
+        }
 
         // Use legacy API for now since it's still supported
         autocompleteRef.current = initializeAutocompleteLegacy(
@@ -90,8 +88,10 @@ export function AddressAutocomplete({
     return () => {
       mounted = false;
       // Cleanup autocomplete listener
-      if (autocompleteRef.current && window.google) {
-        google.maps.event.clearInstanceListeners(autocompleteRef.current);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if (autocompleteRef.current && (window.google as any)?.maps?.event) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (window.google as any).maps.event.clearInstanceListeners(autocompleteRef.current);
       }
     };
   }, [onAddressSelect, onChange, isGoogleApiEnabled]);
@@ -114,7 +114,15 @@ export function AddressAutocomplete({
           id={id}
           name={name}
           type="text"
-          placeholder={disabled ? undefined : (isLoading ? "Loading..." : placeholder)}
+          placeholder={(() => {
+            if (disabled) {
+              return undefined;
+            }
+            if (isLoading) {
+              return "Loading...";
+            }
+            return placeholder;
+          })()}
           value={value}
           defaultValue={defaultValue}
           onChange={handleInputChange}
@@ -128,9 +136,7 @@ export function AddressAutocomplete({
       </div>
       {error && <p className="text-destructive text-sm">{error}</p>}
       {!isGoogleApiEnabled && (
-        <p className="text-muted-foreground text-xs">
-          Enter your complete address manually
-        </p>
+        <p className="text-muted-foreground text-xs">Enter your complete address manually</p>
       )}
       {scriptError && (
         <p className="text-destructive text-sm">

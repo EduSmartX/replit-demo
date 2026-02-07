@@ -52,17 +52,23 @@ export function OtpInput({
         disabled={isVerified || isVerifying}
         data-testid={`${testId}-verify-button`}
       >
-        {isVerifying ? (
-          <>
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Verifying...
-          </>
-        ) : isVerified ? (
-          <>
-            <CheckCircle2 className="mr-2 h-4 w-4" /> Verified
-          </>
-        ) : (
-          `Verify ${label}`
-        )}
+        {(() => {
+          if (isVerifying) {
+            return (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Verifying...
+              </>
+            );
+          }
+          if (isVerified) {
+            return (
+              <>
+                <CheckCircle2 className="mr-2 h-4 w-4" /> Verified
+              </>
+            );
+          }
+          return `Verify ${label}`;
+        })()}
       </Button>
     </div>
   );

@@ -34,11 +34,16 @@ interface AddHolidaysFormProps {
   isException?: boolean;
 }
 
-export function AddHolidaysForm({ open: controlledOpen, onOpenChange, defaultDate, isException = false }: AddHolidaysFormProps = {}) {
+export function AddHolidaysForm({
+  open: controlledOpen,
+  onOpenChange,
+  defaultDate,
+  isException = false,
+}: AddHolidaysFormProps = {}) {
   const [internalOpen, setInternalOpen] = useState(false);
   const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
   const setOpen = onOpenChange || setInternalOpen;
-  
+
   const [holidays, setHolidays] = useState<HolidayFormData[]>([
     {
       id: crypto.randomUUID(),
@@ -105,14 +110,10 @@ export function AddHolidaysForm({ open: controlledOpen, onOpenChange, defaultDat
   };
 
   const toggleExpand = (id: string) => {
-    setHolidays(
-      holidays.map((h) =>
-        h.id === id ? { ...h, isExpanded: !h.isExpanded } : h
-      )
-    );
+    setHolidays(holidays.map((h) => (h.id === id ? { ...h, isExpanded: !h.isExpanded } : h)));
   };
 
-  const updateHoliday = (id: string, field: keyof CreateHolidayPayload, value: any) => {
+  const updateHoliday = (id: string, field: keyof CreateHolidayPayload, value: unknown) => {
     setHolidays(
       holidays.map((h) =>
         h.id === id
@@ -137,7 +138,9 @@ export function AddHolidaysForm({ open: controlledOpen, onOpenChange, defaultDat
   };
 
   const handleSubmit = () => {
-    if (!validateHolidays()) {return;}
+    if (!validateHolidays()) {
+      return;
+    }
 
     // Prepare payloads
     const payloads: CreateHolidayPayload[] = holidays.map((h) => ({
@@ -158,14 +161,14 @@ export function AddHolidaysForm({ open: controlledOpen, onOpenChange, defaultDat
   const isLoading = createSingleMutation.isPending || createBulkMutation.isPending;
 
   const dialogContent = (
-    <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+    <DialogContent className="max-h-[90vh] max-w-5xl overflow-y-auto">
       <DialogHeader>
         <DialogTitle className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-          <Calendar className="h-5 w-5 text-blue-600" />
+          <Calendar className="h-5 w-5 text-indigo-600" />
           {isException ? "Add Exception Policy" : "Add Organization Holidays"}
         </DialogTitle>
         <DialogDescription>
-          {isException 
+          {isException
             ? "Add exception or additional holiday for this date. You can specify a date range for continuous exceptions."
             : "Add single or multiple holidays. You can specify a date range for continuous holidays."}
         </DialogDescription>
@@ -177,7 +180,7 @@ export function AddHolidaysForm({ open: controlledOpen, onOpenChange, defaultDat
           {holidays.map((holiday, index) => (
             <Card key={holiday.id} className="border border-blue-200">
               <CardHeader
-                className="cursor-pointer bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 transition-colors py-3"
+                className="cursor-pointer bg-gradient-to-r from-blue-50 to-indigo-50 py-3 transition-colors hover:from-blue-100 hover:to-indigo-100"
                 onClick={() => toggleExpand(holiday.id)}
               >
                 <div className="flex items-center justify-between">
@@ -200,16 +203,16 @@ export function AddHolidaysForm({ open: controlledOpen, onOpenChange, defaultDat
                       </Button>
                     )}
                     {holiday.isExpanded ? (
-                      <ChevronUp className="h-5 w-5 text-blue-600" />
+                      <ChevronUp className="h-5 w-5 text-indigo-600" />
                     ) : (
-                      <ChevronDown className="h-5 w-5 text-blue-600" />
+                      <ChevronDown className="h-5 w-5 text-indigo-600" />
                     )}
                   </div>
                 </div>
               </CardHeader>
               {holiday.isExpanded && (
                 <CardContent className="pt-6">
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
                     <HolidayFormRow
                       formData={holiday}
                       onUpdate={(field, value) => updateHoliday(holiday.id, field, value)}
@@ -226,10 +229,10 @@ export function AddHolidaysForm({ open: controlledOpen, onOpenChange, defaultDat
           type="button"
           variant="outline"
           onClick={addHolidayRow}
-          className="w-full border-2 border-dashed border-blue-300 text-blue-600 hover:bg-blue-50 hover:border-blue-400 py-3"
+          className="w-full border-2 border-dashed border-indigo-300 py-3 text-indigo-600 hover:border-indigo-400 hover:bg-indigo-50"
           disabled={isLoading}
         >
-          <Plus className="h-5 w-5 mr-2" />
+          <Plus className="mr-2 h-5 w-5" />
           Add Another Holiday
         </Button>
       </div>
@@ -238,10 +241,10 @@ export function AddHolidaysForm({ open: controlledOpen, onOpenChange, defaultDat
         <Button variant="outline" onClick={() => setOpen(false)} disabled={isLoading}>
           Cancel
         </Button>
-        <Button 
-          onClick={handleSubmit} 
-          disabled={isLoading} 
-          className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 gap-2"
+        <Button
+          onClick={handleSubmit}
+          disabled={isLoading}
+          className="gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700"
         >
           {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
           {holidays.length === 1 ? "Create Holiday" : `Create ${holidays.length} Holidays`}

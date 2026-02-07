@@ -21,18 +21,11 @@ import {
   setFormFieldErrors,
 } from "@/lib/error-utils";
 import { getFormConfig } from "@/lib/utils/form-utils";
-import {
-  teacherFormSchema,
-  type TeacherFormValues,
-} from "../schemas/teacher-form-schema";
-import {
-  getFormValuesFromTeacher,
-  getTeacherPayloadFromForm,
-} from "../utils/form-utils";
+import { teacherFormSchema, type TeacherFormValues } from "../schemas/teacher-form-schema";
+import { getFormValuesFromTeacher, getTeacherPayloadFromForm } from "../utils/form-utils";
 import { FullTeacherFields } from "./full-teacher-fields";
 import { MinimalTeacherFields } from "./minimal-teacher-fields";
 import type { TeacherFormProps } from "../types";
-
 
 function TeacherFormComponent({
   mode = "create",
@@ -62,17 +55,41 @@ function TeacherFormComponent({
   // Auto-scroll to first error field
   useScrollToError(form.formState.errors);
 
-  const handleAddressSelect = useCallback((address: { streetAddress?: string; city?: string; state?: string; zipCode?: string; country?: string }) => {
-    if (address.streetAddress) {form.setValue("street_address", address.streetAddress);}
-    if (address.city) {form.setValue("city", address.city);}
-    if (address.state) {form.setValue("state", address.state);}
-    if (address.zipCode) {form.setValue("postal_code", address.zipCode);}
-    if (address.country) {form.setValue("country", address.country);}
-  }, [form]);
+  const handleAddressSelect = useCallback(
+    (address: {
+      streetAddress?: string;
+      city?: string;
+      state?: string;
+      zipCode?: string;
+      country?: string;
+    }) => {
+      if (address.streetAddress) {
+        form.setValue("street_address", address.streetAddress);
+      }
+      if (address.city) {
+        form.setValue("city", address.city);
+      }
+      if (address.state) {
+        form.setValue("state", address.state);
+      }
+      if (address.zipCode) {
+        form.setValue("postal_code", address.zipCode);
+      }
+      if (address.country) {
+        form.setValue("country", address.country);
+      }
+    },
+    [form]
+  );
 
   const createMutation = useMutation({
-    mutationFn: ({ payload, forceCreate }: { payload: ReturnType<typeof getTeacherPayloadFromForm>; forceCreate?: boolean }) =>
-      createTeacher(payload, forceCreate),
+    mutationFn: ({
+      payload,
+      forceCreate,
+    }: {
+      payload: ReturnType<typeof getTeacherPayloadFromForm>;
+      forceCreate?: boolean;
+    }) => createTeacher(payload, forceCreate),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["teachers"] });
       toast.success(SUCCESS_MESSAGES.TEACHER_CREATED);
@@ -87,7 +104,7 @@ function TeacherFormComponent({
       } else {
         // Set field-specific errors if available
         const hasFieldErrors = setFormFieldErrors(error, form.setError);
-        
+
         // Show general toast if no field errors or as a summary
         if (!hasFieldErrors) {
           const errorMessage = getApiErrorMessage(error);
@@ -112,17 +129,22 @@ function TeacherFormComponent({
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ publicId, payload }: { publicId: string; payload: ReturnType<typeof getTeacherPayloadFromForm> }) =>
-      updateTeacher(publicId, payload),
+    mutationFn: ({
+      publicId,
+      payload,
+    }: {
+      publicId: string;
+      payload: ReturnType<typeof getTeacherPayloadFromForm>;
+    }) => updateTeacher(publicId, payload),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["teachers"] });
       await queryClient.invalidateQueries({ queryKey: ["teacher-detail", initialData?.public_id] });
       toast.success(SUCCESS_MESSAGES.TEACHER_UPDATED);
       onSuccess?.();
     },
-    onError: (error: Error) => {      
+    onError: (error: Error) => {
       const hasFieldErrors = setFormFieldErrors(error, form.setError);
-            
+
       if (!hasFieldErrors) {
         const errorMessage = getApiErrorMessage(error);
         toast.error(errorMessage);
@@ -133,7 +155,7 @@ function TeacherFormComponent({
   const handleSubmit = useCallback(
     async (values: TeacherFormValues) => {
       const payload = getTeacherPayloadFromForm(values);
-      
+
       if (isEditMode && initialData?.public_id) {
         updateMutation.mutate({ publicId: initialData.public_id, payload });
       } else {
@@ -159,19 +181,18 @@ function TeacherFormComponent({
     }
   }, [duplicateHandler, createMutation]);
 
-  const isLoading = createMutation.isPending || updateMutation.isPending || reactivateMutation.isPending;
+  const isLoading =
+    createMutation.isPending || updateMutation.isPending || reactivateMutation.isPending;
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={onCancel} title="Back">
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="mb-3 text-3xl font-bold text-gray-900">
-              {formConfig.title}
-            </h1>
+            <h1 className="mb-3 text-3xl font-bold text-gray-900">{formConfig.title}</h1>
             <p className="text-base text-gray-600">{formConfig.description}</p>
           </div>
         </div>
@@ -184,7 +205,7 @@ function TeacherFormComponent({
       </div>
 
       {mode === "create" && (
-        <div className="flex items-center space-x-2 bg-blue-50 px-4 py-3 rounded-lg border border-blue-200">
+        <div className="flex items-center space-x-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
           <Checkbox
             id="minimalFields"
             checked={minimalFields}
@@ -192,7 +213,7 @@ function TeacherFormComponent({
           />
           <Label
             htmlFor="minimalFields"
-            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+            className="cursor-pointer text-sm leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
           >
             Minimum Required Fields
           </Label>
@@ -204,15 +225,17 @@ function TeacherFormComponent({
           {mode === "create" && minimalFields ? (
             <MinimalTeacherFields control={form.control} />
           ) : (
-            <FullTeacherFields 
-              isViewMode={isViewMode} 
-              control={form.control} 
-              onAddressSelect={handleAddressSelect}
+            <FullTeacherFields
+              isViewMode={isViewMode}
+              control={form.control}
+              onAddressSelect={
+                handleAddressSelect as unknown as ((address: unknown) => void) | undefined
+              }
             />
           )}
 
           {!isViewMode && (
-            <div className="flex gap-4 justify-end">
+            <div className="flex flex-wrap justify-end gap-3">
               <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
                 Cancel
               </Button>

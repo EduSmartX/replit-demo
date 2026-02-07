@@ -7,7 +7,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Edit, Loader2, Save } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, type Control, type FieldValues, type UseFormSetError } from "react-hook-form";
 import { TeacherField } from "@/common/components/forms";
 import { PageWrapper } from "@/common/components/layout";
 import { useScrollToError } from "@/common/hooks/use-scroll-to-error";
@@ -37,11 +37,7 @@ import {
   getDefaultSingleFormValues,
   getSingleFormValuesFromClass,
 } from "../../helpers/class-form-helpers";
-import {
-  useCoreClasses,
-  useCreateClass,
-  useUpdateClass,
-} from "../../hooks/use-class-form";
+import { useCoreClasses, useCreateClass, useUpdateClass } from "../../hooks/use-class-form";
 import {
   classSingleFormSchema,
   type ClassSingleFormValues,
@@ -118,19 +114,25 @@ export function SingleClassForm({
   };
 
   // Setup mutations
-  const createMutation = useCreateClass(handleMutationSuccess, form.setError);
-  const updateMutation = useUpdateClass(handleMutationSuccess, form.setError);
+  const createMutation = useCreateClass(
+    handleMutationSuccess,
+    form.setError as unknown as UseFormSetError<FieldValues>
+  );
+  const updateMutation = useUpdateClass(
+    handleMutationSuccess,
+    form.setError as unknown as UseFormSetError<FieldValues>
+  );
 
   // Form submission handler - MUST check mode first
-  const onSubmit = (data: ClassSingleFormValues) => {    
+  const onSubmit = (data: ClassSingleFormValues) => {
     if (isViewMode) {
       return;
-    }    
+    }
     if (isTransitioningToEdit.current) {
       return;
     }
 
-    if (isEditMode && initialData?.public_id) {      
+    if (isEditMode && initialData?.public_id) {
       updateMutation.mutate({
         publicId: initialData.public_id,
         data: {
@@ -141,7 +143,7 @@ export function SingleClassForm({
           capacity: data.capacity || undefined,
         },
       });
-    } else {      
+    } else {
       createMutation.mutate({
         class_master: data.class_master || 0,
         name: data.name || "",
@@ -177,11 +179,7 @@ export function SingleClassForm({
   }
 
   return (
-    <PageWrapper
-      title={formConfig.title}
-      description={formConfig.description}
-      onBack={onCancel}
-    >
+    <PageWrapper title={formConfig.title} description={formConfig.description} onBack={onCancel}>
       {/* Success Message */}
       {showSuccess && (
         <div className="mb-6 rounded-lg border border-green-200 bg-green-50 p-4">
@@ -207,7 +205,7 @@ export function SingleClassForm({
                 {isViewMode || isEditMode ? (
                   <div className="space-y-2">
                     <Label>Class</Label>
-                    <div className="rounded-md border border-input bg-gray-50 px-3 py-2 text-sm">
+                    <div className="border-input rounded-md border bg-gray-50 px-3 py-2 text-sm">
                       {initialData?.class_master.name || "Not selected"}
                     </div>
                   </div>
@@ -220,7 +218,9 @@ export function SingleClassForm({
                         <FormLabel>Class *</FormLabel>
                         <Select
                           onValueChange={(value) => field.onChange(parseInt(value))}
-                          value={field.value && field.value > 0 ? field.value.toString() : undefined}
+                          value={
+                            field.value && field.value > 0 ? field.value.toString() : undefined
+                          }
                         >
                           <FormControl>
                             <SelectTrigger>
@@ -229,10 +229,7 @@ export function SingleClassForm({
                           </FormControl>
                           <SelectContent>
                             {coreClasses.map((coreClass) => (
-                              <SelectItem
-                                key={coreClass.id}
-                                value={coreClass.id.toString()}
-                              >
+                              <SelectItem key={coreClass.id} value={coreClass.id.toString()}>
                                 {coreClass.name}
                               </SelectItem>
                             ))}
@@ -264,7 +261,7 @@ export function SingleClassForm({
 
                 {/* Class Teacher */}
                 <TeacherField
-                  control={form.control}
+                  control={form.control as unknown as Control<FieldValues>}
                   name="class_teacher"
                   label="Class Teacher"
                   disabled={isViewMode}
@@ -289,9 +286,7 @@ export function SingleClassForm({
                           }}
                         />
                       </FormControl>
-                      <FormDescription>
-                        Maximum number of students (1-200)
-                      </FormDescription>
+                      <FormDescription>Maximum number of students (1-200)</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -322,11 +317,7 @@ export function SingleClassForm({
               {/* Form Actions */}
               {isViewMode ? (
                 <div className="flex justify-end gap-3 border-t pt-6">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={onCancel}
-                  >
+                  <Button type="button" variant="outline" onClick={onCancel}>
                     Cancel
                   </Button>
                   <Button type="button" onClick={onEdit} className="gap-2">
@@ -349,7 +340,7 @@ export function SingleClassForm({
                     disabled={createMutation.isPending || updateMutation.isPending}
                     className="gap-2"
                   >
-                    {(createMutation.isPending || updateMutation.isPending) ? (
+                    {createMutation.isPending || updateMutation.isPending ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin" />
                         {isEditMode ? "Updating..." : "Creating..."}

@@ -8,7 +8,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest, type ApiResponse } from "@/lib/api";
 import { SelectField } from "./form-fields";
-import type { Control } from "react-hook-form";
+import type { Control, FieldValues } from "react-hook-form";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -19,7 +19,7 @@ interface OrganizationUser {
 }
 
 interface SupervisorFieldProps {
-  control: Control<any>;
+  control: Control<FieldValues>;
   name: string;
   disabled?: boolean;
   description?: string;
@@ -38,7 +38,7 @@ function useOrganizationUsers() {
           method: "GET",
         }
       );
-      
+
       if (!response || typeof response !== "object") {
         return [];
       }

@@ -6,14 +6,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import {
-    createSubject,
-    deleteSubject,
-    getSubject,
-    getSubjects,
-    updateSubject,
-    type SubjectCreatePayload,
-    type SubjectFilters,
-    type SubjectUpdatePayload,
+  createSubject,
+  deleteSubject,
+  getSubject,
+  getSubjects,
+  updateSubject,
+  type SubjectCreatePayload,
+  type SubjectFilters,
+  type SubjectUpdatePayload,
 } from "@/lib/api/subject-api";
 import { parseBackendValidationError } from "@/lib/utils/form-error-handler";
 
@@ -63,23 +63,27 @@ export function useCreateSubject() {
         description: "Subject assigned successfully",
       });
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       const errorData = parseBackendValidationError(error);
-      
+
       if (errorData?.errors) {
         // Extract all error messages
-        const errorMessages = Object.entries(errorData.errors)
-          .flatMap(([_field, messages]) => messages);
-        
+        const errorMessages = Object.entries(errorData.errors).flatMap(
+          ([_field, messages]) => messages
+        );
+
         toast({
           title: "Validation Error",
           description: errorMessages.join("\n• "),
           variant: "destructive",
         });
       } else {
+        const err = error as Record<string, unknown>;
         toast({
           title: "Error",
-          description: error?.message || "Failed to assign subject",
+          description:
+            (typeof err?.message === "string" ? err.message : undefined) ||
+            "Failed to assign subject",
           variant: "destructive",
         });
       }
@@ -104,23 +108,27 @@ export function useUpdateSubject(publicId: string) {
         description: "Subject updated successfully",
       });
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       const errorData = parseBackendValidationError(error);
-      
+
       if (errorData?.errors) {
         // Extract all error messages
-        const errorMessages = Object.entries(errorData.errors)
-          .flatMap(([_field, messages]) => messages);
-        
+        const errorMessages = Object.entries(errorData.errors).flatMap(
+          ([_field, messages]) => messages
+        );
+
         toast({
           title: "Validation Error",
           description: errorMessages.join("\n• "),
           variant: "destructive",
         });
       } else {
+        const err = error as Record<string, unknown>;
         toast({
           title: "Error",
-          description: error?.message || "Failed to update subject",
+          description:
+            (typeof err?.message === "string" ? err.message : undefined) ||
+            "Failed to update subject",
           variant: "destructive",
         });
       }
@@ -144,23 +152,27 @@ export function useDeleteSubject() {
         description: "Subject assignment deleted successfully",
       });
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       const errorData = parseBackendValidationError(error);
-      
+
       if (errorData?.errors) {
         // Extract all error messages
-        const errorMessages = Object.entries(errorData.errors)
-          .flatMap(([_field, messages]) => messages);
-        
+        const errorMessages = Object.entries(errorData.errors).flatMap(
+          ([_field, messages]) => messages
+        );
+
         toast({
           title: "Validation Error",
           description: errorMessages.join("\n• "),
           variant: "destructive",
         });
       } else {
+        const err = error as Record<string, unknown>;
         toast({
           title: "Error",
-          description: error?.message || "Failed to delete subject",
+          description:
+            (typeof err?.message === "string" ? err.message : undefined) ||
+            "Failed to delete subject",
           variant: "destructive",
         });
       }

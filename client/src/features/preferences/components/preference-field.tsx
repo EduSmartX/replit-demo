@@ -32,13 +32,13 @@ const validateTimeFormat = (value: string): string | null => {
   if (!value) {
     return null;
   }
-  
+
   // Check if format is HH:MM
   const timeRegex = /^([0-1]?[0-9]|2[0-3]):([0-5][0-9])$/;
   if (!timeRegex.test(value)) {
     return "Invalid time format. Please use HH:MM format (e.g., 14:30)";
   }
-  
+
   return null;
 };
 
@@ -46,16 +46,16 @@ const validateDeadlineDay = (value: string): string | null => {
   if (!value) {
     return null;
   }
-  
+
   const numValue = parseInt(value, 10);
   if (isNaN(numValue)) {
     return "Please enter a valid number";
   }
-  
+
   if (numValue < 1 || numValue > 31) {
     return "Deadline day must be between 1 and 31";
   }
-  
+
   return null;
 };
 
@@ -102,9 +102,10 @@ export function PreferenceField({
   switch (preference.field_type) {
     case "string": {
       // Check if this is the time field for student absence notification
-      const isTimeField = preference.display_name.includes("Preferred Time") && 
-                         preference.display_name.includes("Student Absence");
-      
+      const isTimeField =
+        preference.display_name.includes("Preferred Time") &&
+        preference.display_name.includes("Student Absence");
+
       const handleStringChange = (newValue: string) => {
         if (isTimeField) {
           const error = validateTimeFormat(newValue);
@@ -114,7 +115,7 @@ export function PreferenceField({
           onChange(newValue, false);
         }
       };
-      
+
       return (
         <div className="space-y-1.5">
           <Label htmlFor={preference.key}>{preference.display_name}</Label>
@@ -127,18 +128,17 @@ export function PreferenceField({
             placeholder={isTimeField ? "HH:MM (e.g., 14:30)" : preference.default_value}
             className={cn(validationError && "border-red-500 focus-visible:ring-red-500")}
           />
-          {validationError && (
-            <p className="text-sm font-medium text-red-500">{validationError}</p>
-          )}
+          {validationError && <p className="text-sm font-medium text-red-500">{validationError}</p>}
         </div>
       );
     }
 
     case "number": {
       // Check if this is the deadline day field
-      const isDeadlineField = preference.display_name.includes("Teacher Timesheet Deadline") &&
-                             preference.display_name.includes("Day");
-      
+      const isDeadlineField =
+        preference.display_name.includes("Teacher Timesheet Deadline") &&
+        preference.display_name.includes("Day");
+
       const handleNumberChange = (newValue: string) => {
         if (isDeadlineField) {
           const error = validateDeadlineDay(newValue);
@@ -149,7 +149,7 @@ export function PreferenceField({
           onChange(newValue, false);
         }
       };
-      
+
       return (
         <div className="space-y-1.5">
           <Label htmlFor={preference.key}>{preference.display_name}</Label>
@@ -164,11 +164,9 @@ export function PreferenceField({
             max={isDeadlineField ? "31" : undefined}
             className={cn(validationError && "border-red-500 focus-visible:ring-red-500")}
           />
-          {validationError && (
-            <p className="text-sm font-medium text-red-500">{validationError}</p>
-          )}
+          {validationError && <p className="text-sm font-medium text-red-500">{validationError}</p>}
           {isDeadlineField && !validationError && (
-            <p className="text-xs text-muted-foreground">Enter a day between 1 and 31</p>
+            <p className="text-muted-foreground text-xs">Enter a day between 1 and 31</p>
           )}
         </div>
       );
@@ -178,19 +176,23 @@ export function PreferenceField({
       return (
         <div className="space-y-1.5">
           <Label>{preference.display_name}</Label>
-          <RadioGroup
-            value={value as string}
-            onValueChange={onChange}
-            disabled={disabled}
-          >
+          <RadioGroup value={value as string} onValueChange={onChange} disabled={disabled}>
             {preference.applicable_values?.map((option) => (
               <div key={option} className="flex items-center space-x-2">
                 <RadioGroupItem value={option} id={`${preference.key}-${option}`} />
                 <Label
                   htmlFor={`${preference.key}-${option}`}
-                  className="font-normal cursor-pointer"
+                  className="cursor-pointer font-normal"
                 >
-                  {option === "TRUE" ? "Yes" : option === "FALSE" ? "No" : option}
+                  {(() => {
+                    if (option === "TRUE") {
+                      return "Yes";
+                    }
+                    if (option === "FALSE") {
+                      return "No";
+                    }
+                    return option;
+                  })()}
                 </Label>
               </div>
             ))}
@@ -258,7 +260,7 @@ export function PreferenceField({
                       type="button"
                       onClick={() => handleMultiSelectRemove(val)}
                       disabled={disabled}
-                      className="hover:bg-gray-300 rounded-full p-0.5"
+                      className="rounded-full p-0.5 hover:bg-gray-300"
                     >
                       <X className="h-3 w-3" />
                     </button>

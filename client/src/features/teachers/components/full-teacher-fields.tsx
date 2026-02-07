@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { type Control } from "react-hook-form";
+import { type Control, type FieldValues } from "react-hook-form";
 import {
   AddressInputFields,
   BloodGroupField,
@@ -10,12 +10,13 @@ import {
   TextInputField,
 } from "@/common/components/forms";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ORGANIZATION_ROLE_CODES } from "@/lib/constants";
 import type { TeacherFormValues } from "../schemas/teacher-form-schema";
 
 interface FullTeacherFieldsProps {
   isViewMode: boolean;
   control: Control<TeacherFormValues>;
-  onAddressSelect?: (address: any) => void;
+  onAddressSelect?: (address: unknown) => void;
 }
 
 export const FullTeacherFields = memo<FullTeacherFieldsProps>(
@@ -26,7 +27,7 @@ export const FullTeacherFields = memo<FullTeacherFieldsProps>(
           <CardHeader>
             <CardTitle>Basic Information</CardTitle>
           </CardHeader>
-          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <TextInputField
               control={control}
               name="employee_id"
@@ -89,9 +90,19 @@ export const FullTeacherFields = memo<FullTeacherFieldsProps>(
           <CardHeader>
             <CardTitle>Professional Information</CardTitle>
           </CardHeader>
-          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <OrganizationRoleField control={control} name="organization_role" disabled={isViewMode} />
-            <SupervisorField control={control} name="supervisor_email" disabled={isViewMode} />
+          <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <OrganizationRoleField
+              control={control as unknown as Control<FieldValues>}
+              name="organization_role"
+              disabled={isViewMode}
+              defaultRoleCode={ORGANIZATION_ROLE_CODES.TEACHER}
+              required
+            />
+            <SupervisorField
+              control={control as unknown as Control<FieldValues>}
+              name="supervisor_email"
+              disabled={isViewMode}
+            />
             <TextInputField
               control={control}
               name="designation"
@@ -128,7 +139,7 @@ export const FullTeacherFields = memo<FullTeacherFieldsProps>(
           <CardHeader>
             <CardTitle>Emergency Contact</CardTitle>
           </CardHeader>
-          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <TextInputField
               control={control}
               name="emergency_contact_name"

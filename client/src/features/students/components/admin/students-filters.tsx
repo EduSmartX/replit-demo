@@ -7,11 +7,11 @@ import { Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import type { Class, ClassMaster } from "@/lib/api/student-api";
 
@@ -49,7 +49,9 @@ export function StudentsFilters({
       {/* All filters in one row */}
       <div className="grid gap-4 md:grid-cols-3">
         <div className="space-y-2">
-          <label htmlFor="student-search" className="text-sm font-medium text-gray-700">Search</label>
+          <label htmlFor="student-search" className="text-sm font-medium text-gray-700">
+            Search
+          </label>
           <Input
             id="student-search"
             placeholder="Search by name, roll number..."
@@ -64,7 +66,9 @@ export function StudentsFilters({
         </div>
 
         <div className="space-y-2">
-          <label htmlFor="student-class-master" className="text-sm font-medium text-gray-700">Select Class/Grade</label>
+          <label htmlFor="student-class-master" className="text-sm font-medium text-gray-700">
+            Select Class/Grade
+          </label>
           <Select value={selectedClassMaster.toString()} onValueChange={onClassMasterChange}>
             <SelectTrigger id="student-class-master">
               <SelectValue placeholder="Select a class" />
@@ -81,21 +85,25 @@ export function StudentsFilters({
         </div>
 
         <div className="space-y-2">
-          <label htmlFor="student-section" className="text-sm font-medium text-gray-700">Select Section</label>
-          <Select 
-            value={selectedSection} 
+          <label htmlFor="student-section" className="text-sm font-medium text-gray-700">
+            Select Section
+          </label>
+          <Select
+            value={selectedSection}
             onValueChange={onSectionChange}
             disabled={loadingSections || sections.length === 0}
           >
             <SelectTrigger id="student-section">
-              <SelectValue 
-                placeholder={
-                  loadingSections 
-                    ? "Loading..." 
-                    : sections.length === 0 
-                    ? "No sections" 
-                    : "Select section"
-                } 
+              <SelectValue
+                placeholder={(() => {
+                  if (loadingSections) {
+                    return "Loading...";
+                  }
+                  if (sections.length === 0) {
+                    return "No sections";
+                  }
+                  return "Select section";
+                })()}
               />
             </SelectTrigger>
             <SelectContent>
@@ -118,11 +126,7 @@ export function StudentsFilters({
         </Button>
 
         {hasActiveFilters && (
-          <Button 
-            variant="outline" 
-            onClick={onClearFilters} 
-            className="gap-2"
-          >
+          <Button variant="outline" onClick={onClearFilters} className="gap-2">
             <X className="h-4 w-4" />
             Clear All Filters
           </Button>

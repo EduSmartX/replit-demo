@@ -49,11 +49,8 @@ export function LeaveAllocationsList({
     queryKey: ["organization-roles"],
     queryFn: fetchOrganizationRoles,
   });
-  
-  const {
-    data: allocationsData,
-    isLoading,
-  } = useQuery({
+
+  const { data: allocationsData, isLoading } = useQuery({
     queryKey: ["leave-allocations", filters.leave_type, filters.role],
     queryFn: () =>
       fetchLeaveAllocations({
@@ -126,7 +123,7 @@ export function LeaveAllocationsList({
     },
     {
       header: "Total Days",
-      accessor: (row) => <span className="font-semibold text-blue-600">{row.total_days}</span>,
+      accessor: (row) => <span className="font-semibold text-indigo-600">{row.total_days}</span>,
       sortable: true,
       sortKey: "total_days",
     },
@@ -170,7 +167,7 @@ export function LeaveAllocationsList({
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="mb-3 text-3xl font-bold text-gray-900">Leave Allocation Policies</h1>
           <p className="text-base text-gray-600">

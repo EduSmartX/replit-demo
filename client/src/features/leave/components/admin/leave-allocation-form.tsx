@@ -1,6 +1,6 @@
 /**
  * Leave Allocation Policy Form
- * 
+ *
  * Comprehensive form for creating and editing leave allocation policies.
  * Supports custom leave types, date ranges, carryover rules, and role-based policies.
  */
@@ -8,17 +8,17 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, type Control, type FieldValues } from "react-hook-form";
 import { useScrollToError } from "@/common/hooks/use-scroll-to-error";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-    Form,
-    FormControl,
-    FormDescription,
-    FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -27,23 +27,25 @@ import type { LeaveAllocation, LeaveAllocationPayload } from "@/lib/api/leave-ap
 import { LeaveMessages } from "@/lib/constants";
 import { formatDateForDisplay } from "@/lib/utils/date-utils";
 import {
-    formatDateForApi,
-    getDefaultFormValues,
-    getFormValuesFromAllocation,
+  formatDateForApi,
+  getDefaultFormValues,
+  getFormValuesFromAllocation,
 } from "../../helpers/leave-allocation-helpers";
 import {
-    useCreateLeaveAllocation,
-    useLeaveTypes,
-    useOrganizationRoles,
-    useUpdateLeaveAllocation,
+  useCreateLeaveAllocation,
+  useLeaveTypes,
+  useOrganizationRoles,
+  useUpdateLeaveAllocation,
 } from "../../hooks/use-leave-allocation-form";
-import { createLeaveAllocationSchema, type LeaveAllocationFormValues } from "../../schemas/leave-allocation-schema";
+import {
+  createLeaveAllocationSchema,
+  type LeaveAllocationFormValues,
+} from "../../schemas/leave-allocation-schema";
 import { DateRangeFields } from "../common/date-range-fields";
 import { LeaveTypeField } from "../common/leave-type-field";
 import { PolicyFormHeader } from "../common/policy-form-header";
 import { PolicySummaryCard } from "../common/policy-summary-card";
 import { RolesCheckboxField } from "../common/roles-checkbox-field";
-import type { Control} from "react-hook-form";
 
 interface LeaveAllocationFormProps {
   mode?: "create" | "view" | "edit";
@@ -155,7 +157,7 @@ export function LeaveAllocationForm({
   if (loadingLeaveTypes || loadingRoles) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+        <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
       </div>
     );
   }
@@ -189,7 +191,7 @@ export function LeaveAllocationForm({
               <form className="space-y-6">
                 <fieldset disabled={isViewMode} className="space-y-6">
                   <LeaveTypeField
-                    control={form.control}
+                    control={form.control as unknown as Control<FieldValues>}
                     leaveTypes={leaveTypes}
                     mode={mode}
                     initialLeaveTypeName={initialData?.leave_type_name}
@@ -278,7 +280,10 @@ export function LeaveAllocationForm({
                     disabled={isViewMode}
                   />
 
-                  <RolesCheckboxField control={form.control} roles={roles} />
+                  <RolesCheckboxField
+                    control={form.control as unknown as Control<FieldValues>}
+                    roles={roles}
+                  />
                 </fieldset>
               </form>
             </Form>

@@ -77,10 +77,13 @@ export function getCalendarExceptionColumns({
     {
       header: "Reason",
       accessor: (exception) => (
-        <span className="text-sm text-gray-700 line-clamp-2">{exception.reason}</span>
+        <span className="line-clamp-2 max-w-[300px] text-sm text-gray-700" title={exception.reason}>
+          {exception.reason}
+        </span>
       ),
       sortable: false,
       width: 300,
+      minWidth: 250,
     },
     {
       header: "Actions",
@@ -90,7 +93,7 @@ export function getCalendarExceptionColumns({
             variant="ghost"
             size="sm"
             onClick={() => onView(exception)}
-            className="text-gray-600 hover:text-gray-800 hover:bg-gray-50"
+            className="text-gray-600 hover:bg-gray-50 hover:text-gray-800"
             title="View exception"
           >
             <Eye className="h-4 w-4" />
@@ -99,7 +102,7 @@ export function getCalendarExceptionColumns({
             variant="ghost"
             size="sm"
             onClick={() => onEdit(exception)}
-            className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+            className="text-blue-600 hover:bg-blue-50 hover:text-blue-800"
             title="Edit exception"
           >
             <Edit className="h-4 w-4" />
@@ -108,7 +111,7 @@ export function getCalendarExceptionColumns({
             variant="ghost"
             size="sm"
             onClick={() => onDelete(exception)}
-            className="text-red-600 hover:text-red-800 hover:bg-red-50"
+            className="text-red-600 hover:bg-red-50 hover:text-red-800"
             title="Delete exception"
           >
             <Trash2 className="h-4 w-4" />

@@ -1,6 +1,6 @@
 /**
  * Students Management Page
- * 
+ *
  * Complete student management interface following Teacher pattern with URL routing
  */
 
@@ -14,6 +14,7 @@ import { StudentsList } from "@/features/students/components/admin/students-list
 import { StudentForm } from "@/features/students/components/common/student-form";
 import { useDeleteMutation } from "@/hooks/use-delete-mutation";
 import { useReactivateMutation } from "@/hooks/use-reactivate-mutation";
+import { useToast } from "@/hooks/use-toast";
 import type { Student, StudentDetail } from "@/lib/api/student-api";
 import { deleteStudent, getStudent, reactivateStudent } from "@/lib/api/student-api";
 
@@ -26,11 +27,15 @@ export default function StudentsPage() {
   const [selectedStudentMeta, setSelectedStudentMeta] = useState<{ classId: string } | null>(null);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [successMessage, setSuccessMessage] = useState({ title: "", description: "" });
+  const { toast } = useToast();
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; student: Student | null }>({
     open: false,
     student: null,
   });
-  const [reactivateDialog, setReactivateDialog] = useState<{ open: boolean; student: Student | null }>({
+  const [reactivateDialog, setReactivateDialog] = useState<{
+    open: boolean;
+    student: Student | null;
+  }>({
     open: false,
     student: null,
   });
@@ -38,7 +43,7 @@ export default function StudentsPage() {
   // Get student ID and class ID from URL path
   const getStudentInfoFromPath = () => {
     // Skip if creating new student
-    if (location.endsWith('/students/new')) {
+    if (location.endsWith("/students/new")) {
       return { classId: null, publicId: null };
     }
     // Try format: /classes/:classId/students/:publicId
@@ -80,7 +85,7 @@ export default function StudentsPage() {
       setSelectedStudentMeta(null);
       return;
     }
-    
+
     if (studentId && studentDetail) {
       setSelectedStudent(studentDetail);
       if (viewMode !== "edit") {
@@ -95,12 +100,8 @@ export default function StudentsPage() {
 
   const deleteStudentMutation = useDeleteMutation({
     resourceName: "Student",
-    deleteFn: (publicId: string) => {
-      const student = deleteDialog.student;
-      if (!student) {
-        throw new Error("Student not found");
-      }
-      return deleteStudent(student.class_info.public_id, publicId);
+    deleteFn: ({ classId, publicId }: { classId: string; publicId: string }) => {
+      return deleteStudent(classId, publicId);
     },
     queryKeys: ["students", "student-detail"],
     onSuccessCallback: () => {
@@ -110,16 +111,19 @@ export default function StudentsPage() {
       });
       setShowSuccessDialog(true);
     },
+    onErrorCallback: (error: Error) => {
+      toast({
+        title: "Failed to Delete Student",
+        description: error.message || "An error occurred while deleting the student.",
+        variant: "destructive",
+      });
+    },
   });
 
   const reactivateStudentMutation = useReactivateMutation({
     resourceName: "Student",
-    reactivateFn: (publicId: string) => {
-      const student = reactivateDialog.student;
-      if (!student) {
-        throw new Error("Student not found");
-      }
-      return reactivateStudent(student.class_info.public_id, publicId);
+    reactivateFn: ({ publicId, classId }: { publicId: string; classId: string }) => {
+      return reactivateStudent(classId, publicId);
     },
     queryKeys: ["students", "student-detail"],
     onSuccessCallback: () => {
@@ -128,6 +132,13 @@ export default function StudentsPage() {
         description: "The student has been successfully reactivated.",
       });
       setShowSuccessDialog(true);
+    },
+    onErrorCallback: (error: Error) => {
+      toast({
+        title: "Failed to Reactivate Student",
+        description: error.message || "An error occurred while reactivating the student.",
+        variant: "destructive",
+      });
     },
   });
 
@@ -141,14 +152,22 @@ export default function StudentsPage() {
 
   const confirmDelete = () => {
     if (deleteDialog.student) {
-      deleteStudentMutation.mutate(deleteDialog.student.public_id);
+      const student = deleteDialog.student;
+      deleteStudentMutation.mutate({
+        classId: student.class_info.public_id,
+        publicId: student.public_id,
+      });
       setDeleteDialog({ open: false, student: null });
     }
   };
 
   const confirmReactivate = () => {
     if (reactivateDialog.student) {
-      reactivateStudentMutation.mutate(reactivateDialog.student.public_id);
+      const student = reactivateDialog.student;
+      reactivateStudentMutation.mutate({
+        publicId: student.public_id,
+        classId: student.class_info.public_id,
+      });
       setReactivateDialog({ open: false, student: null });
     }
   };
@@ -185,7 +204,7 @@ export default function StudentsPage() {
 
   const handleSuccessDialogClose = () => {
     setShowSuccessDialog(false);
-    
+
     if (viewMode === "create") {
       setViewMode("list");
       setSelectedStudent(null);
@@ -213,18 +232,22 @@ export default function StudentsPage() {
             onCreateNew={handleCreateNew}
             onView={handleViewStudent}
             onEdit={handleEditStudent}
+            onDelete={_handleDeleteStudent}
+            onReactivate={_handleReactivateStudent}
           />
         )}
-        
-        {viewMode !== "list" && viewMode !== "create" && (isLoadingStudent || (studentId && !studentDetail)) && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-            <div className="flex flex-col items-center gap-2">
-              <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
-              <p className="text-sm text-muted-foreground">Loading student data...</p>
+
+        {viewMode !== "list" &&
+          viewMode !== "create" &&
+          (isLoadingStudent || (studentId && !studentDetail)) && (
+            <div className="bg-background/80 fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm">
+              <div className="flex flex-col items-center gap-2">
+                <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
+                <p className="text-muted-foreground text-sm">Loading student data...</p>
+              </div>
             </div>
-          </div>
-        )}
-        
+          )}
+
         {viewMode !== "list" && !isLoadingStudent && (viewMode === "create" || studentDetail) && (
           <StudentForm
             mode={viewMode}
@@ -243,7 +266,10 @@ export default function StudentsPage() {
         description={successMessage.description}
         onClose={() => {
           setShowSuccessDialog(false);
-          if (successMessage.title.includes("Deleted") || successMessage.title.includes("Reactivated")) {
+          if (
+            successMessage.title.includes("Deleted") ||
+            successMessage.title.includes("Reactivated")
+          ) {
             setViewMode("list");
             setSelectedStudent(null);
             setSelectedStudentMeta(null);
@@ -256,7 +282,7 @@ export default function StudentsPage() {
 
       <DeleteConfirmationDialog
         open={deleteDialog.open}
-        description={`Are you sure you want to delete ${deleteDialog.student?.user_info?.full_name || 'this student'}? This action cannot be undone.`}
+        description={`Are you sure you want to delete ${deleteDialog.student?.user_info?.full_name || "this student"}? This action cannot be undone.`}
         onConfirm={confirmDelete}
         onCancel={() => setDeleteDialog({ open: false, student: null })}
         isDeleting={deleteStudentMutation.isPending}
@@ -265,7 +291,7 @@ export default function StudentsPage() {
       <DeleteConfirmationDialog
         open={reactivateDialog.open}
         title="Reactivate Student"
-        description={`Are you sure you want to reactivate ${reactivateDialog.student?.user_info?.full_name || 'this student'}?`}
+        description={`Are you sure you want to reactivate ${reactivateDialog.student?.user_info?.full_name || "this student"}?`}
         confirmLabel="Reactivate"
         onConfirm={confirmReactivate}
         onCancel={() => setReactivateDialog({ open: false, student: null })}

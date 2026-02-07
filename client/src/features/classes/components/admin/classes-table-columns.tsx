@@ -32,32 +32,37 @@ export function getClassColumns({
     {
       header: "Class Teacher",
       accessor: (row: MasterClass) => (
-        <div className="text-sm text-gray-900">
-          {row.class_teacher 
-            ? `${row.class_teacher.full_name} (${row.class_teacher.email})` 
-            : "-"}
+        <div className="min-w-[200px] text-sm text-gray-900">
+          {row.class_teacher ? (
+            <div className="flex flex-col">
+              <span className="truncate font-medium">{row.class_teacher.full_name}</span>
+              <span className="truncate text-xs text-gray-500" title={row.class_teacher.email}>
+                {row.class_teacher.email}
+              </span>
+            </div>
+          ) : (
+            "-"
+          )}
         </div>
       ),
+      width: 220,
+      minWidth: 200,
     },
     {
       header: "Description",
       accessor: (row: MasterClass) => (
-        <div className="text-sm text-gray-600">
+        <div className="max-w-[250px] truncate text-sm text-gray-600" title={row.info || "-"}>
           {row.info || "-"}
         </div>
       ),
+      width: 250,
+      minWidth: 200,
     },
     {
       header: "Capacity",
       accessor: (row: MasterClass) => (
         <div className="text-sm text-gray-900">
-          {row.capacity ? (
-            <Badge variant="secondary">
-              {row.capacity} students
-            </Badge>
-          ) : (
-            "-"
-          )}
+          {row.capacity ? <Badge variant="secondary">{row.capacity} students</Badge> : "-"}
         </div>
       ),
       sortable: true,
@@ -68,7 +73,7 @@ export function getClassColumns({
       : [
           {
             header: "Actions",
-            accessor: (classData) => (
+            accessor: (classData: MasterClass) => (
               <div className="flex gap-2">
                 <Button
                   variant="ghost"

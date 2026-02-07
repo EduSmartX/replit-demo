@@ -45,24 +45,36 @@ export function getSubjectColumns({
     {
       header: "Teacher",
       accessor: (subject) => (
-        <div className="flex items-center gap-2">
-          <User className="h-4 w-4 text-gray-400" />
-          <div>
-            <p className="font-medium text-gray-900">{subject.teacher_info?.full_name || "-"}</p>
-            <p className="text-sm text-gray-500">{subject.teacher_info?.employee_id || "-"}</p>
+        <div className="flex min-w-[180px] items-center gap-2">
+          <User className="h-4 w-4 flex-shrink-0 text-gray-400" />
+          <div className="min-w-0 flex-1">
+            <p className="truncate font-medium text-gray-900">
+              {subject.teacher_info?.full_name || "-"}
+            </p>
+            <p className="truncate text-sm text-gray-500">
+              {subject.teacher_info?.employee_id || "-"}
+            </p>
           </div>
         </div>
       ),
       sortable: true,
       sortKey: "teacher_info.full_name",
+      width: 200,
+      minWidth: 180,
     },
     {
       header: "Description",
       accessor: (subject) => {
         const desc = subject.description;
-        const displayText = (!desc || desc === 'nan' || desc === 'NaN') ? "-" : desc;
-        return <p className="text-sm text-gray-600 text-center">{displayText}</p>;
+        const displayText = !desc || desc === "nan" || desc === "NaN" ? "-" : desc;
+        return (
+          <p className="max-w-[250px] truncate text-sm text-gray-600" title={displayText}>
+            {displayText}
+          </p>
+        );
       },
+      width: 250,
+      minWidth: 200,
     },
     createCreatedByColumn<Subject>(),
     createLastUpdatedColumn<Subject>(),
@@ -81,7 +93,7 @@ export function getSubjectColumns({
               className="h-8 px-3 text-blue-600 hover:bg-blue-50 hover:text-blue-700"
               title="Reactivate"
             >
-              <RotateCcw className="h-4 w-4 mr-1" />
+              <RotateCcw className="mr-1 h-4 w-4" />
               Reactivate
             </Button>
           ) : (

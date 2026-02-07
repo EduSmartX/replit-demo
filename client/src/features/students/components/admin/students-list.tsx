@@ -15,29 +15,13 @@ import {
   getListDescription,
   getListTitle,
 } from "@/common/utils/deleted-view-helpers";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/data-table";
 import { TablePagination } from "@/components/ui/table-pagination";
-import { useDeleteMutation } from "@/hooks/use-delete-mutation";
 import { useDeletedView } from "@/hooks/use-deleted-view";
 import { fetchClasses, fetchCoreClasses } from "@/lib/api/class-api";
-import {
-  deleteStudent,
-  getStudents,
-  reactivateStudent,
-  type Student,
-} from "@/lib/api/student-api";
+import { getStudents, reactivateStudent, type Student } from "@/lib/api/student-api";
 import { ERROR_MESSAGES } from "@/lib/constants";
 import { BulkUploadStudents } from "./bulk-upload-students";
 import { getStudentColumns } from "./students-table-columns";
@@ -46,19 +30,23 @@ interface StudentsListProps {
   onCreateNew?: () => void;
   onView?: (student: Student) => void;
   onEdit?: (student: Student) => void;
+  onDelete?: (student: Student) => void;
+  onReactivate?: (student: Student) => void;
 }
 
-export function StudentsList({ onCreateNew, onView: onViewProp, onEdit: onEditProp }: StudentsListProps = {}) {
+export function StudentsList({
+  onCreateNew,
+  onView: onViewProp,
+  onEdit: onEditProp,
+  onDelete: onDeleteProp,
+  onReactivate: onReactivateProp,
+}: StudentsListProps = {}) {
   const [filters, setFilters] = useState<Record<string, string>>({});
-  const [deleteStudentData, setDeleteStudentData] = useState<string | null>(null);
+  const [formFilters, setFormFilters] = useState<Record<string, string>>({});
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  const {
-    showDeleted,
-    toggleDeletedView,
-    handleReactivate: handleReactivateBase,
-  } = useDeletedView({
+  const { showDeleted, toggleDeletedView } = useDeletedView({
     resourceName: "Student",
     queryKey: ["students"],
     reactivateFn: (publicId: string) => {
@@ -90,6 +78,7 @@ export function StudentsList({ onCreateNew, onView: onViewProp, onEdit: onEditPr
   const apiFilters = {
     search: filters.search || undefined,
     class_id: filters.class_id || undefined,
+    class_master_id: filters.class_master_id || undefined,
     is_deleted: showDeleted,
     page,
     page_size: pageSize,
@@ -98,19 +87,6 @@ export function StudentsList({ onCreateNew, onView: onViewProp, onEdit: onEditPr
   const { data, isLoading } = useQuery({
     queryKey: ["students", apiFilters],
     queryFn: () => getStudents(apiFilters),
-  });
-
-  const deleteMutation = useDeleteMutation({
-    resourceName: "Student",
-    deleteFn: (publicId: string) => {
-      const student = students.find((s: Student) => s.public_id === publicId);
-      if (!student) {
-        throw new Error("Student not found");
-      }
-      return deleteStudent(student.class_info.public_id, publicId);
-    },
-    queryKeys: ["students"],
-    refetchQueries: false,
   });
 
   const students = data?.data || [];
@@ -130,13 +106,8 @@ export function StudentsList({ onCreateNew, onView: onViewProp, onEdit: onEditPr
   };
 
   const handleDelete = (student: Student) => {
-    setDeleteStudentData(student.public_id);
-  };
-
-  const confirmDelete = () => {
-    if (deleteStudentData) {
-      deleteMutation.mutate(deleteStudentData);
-      setDeleteStudentData(null);
+    if (onDeleteProp) {
+      onDeleteProp(student);
     }
   };
 
@@ -156,65 +127,51 @@ export function StudentsList({ onCreateNew, onView: onViewProp, onEdit: onEditPr
   };
 
   const handleFilter = (newFilters: Record<string, string>) => {
-    // If master class changed, clear class_id filter
-    if (newFilters.master_class_id !== filters.master_class_id) {
-      const { class_id: _class_id, ...rest } = newFilters;
-      setFilters(rest);
-    } else {
-      setFilters(newFilters);
-    }
+    setFilters(newFilters);
+    setFormFilters(newFilters);
     setPage(1);
-  };
-
-  const handleFieldChange = (name: string, value: string, allFilters: Record<string, string>) => {
-    // If master_class_id changes, immediately update filters to enable/populate class_id dropdown
-    if (name === "master_class_id") {
-      const { class_id: _class_id, ...rest } = allFilters;
-      const activeFilters = Object.entries(rest).reduce((acc, [key, val]) => {
-        if (val && val !== "all") {
-          acc[key] = val;
-        }
-        return acc;
-      }, {} as Record<string, string>);
-      setFilters(activeFilters);
-    }
   };
 
   const handleResetFilters = () => {
     setFilters({});
+    setFormFilters({});
     setPage(1);
   };
 
-  const handleReactivate = (publicId: string) => {
-    handleReactivateBase(publicId);
+  const handleFieldChange = (name: string, value: string, allFilters: Record<string, string>) => {
+    setFormFilters(allFilters);
+  };
+
+  const handleReactivate = (student: Student) => {
+    if (onReactivateProp) {
+      onReactivateProp(student);
+    }
   };
 
   // Prepare filter fields
   const coreClasses = useMemo(() => coreClassesData?.data || [], [coreClassesData?.data]);
 
-  // Filter sections based on selected master class
   const filteredSections = useMemo(() => {
     const allClasses = classesData?.data || [];
-    
-    if (!filters.master_class_id) {
+
+    if (!formFilters.class_master_id) {
       return allClasses;
     }
-    
-    // Find the selected master class to get its ID
-    const selectedMasterClass = coreClasses.find(c => c.code === filters.master_class_id);
-    
+
+    const selectedMasterClass = coreClasses.find(
+      (c) => c.id.toString() === formFilters.class_master_id
+    );
+
     if (!selectedMasterClass) {
       return [];
     }
-    
-    const filtered = allClasses.filter(
-      (cls) => {
-        return cls.class_master.id === selectedMasterClass.id;
-      }
-    );
-    
+
+    const filtered = allClasses.filter((cls) => {
+      return cls.class_master.id === selectedMasterClass.id;
+    });
+
     return filtered;
-  }, [filters.master_class_id, classesData?.data, coreClasses]);
+  }, [formFilters.class_master_id, classesData?.data, coreClasses]);
 
   const filterFields: FilterField[] = [
     {
@@ -224,12 +181,12 @@ export function StudentsList({ onCreateNew, onView: onViewProp, onEdit: onEditPr
       placeholder: "Search by name, roll number, or email...",
     },
     {
-      name: "master_class_id",
+      name: "class_master_id",
       label: "Master Class",
       type: "select",
       placeholder: "All",
       options: coreClasses.map((cls) => ({
-        value: cls.code,
+        value: cls.id.toString(),
         label: cls.name,
       })),
     },
@@ -242,7 +199,7 @@ export function StudentsList({ onCreateNew, onView: onViewProp, onEdit: onEditPr
         value: cls.public_id,
         label: cls.name,
       })),
-      disabled: !filters.master_class_id || filteredSections.length === 0,
+      disabled: !formFilters.class_master_id || filteredSections.length === 0,
     },
   ];
 
@@ -260,21 +217,16 @@ export function StudentsList({ onCreateNew, onView: onViewProp, onEdit: onEditPr
   return (
     <>
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="mb-3 text-3xl font-bold text-gray-900">
             {getListTitle("Students", showDeleted)}
           </h1>
-          <p className="text-base text-gray-600">
-            {getListDescription("Students", showDeleted)}
-          </p>
+          <p className="text-base text-gray-600">{getListDescription("Students", showDeleted)}</p>
         </div>
 
         <div className="flex flex-wrap gap-3">
-          <DeletedViewToggle
-            showDeleted={showDeleted}
-            onToggle={toggleDeletedView}
-          />
+          <DeletedViewToggle showDeleted={showDeleted} onToggle={toggleDeletedView} />
 
           {!showDeleted && (
             <>
@@ -293,7 +245,7 @@ export function StudentsList({ onCreateNew, onView: onViewProp, onEdit: onEditPr
         fields={filterFields}
         onFilter={handleFilter}
         onReset={handleResetFilters}
-        defaultValues={filters}
+        defaultValues={formFilters}
         onFieldChange={handleFieldChange}
       />
 
@@ -328,24 +280,6 @@ export function StudentsList({ onCreateNew, onView: onViewProp, onEdit: onEditPr
           )}
         </CardContent>
       </Card>
-
-      {/* Delete Confirmation */}
-      <AlertDialog open={!!deleteStudentData} onOpenChange={() => setDeleteStudentData(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Student?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will remove the student. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 }

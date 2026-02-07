@@ -46,7 +46,7 @@ import {
   getDeletedDuplicateMessage,
   getDeletedRecordId,
   isDeletedDuplicateError,
-  setFormFieldErrors
+  setFormFieldErrors,
 } from "@/lib/error-utils";
 
 const subjectFormSchema = z.object({
@@ -68,9 +68,9 @@ export function SingleSubjectForm({ subject, onSuccess, onCancel }: SingleSubjec
   const isEditMode = !!subject;
   const queryClient = useQueryClient();
 
-
   // Extract actual subject data if it's wrapped in API response
-  const subjectData = subject && 'data' in subject ? subject.data : subject;
+  const subjectData: Subject | null | undefined =
+    subject && "data" in subject ? ((subject as Record<string, unknown>).data as Subject) : subject;
 
   const duplicateHandler = useDeletedDuplicateHandler<{
     payload: SubjectCreatePayload;
@@ -96,25 +96,29 @@ export function SingleSubjectForm({ subject, onSuccess, onCancel }: SingleSubjec
   });
 
   const classes = classesData?.data || [];
-  const coreSubjects = Array.isArray(coreSubjectsData)
+  const coreSubjects: CoreSubject[] = Array.isArray(coreSubjectsData)
     ? coreSubjectsData
-    : (coreSubjectsData as any)?.data || [];
+    : ((coreSubjectsData as Record<string, unknown> | undefined)?.data as
+        | CoreSubject[]
+        | undefined) || [];
   const teachers = teachersData?.data || [];
 
   const form = useForm<SubjectFormValues>({
     resolver: zodResolver(subjectFormSchema),
     shouldFocusError: true,
-    defaultValues: subjectData ? {
-      class_id: subjectData.class_info?.public_id || "",
-      subject_id: subjectData.subject_info?.id?.toString() || "",
-      teacher_id: subjectData.teacher_info?.public_id || "",
-      description: subjectData.description || "",
-    } : {
-      class_id: "",
-      subject_id: "",
-      teacher_id: "",
-      description: "",
-    },
+    defaultValues: subjectData
+      ? {
+          class_id: subjectData.class_info?.public_id || "",
+          subject_id: subjectData.subject_info?.id?.toString() || "",
+          teacher_id: subjectData.teacher_info?.public_id || "",
+          description: subjectData.description || "",
+        }
+      : {
+          class_id: "",
+          subject_id: "",
+          teacher_id: "",
+          description: "",
+        },
   });
 
   // Auto-scroll to first error field
@@ -136,11 +140,16 @@ export function SingleSubjectForm({ subject, onSuccess, onCancel }: SingleSubjec
         description: "",
       });
     }
-  }, [subject, form]);
+  }, [subject, subjectData, form]);
 
   const createMutation = useMutation({
-    mutationFn: ({ payload, forceCreate }: { payload: SubjectCreatePayload; forceCreate?: boolean }) =>
-      createSubject(payload, forceCreate),
+    mutationFn: ({
+      payload,
+      forceCreate,
+    }: {
+      payload: SubjectCreatePayload;
+      forceCreate?: boolean;
+    }) => createSubject(payload, forceCreate),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["subjects"] });
       duplicateHandler.closeDialog();
@@ -149,7 +158,7 @@ export function SingleSubjectForm({ subject, onSuccess, onCancel }: SingleSubjec
         onSuccess();
       }
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       if (isDeletedDuplicateError(error)) {
         const message = getDeletedDuplicateMessage(error);
         const deletedRecordId = getDeletedRecordId(error);
@@ -163,7 +172,7 @@ export function SingleSubjectForm({ subject, onSuccess, onCancel }: SingleSubjec
 
         duplicateHandler.openDialog(message, {
           payload,
-          deletedRecordId
+          deletedRecordId,
         });
         return;
       }
@@ -182,7 +191,7 @@ export function SingleSubjectForm({ subject, onSuccess, onCancel }: SingleSubjec
       queryClient.invalidateQueries({ queryKey: ["subjects"] });
       onSuccess?.();
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       // Use centralized error utility to set field errors
       setFormFieldErrors(error, form.setError);
     },
@@ -196,7 +205,7 @@ export function SingleSubjectForm({ subject, onSuccess, onCancel }: SingleSubjec
       form.reset();
       onSuccess?.();
     },
-    onError: (_error: any) => {
+    onError: (_error: Error) => {
       // Error is displayed in dialog
     },
   });
@@ -212,7 +221,7 @@ export function SingleSubjectForm({ subject, onSuccess, onCancel }: SingleSubjec
       const payload: SubjectCreatePayload = {
         class_id: values.class_id,
         subject_id: parseInt(values.subject_id),
-        teacher_id: values.teacher_id,
+        teacher_id: values.teacher_id || "",
         description: values.description || "",
       };
       createMutation.mutate({ payload });
@@ -220,7 +229,12 @@ export function SingleSubjectForm({ subject, onSuccess, onCancel }: SingleSubjec
   };
 
   const isLoading =
-    createMutation.isPending || updateMutation.isPending || reactivateMutation.isPending || loadingClasses || loadingSubjects || loadingTeachers;
+    createMutation.isPending ||
+    updateMutation.isPending ||
+    reactivateMutation.isPending ||
+    loadingClasses ||
+    loadingSubjects ||
+    loadingTeachers;
 
   return (
     <>
@@ -235,8 +249,8 @@ export function SingleSubjectForm({ subject, onSuccess, onCancel }: SingleSubjec
               {isEditMode ? "Edit Subject" : "Assign Subject"}
             </h1>
             <p className="text-base text-gray-600">
-              {isEditMode 
-                ? "Update teacher or description for this subject assignment" 
+              {isEditMode
+                ? "Update teacher or description for this subject assignment"
                 : "Assign a subject to a class with a teacher"}
             </p>
           </div>
@@ -246,8 +260,8 @@ export function SingleSubjectForm({ subject, onSuccess, onCancel }: SingleSubjec
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <Card>
-              <CardContent className="pt-6 space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <CardContent className="space-y-6 pt-6">
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                   {/* Class Selection */}
                   <FormField
                     control={form.control}
@@ -255,7 +269,11 @@ export function SingleSubjectForm({ subject, onSuccess, onCancel }: SingleSubjec
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Class *</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value} disabled={isLoading || isEditMode}>
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value}
+                          disabled={isLoading || isEditMode}
+                        >
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Select class..." />
@@ -281,7 +299,11 @@ export function SingleSubjectForm({ subject, onSuccess, onCancel }: SingleSubjec
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Subject *</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value} disabled={isLoading || isEditMode}>
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value}
+                          disabled={isLoading || isEditMode}
+                        >
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Select subject..." />
@@ -301,7 +323,7 @@ export function SingleSubjectForm({ subject, onSuccess, onCancel }: SingleSubjec
                   />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                   {/* Teacher Selection */}
                   <FormField
                     control={form.control}
@@ -309,7 +331,11 @@ export function SingleSubjectForm({ subject, onSuccess, onCancel }: SingleSubjec
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Teacher (Optional)</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value} disabled={isLoading}>
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value}
+                          disabled={isLoading}
+                        >
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Select teacher..." />
@@ -353,7 +379,7 @@ export function SingleSubjectForm({ subject, onSuccess, onCancel }: SingleSubjec
 
             {/* Form Actions */}
             <Card>
-              <CardContent className="flex justify-end gap-3 pt-6">
+              <CardContent className="flex flex-wrap justify-end gap-3 pt-6">
                 <Button variant="outline" onClick={onCancel} disabled={isLoading} type="button">
                   Cancel
                 </Button>
@@ -388,7 +414,10 @@ export function SingleSubjectForm({ subject, onSuccess, onCancel }: SingleSubjec
           }}
           onCreateNew={() => {
             if (duplicateHandler.pendingData?.payload) {
-              createMutation.mutate({ payload: duplicateHandler.pendingData.payload, forceCreate: true });
+              createMutation.mutate({
+                payload: duplicateHandler.pendingData.payload,
+                forceCreate: true,
+              });
             }
           }}
           onCancel={duplicateHandler.closeDialog}

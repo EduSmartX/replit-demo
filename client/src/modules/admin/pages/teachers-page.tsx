@@ -7,28 +7,33 @@ import { DashboardLayout } from "@/common/layouts";
 import { TeachersList, TeacherForm } from "@/features/teachers";
 import { useDeleteMutation } from "@/hooks/use-delete-mutation";
 import { useReactivateMutation } from "@/hooks/use-reactivate-mutation";
+import { useToast } from "@/hooks/use-toast";
 import { deleteTeacher, fetchTeacherById, reactivateTeacher } from "@/lib/api/teacher-api";
 import type { Teacher } from "@/lib/api/teacher-api";
 
 export default function TeachersPage() {
   const [location, setLocation] = useLocation();
-  
+
   const [viewMode, setViewMode] = useState<"list" | "create" | "edit" | "view">("list");
   const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [successMessage, setSuccessMessage] = useState({ title: "", description: "" });
+  const { toast } = useToast();
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; teacher: Teacher | null }>({
     open: false,
     teacher: null,
   });
-  const [reactivateDialog, setReactivateDialog] = useState<{ open: boolean; teacher: Teacher | null }>({
+  const [reactivateDialog, setReactivateDialog] = useState<{
+    open: boolean;
+    teacher: Teacher | null;
+  }>({
     open: false,
     teacher: null,
   });
 
   const getTeacherIdFromPath = () => {
     // Skip if creating new teacher
-    if (location.endsWith('/teachers/new')) {
+    if (location.endsWith("/teachers/new")) {
       return null;
     }
     const match = location.match(/\/teachers\/([a-zA-Z0-9-]+)$/);
@@ -58,7 +63,7 @@ export default function TeachersPage() {
       setSelectedTeacher(null);
       return;
     }
-    
+
     if (teacherId && teacherDetail) {
       setSelectedTeacher(teacherDetail);
       setViewMode("view");
@@ -79,6 +84,13 @@ export default function TeachersPage() {
       });
       setShowSuccessDialog(true);
     },
+    onErrorCallback: (error: Error) => {
+      toast({
+        title: "Failed to Delete Teacher",
+        description: error.message || "An error occurred while deleting the teacher.",
+        variant: "destructive",
+      });
+    },
   });
 
   const reactivateTeacherMutation = useReactivateMutation({
@@ -91,6 +103,13 @@ export default function TeachersPage() {
         description: "The teacher has been successfully reactivated.",
       });
       setShowSuccessDialog(true);
+    },
+    onErrorCallback: (error: Error) => {
+      toast({
+        title: "Failed to Reactivate Teacher",
+        description: error.message || "An error occurred while reactivating the teacher.",
+        variant: "destructive",
+      });
     },
   });
 
@@ -145,7 +164,7 @@ export default function TeachersPage() {
 
   const handleSuccessDialogClose = () => {
     setShowSuccessDialog(false);
-    
+
     if (viewMode === "create") {
       setViewMode("list");
       setSelectedTeacher(null);
@@ -166,30 +185,38 @@ export default function TeachersPage() {
   return (
     <DashboardLayout>
       <PageWrapper>
-        {viewMode === "list" ? (
-          <TeachersList
-            onCreateNew={handleCreateNew}
-            onView={handleViewTeacher}
-            onEdit={handleEditTeacher}
-            onDelete={handleDeleteTeacher}
-            onReactivate={handleReactivateTeacher}
-          />
-        ) : (viewMode !== "create" && (isLoadingTeacher || (teacherId && !selectedTeacher))) ? (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-            <div className="flex flex-col items-center gap-2">
-              <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
-              <p className="text-sm text-muted-foreground">Loading teacher data...</p>
-            </div>
-          </div>
-        ) : (
-          <TeacherForm
-            mode={viewMode}
-            initialData={selectedTeacher}
-            onEdit={() => setViewMode("edit")}
-            onSuccess={handleSuccess}
-            onCancel={handleCancel}
-          />
-        )}
+        {(() => {
+          if (viewMode === "list") {
+            return (
+              <TeachersList
+                onCreateNew={handleCreateNew}
+                onView={handleViewTeacher}
+                onEdit={handleEditTeacher}
+                onDelete={handleDeleteTeacher}
+                onReactivate={handleReactivateTeacher}
+              />
+            );
+          }
+          if (viewMode !== "create" && (isLoadingTeacher || (teacherId && !selectedTeacher))) {
+            return (
+              <div className="bg-background/80 fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm">
+                <div className="flex flex-col items-center gap-2">
+                  <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
+                  <p className="text-muted-foreground text-sm">Loading teacher data...</p>
+                </div>
+              </div>
+            );
+          }
+          return (
+            <TeacherForm
+              mode={viewMode}
+              initialData={selectedTeacher}
+              onEdit={() => setViewMode("edit")}
+              onSuccess={handleSuccess}
+              onCancel={handleCancel}
+            />
+          );
+        })()}
       </PageWrapper>
 
       <SuccessDialog
@@ -198,7 +225,10 @@ export default function TeachersPage() {
         description={successMessage.description}
         onClose={() => {
           setShowSuccessDialog(false);
-          if (successMessage.title.includes("Deleted") || successMessage.title.includes("Reactivated")) {
+          if (
+            successMessage.title.includes("Deleted") ||
+            successMessage.title.includes("Reactivated")
+          ) {
             setViewMode("list");
             setSelectedTeacher(null);
             setLocation("/teachers");
@@ -210,7 +240,7 @@ export default function TeachersPage() {
 
       <DeleteConfirmationDialog
         open={deleteDialog.open}
-        description={`Are you sure you want to delete ${deleteDialog.teacher?.user?.full_name || 'this teacher'}? This action cannot be undone.`}
+        description={`Are you sure you want to delete ${deleteDialog.teacher?.user?.full_name || "this teacher"}? This action cannot be undone.`}
         onConfirm={confirmDelete}
         onCancel={() => setDeleteDialog({ open: false, teacher: null })}
         isDeleting={deleteTeacherMutation.isPending}
@@ -219,7 +249,7 @@ export default function TeachersPage() {
       <DeleteConfirmationDialog
         open={reactivateDialog.open}
         title="Reactivate Teacher"
-        description={`Are you sure you want to reactivate ${reactivateDialog.teacher?.user?.full_name || 'this teacher'}?`}
+        description={`Are you sure you want to reactivate ${reactivateDialog.teacher?.user?.full_name || "this teacher"}?`}
         confirmLabel="Reactivate"
         onConfirm={confirmReactivate}
         onCancel={() => setReactivateDialog({ open: false, teacher: null })}

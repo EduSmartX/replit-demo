@@ -1,13 +1,13 @@
 /**
  * Signup Wizard Component
  * Multi-step registration flow for new organizations and admin users.
- * 
+ *
  * Steps:
  * 1. Email verification (admin + organization emails with OTP)
  * 2. Organization details (name, phone, address)
  * 3. Admin details (name, password)
  * 4. Confirmation and submission
- * 
+ *
  * Includes form validation, OTP verification, Google Places address autocomplete,
  * and animated step transitions.
  */
@@ -34,7 +34,7 @@ import {
   User,
 } from "lucide-react";
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, type FieldValues, type UseFormRegister } from "react-hook-form";
 import { useLocation } from "wouter";
 import * as z from "zod";
 import { AddressInputFields } from "@/common/components/forms";
@@ -54,11 +54,11 @@ import { ValidationErrorMessages } from "@/lib/constants";
 import { parseApiError } from "@/lib/error-parser";
 import type { AddressComponents } from "@/lib/google-places";
 import { sendOtps, verifyOtp } from "@/lib/otp-service";
-import { 
-  tenDigitPhoneRegex, 
+import {
+  cleanPhoneNumber,
   nameRegex,
+  tenDigitPhoneRegex,
   ValidationMessages,
-  cleanPhoneNumber 
 } from "@/lib/utils/validation-utils";
 import { AuthFormCard } from "./auth-form-card";
 import { OtpInput } from "./otp-input";
@@ -84,16 +84,13 @@ const step3Schema = z
     orgPhoneNumber: z
       .string()
       .min(1, "Phone number is required")
-      .refine(
-        (val) => {
-          if (!val) {
-            return false;
-          }
-          const cleaned = cleanPhoneNumber(val);
-          return tenDigitPhoneRegex.test(cleaned);
-        },
-        ValidationMessages.phone.invalid
-      )
+      .refine((val) => {
+        if (!val) {
+          return false;
+        }
+        const cleaned = cleanPhoneNumber(val);
+        return tenDigitPhoneRegex.test(cleaned);
+      }, ValidationMessages.phone.invalid)
       .transform((val) => cleanPhoneNumber(val)),
     orgWebsite: z.string().optional(),
     boardAffiliation: z.string().optional(),
@@ -128,10 +125,10 @@ const step3Schema = z
     path: ["confirmPassword"],
   });
 
-export function SignupWizard({ 
+export function SignupWizard({
   onComplete: _onComplete,
-  onStepChange 
-}: { 
+  onStepChange,
+}: {
   onComplete: () => void;
   onStepChange?: (step: number) => void;
 }) {
@@ -224,7 +221,8 @@ export function SignupWizard({
         },
       ]);
 
-      if (response.all_success) {
+      const resp = response as Record<string, unknown>;
+      if (resp.all_success) {
         toast({
           title: "OTP Sent",
           description: `Verification codes sent to ${data.adminEmail} and ${data.orgEmail}`,
@@ -237,55 +235,65 @@ export function SignupWizard({
           variant: "destructive",
         });
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Parse error response
       let errorTitle = "Error Sending OTP";
       let errorDescription = "Failed to send verification codes. Please try again.";
 
       try {
+        const err = error as Record<string, unknown>;
         // Check if error has errors property (our API error structure)
-        const errorData = error?.errors || error?.response?.data || error?.data;
+        const errorData =
+          err?.errors || (err?.response as Record<string, unknown>)?.data || err?.data;
 
-        if (errorData) {
+        if (errorData && typeof errorData === "object") {
+          const errData = errorData as Record<string, unknown>;
           // Handle validation errors with specific email errors
-          if (errorData.errors && Array.isArray(errorData.errors)) {
-            // Build a user-friendly error message from structured errors
-            errorTitle = errorData.detail || "Registration Error";
-            
-            // Create readable error messages for each email
-            const errorMessages = errorData.errors.map((err: { 
-              email: string; 
-              category: string; 
-              error: string 
-            }) => {
-              const emailType = err.category === 'admin' ? 'Administrator' : 'Organization';
-              return `• ${emailType} email (${err.email}): ${err.error}`;
-            }).join("\n");
+          if ("data" in errData && Array.isArray(errData.data)) {
+            const detail = errData.detail;
+            errorTitle = typeof detail === "string" ? detail : "Registration Error";
 
-            errorDescription = errorMessages || "Please check the email addresses and try again.";
+            // Create readable error messages for each email
+            const errors = errData.errors;
+            if (Array.isArray(errors)) {
+              const errorMessages = errors
+                .map((err: { email: string; category: string; error: string }) => {
+                  const emailType = err.category === "admin" ? "Administrator" : "Organization";
+                  return `• ${emailType} email (${err.email}): ${err.error}`;
+                })
+                .join("\n");
+
+              errorDescription = errorMessages || "Please check the email addresses and try again.";
+            }
           }
           // Handle already registered emails
-          else if (errorData.detail && errorData.detail.includes("already registered")) {
+          else if (
+            errData.detail &&
+            typeof errData.detail === "string" &&
+            errData.detail.includes("already registered")
+          ) {
             errorTitle = "Email Already Registered";
             errorDescription =
               "One or more emails are already registered. Please use different emails or login.";
           }
           // Handle general errors with detail field
-          else if (errorData.detail) {
+          else if (errData.detail && typeof errData.detail === "string") {
             errorTitle = "Registration Failed";
-            errorDescription = errorData.detail;
+            errorDescription = errData.detail;
           }
           // Handle errors with message field
-          else if (errorData.message) {
-            errorDescription = errorData.message;
+          else if (typeof errData.message === "string") {
+            errorDescription = errData.message;
           }
         } else {
+          const err = error as Record<string, unknown>;
           // Fallback to error message
-          errorDescription = error?.message || errorDescription;
+          errorDescription = typeof err?.message === "string" ? err.message : errorDescription;
         }
       } catch (parseError) {
+        const err = error as Record<string, unknown>;
         // If parsing fails, use the original error message
-        errorDescription = error?.message || errorDescription;
+        errorDescription = typeof err?.message === "string" ? err.message : errorDescription;
       }
 
       toast({
@@ -317,7 +325,9 @@ export function SignupWizard({
 
     setVerifying(true);
     try {
-      const response = (await verifyOtp(email, otpCode, "organization_registration")) as any;
+      const response = (await verifyOtp(email, otpCode, "organization_registration")) as {
+        success: boolean | string;
+      };
 
       if (response.success === true || response.success === "true") {
         setVerified(true);
@@ -326,13 +336,17 @@ export function SignupWizard({
           description: successMessage,
         });
       } else {
+        const resp = response as Record<string, unknown>;
         toast({
           title: "Verification Failed",
-          description: response.message || "Failed to verify OTP. Please try again.",
+          description:
+            typeof resp.message === "string"
+              ? resp.message
+              : "Failed to verify OTP. Please try again.",
           variant: "destructive",
         });
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Verification Failed",
         description: parseApiError(error, "Failed to verify OTP. Please try again."),
@@ -405,21 +419,24 @@ export function SignupWizard({
         },
       };
 
-      const response = await api.post(
+      const response = (await api.post(
         API_ENDPOINTS.organizations.register,
         requestData,
         { skipAuth: true } // Public endpoint - no auth required
-      );
+      )) as Record<string, unknown>;
 
       if (
         response.status === "success" ||
         response.message === "Organization registered successfully."
       ) {
         // Extract registration data from response
+        const adminInfo = response.admin_info as Record<string, unknown> | undefined;
+        const orgInfo = response.organization_info as Record<string, unknown> | undefined;
         const registrationData = {
-          username: response.admin_info?.username || "N/A",
-          organizationName: response.organization_info?.name || data.orgName,
-          email: response.admin_info?.email || form1.getValues("adminEmail"),
+          username: typeof adminInfo?.username === "string" ? adminInfo.username : "N/A",
+          organizationName: typeof orgInfo?.name === "string" ? orgInfo.name : data.orgName,
+          email:
+            typeof adminInfo?.email === "string" ? adminInfo.email : form1.getValues("adminEmail"),
         };
 
         // Store in sessionStorage for the success page
@@ -435,10 +452,11 @@ export function SignupWizard({
           setLocation("/registration-success");
         }, 500);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Parse validation errors
       try {
-        const errorText = error.message;
+        const err = error as Record<string, unknown>;
+        const errorText = typeof err.message === "string" ? err.message : "";
         const jsonMatch = errorText.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
           const errorData = JSON.parse(jsonMatch[0]);
@@ -450,7 +468,7 @@ export function SignupWizard({
             // Organization info errors
             if (errors.organization_info) {
               Object.keys(errors.organization_info).forEach((field) => {
-                const fieldMap: Record<string, any> = {
+                const fieldMap: Record<string, string> = {
                   name: "orgName",
                   type: "orgType",
                   phone_number: "orgPhoneNumber",
@@ -461,7 +479,7 @@ export function SignupWizard({
                 };
                 const formField = fieldMap[field];
                 if (formField) {
-                  form3.setError(formField, {
+                  form3.setError(formField as Parameters<typeof form3.setError>[0], {
                     type: "manual",
                     message: errors.organization_info[field][0],
                   });
@@ -472,7 +490,7 @@ export function SignupWizard({
             // Address info errors
             if (errors.address_info) {
               Object.keys(errors.address_info).forEach((field) => {
-                const fieldMap: Record<string, any> = {
+                const fieldMap: Record<string, string> = {
                   street_address: "streetAddress",
                   address_line_2: "addressLine2",
                   city: "city",
@@ -484,7 +502,7 @@ export function SignupWizard({
                 };
                 const formField = fieldMap[field];
                 if (formField) {
-                  form3.setError(formField, {
+                  form3.setError(formField as Parameters<typeof form3.setError>[0], {
                     type: "manual",
                     message: errors.address_info[field][0],
                   });
@@ -495,7 +513,7 @@ export function SignupWizard({
             // Admin info errors
             if (errors.admin_info) {
               Object.keys(errors.admin_info).forEach((field) => {
-                const fieldMap: Record<string, any> = {
+                const fieldMap: Record<string, string> = {
                   first_name: "firstName",
                   last_name: "lastName",
                   password: "password",
@@ -503,7 +521,7 @@ export function SignupWizard({
                 };
                 const formField = fieldMap[field];
                 if (formField) {
-                  form3.setError(formField, {
+                  form3.setError(formField as Parameters<typeof form3.setError>[0], {
                     type: "manual",
                     message: errors.admin_info[field][0],
                   });
@@ -571,7 +589,7 @@ export function SignupWizard({
             <AuthFormCard
               footer={
                 <Button
-                  className="w-full h-12 text-base"
+                  className="h-12 w-full text-base"
                   onClick={form1.handleSubmit(onStep1Submit)}
                   disabled={isLoading}
                   data-testid="button-send-otp"
@@ -585,13 +603,15 @@ export function SignupWizard({
               }
             >
               <div className="space-y-2">
-                <Label htmlFor="orgEmail" className="text-base">Organization Email</Label>
+                <Label htmlFor="orgEmail" className="text-base">
+                  Organization Email
+                </Label>
                 <div className="relative">
                   <Building2 className="text-muted-foreground absolute top-3.5 left-3 h-5 w-5" />
                   <Input
                     id="orgEmail"
                     placeholder="school@edu.org"
-                    className="pl-10 h-12 text-base"
+                    className="h-12 pl-10 text-base"
                     {...form1.register("orgEmail")}
                     data-testid="input-org-email"
                   />
@@ -603,13 +623,15 @@ export function SignupWizard({
                 )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="adminEmail" className="text-base">Administrator Email</Label>
+                <Label htmlFor="adminEmail" className="text-base">
+                  Administrator Email
+                </Label>
                 <div className="relative">
                   <Mail className="text-muted-foreground absolute top-3.5 left-3 h-5 w-5" />
                   <Input
                     id="adminEmail"
                     placeholder="admin@edu.org"
-                    className="pl-10 h-12 text-base"
+                    className="h-12 pl-10 text-base"
                     {...form1.register("adminEmail")}
                     data-testid="input-admin-email"
                   />
@@ -634,8 +656,13 @@ export function SignupWizard({
           >
             <AuthFormCard
               footer={
-                <div className="flex justify-between w-full gap-4">
-                  <Button variant="ghost" onClick={() => updateStep(1)} disabled={isLoading} className="h-12 text-base">
+                <div className="flex w-full justify-between gap-4">
+                  <Button
+                    variant="ghost"
+                    onClick={() => updateStep(1)}
+                    disabled={isLoading}
+                    className="h-12 text-base"
+                  >
                     Back
                   </Button>
                   <Button
@@ -653,7 +680,7 @@ export function SignupWizard({
                 id="adminOtp"
                 label="Administrator Email OTP"
                 email={form1.getValues("adminEmail")}
-                register={form2.register}
+                register={form2.register as unknown as UseFormRegister<FieldValues>}
                 fieldName="adminOtp"
                 error={form2.formState.errors.adminOtp}
                 isVerified={adminOtpVerified}
@@ -665,7 +692,7 @@ export function SignupWizard({
                 id="orgOtp"
                 label="Organization Email OTP"
                 email={form1.getValues("orgEmail")}
-                register={form2.register}
+                register={form2.register as unknown as UseFormRegister<FieldValues>}
                 fieldName="orgOtp"
                 error={form2.formState.errors.orgOtp}
                 isVerified={orgOtpVerified}
@@ -687,290 +714,294 @@ export function SignupWizard({
           >
             <AuthFormCard
               footer={
-                <div className="flex justify-between w-full gap-4">
+                <div className="flex w-full justify-between gap-4">
                   <Button variant="ghost" onClick={() => updateStep(2)} className="h-12 text-base">
                     Back
                   </Button>
                   <Button
-                    className="bg-primary hover:bg-primary/90 h-12 text-base px-8"
+                    className="bg-primary hover:bg-primary/90 h-12 px-8 text-base"
                     onClick={form3.handleSubmit(onStep3Submit)}
                     disabled={isLoading}
                     data-testid="button-complete-signup"
                   >
-                    {isLoading ? (
-                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    ) : (
-                      "Register"
-                    )}
+                    {isLoading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : "Register"}
                   </Button>
                 </div>
               }
             >
               {/* Organization Information */}
               <div className="space-y-4">
-                  <h3 className="text-primary flex items-center gap-2 text-base font-semibold">
-                    <Building2 className="h-5 w-5" />
-                    Organization Information
-                  </h3>
+                <h3 className="text-primary flex items-center gap-2 text-base font-semibold">
+                  <Building2 className="h-5 w-5" />
+                  Organization Information
+                </h3>
+
+                <div className="space-y-2">
+                  <Label htmlFor="orgName" className="text-base">
+                    Organization Name <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="orgName"
+                    placeholder="Green Valley School"
+                    {...form3.register("orgName")}
+                    data-testid="input-org-name"
+                    className="h-12 text-base"
+                  />
+                  {form3.formState.errors.orgName && (
+                    <p className="text-destructive text-sm">
+                      {form3.formState.errors.orgName.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="orgType" className="text-base">
+                      Type <span className="text-destructive">*</span>
+                    </Label>
+                    <Select onValueChange={(val) => form3.setValue("orgType", val)}>
+                      <SelectTrigger data-testid="select-org-type" className="h-12 text-base">
+                        <SelectValue placeholder="Select type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="public">Public</SelectItem>
+                        <SelectItem value="private">Private</SelectItem>
+                        <SelectItem value="charter">Charter</SelectItem>
+                        <SelectItem value="international">International</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {form3.formState.errors.orgType && (
+                      <p className="text-destructive text-sm">
+                        {form3.formState.errors.orgType.message}
+                      </p>
+                    )}
+                  </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="orgName" className="text-base">
-                      Organization Name <span className="text-destructive">*</span>
+                    <Label htmlFor="orgPhoneNumber" className="text-base">
+                      Phone Number <span className="text-destructive">*</span>
+                    </Label>
+                    <div className="relative">
+                      <Phone className="text-muted-foreground absolute top-3.5 left-3 h-5 w-5" />
+                      <Input
+                        id="orgPhoneNumber"
+                        placeholder="+919876543210"
+                        className="h-12 pl-10 text-base"
+                        {...form3.register("orgPhoneNumber")}
+                        data-testid="input-org-phone"
+                      />
+                    </div>
+                    {form3.formState.errors.orgPhoneNumber && (
+                      <p className="text-destructive text-sm">
+                        {form3.formState.errors.orgPhoneNumber.message}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="orgWebsite" className="text-base">
+                      Website URL
+                    </Label>
+                    <div className="relative">
+                      <Globe className="text-muted-foreground absolute top-3.5 left-3 h-5 w-5" />
+                      <Input
+                        id="orgWebsite"
+                        placeholder="https://school.edu"
+                        className="h-12 pl-10 text-base"
+                        {...form3.register("orgWebsite")}
+                        data-testid="input-org-website"
+                      />
+                    </div>
+                    {form3.formState.errors.orgWebsite && (
+                      <p className="text-destructive text-sm">
+                        {form3.formState.errors.orgWebsite.message}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="boardAffiliation" className="text-base">
+                      Board Affiliation
+                    </Label>
+                    <Select onValueChange={(val) => form3.setValue("boardAffiliation", val)}>
+                      <SelectTrigger className="h-12 text-base">
+                        <SelectValue placeholder="Select board" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="cbse">CBSE</SelectItem>
+                        <SelectItem value="icse">ICSE</SelectItem>
+                        <SelectItem value="state">State Board</SelectItem>
+                        <SelectItem value="ib">IB</SelectItem>
+                        <SelectItem value="cambridge">Cambridge</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {form3.formState.errors.boardAffiliation && (
+                      <p className="text-destructive text-sm">
+                        {form3.formState.errors.boardAffiliation.message}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="legalEntity" className="text-base">
+                      Legal Entity
                     </Label>
                     <Input
-                      id="orgName"
-                      placeholder="Green Valley School"
-                      {...form3.register("orgName")}
-                      data-testid="input-org-name"
+                      id="legalEntity"
+                      placeholder="ABC Education Trust"
+                      {...form3.register("legalEntity")}
                       className="h-12 text-base"
                     />
-                    {form3.formState.errors.orgName && (
+                    {form3.formState.errors.legalEntity && (
                       <p className="text-destructive text-sm">
-                        {form3.formState.errors.orgName.message}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="orgType" className="text-base">
-                        Type <span className="text-destructive">*</span>
-                      </Label>
-                      <Select onValueChange={(val) => form3.setValue("orgType", val)}>
-                        <SelectTrigger data-testid="select-org-type" className="h-12 text-base">
-                          <SelectValue placeholder="Select type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="public">Public</SelectItem>
-                          <SelectItem value="private">Private</SelectItem>
-                          <SelectItem value="charter">Charter</SelectItem>
-                          <SelectItem value="international">International</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      {form3.formState.errors.orgType && (
-                        <p className="text-destructive text-sm">
-                          {form3.formState.errors.orgType.message}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="orgPhoneNumber" className="text-base">
-                        Phone Number <span className="text-destructive">*</span>
-                      </Label>
-                      <div className="relative">
-                        <Phone className="text-muted-foreground absolute top-3.5 left-3 h-5 w-5" />
-                        <Input
-                          id="orgPhoneNumber"
-                          placeholder="+919876543210"
-                          className="pl-10 h-12 text-base"
-                          {...form3.register("orgPhoneNumber")}
-                          data-testid="input-org-phone"
-                        />
-                      </div>
-                      {form3.formState.errors.orgPhoneNumber && (
-                        <p className="text-destructive text-sm">
-                          {form3.formState.errors.orgPhoneNumber.message}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="orgWebsite" className="text-base">Website URL</Label>
-                      <div className="relative">
-                        <Globe className="text-muted-foreground absolute top-3.5 left-3 h-5 w-5" />
-                        <Input
-                          id="orgWebsite"
-                          placeholder="https://school.edu"
-                          className="pl-10 h-12 text-base"
-                          {...form3.register("orgWebsite")}
-                          data-testid="input-org-website"
-                        />
-                      </div>
-                      {form3.formState.errors.orgWebsite && (
-                        <p className="text-destructive text-sm">
-                          {form3.formState.errors.orgWebsite.message}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="boardAffiliation" className="text-base">Board Affiliation</Label>
-                      <Select onValueChange={(val) => form3.setValue("boardAffiliation", val)}>
-                        <SelectTrigger className="h-12 text-base">
-                          <SelectValue placeholder="Select board" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="cbse">CBSE</SelectItem>
-                          <SelectItem value="icse">ICSE</SelectItem>
-                          <SelectItem value="state">State Board</SelectItem>
-                          <SelectItem value="ib">IB</SelectItem>
-                          <SelectItem value="cambridge">Cambridge</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      {form3.formState.errors.boardAffiliation && (
-                        <p className="text-destructive text-sm">
-                          {form3.formState.errors.boardAffiliation.message}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="legalEntity" className="text-base">Legal Entity</Label>
-                      <Input
-                        id="legalEntity"
-                        placeholder="ABC Education Trust"
-                        {...form3.register("legalEntity")}
-                        className="h-12 text-base"
-                      />
-                      {form3.formState.errors.legalEntity && (
-                        <p className="text-destructive text-sm">
-                          {form3.formState.errors.legalEntity.message}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="agentReferral" className="text-base">Agent Referral</Label>
-                      <Input
-                        id="agentReferral"
-                        placeholder="Referral code"
-                        {...form3.register("agentReferral")}
-                        className="h-12 text-base"
-                      />
-                      {form3.formState.errors.agentReferral && (
-                        <p className="text-destructive text-sm">
-                          {form3.formState.errors.agentReferral.message}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Address Information */}
-                <div className="space-y-4 border-t pt-4">
-                  <h3 className="text-primary flex items-center gap-2 text-base font-semibold">
-                    <MapPin className="h-5 w-5" />
-                    Organization Address
-                  </h3>
-
-                  <AddressInputFields
-                    control={form3.control}
-                    streetAddressName="streetAddress"
-                    addressLine2Name="addressLine2"
-                    cityName="city"
-                    stateName="state"
-                    zipCodeName="zipCode"
-                    countryName="country"
-                    latitudeName="latitude"
-                    longitudeName="longitude"
-                    onAddressSelect={handleAddressSelect}
-                    errors={{
-                      streetAddress: form3.formState.errors.streetAddress,
-                      addressLine2: form3.formState.errors.addressLine2,
-                      city: form3.formState.errors.city,
-                      state: form3.formState.errors.state,
-                      zipCode: form3.formState.errors.zipCode,
-                      country: form3.formState.errors.country,
-                    }}
-                    showLocationButton={true}
-                    gridCols="2"
-                  />
-                </div>
-
-                {/* Admin Information */}
-                <div className="space-y-4 border-t pt-4">
-                  <h3 className="text-primary flex items-center gap-2 text-base font-semibold">
-                    <User className="h-5 w-5" />
-                    Administrator Information
-                  </h3>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="firstName" className="text-base">
-                        First Name <span className="text-destructive">*</span>
-                      </Label>
-                      <Input
-                        id="firstName"
-                        placeholder="Rajesh"
-                        {...form3.register("firstName")}
-                        data-testid="input-firstname"
-                        className="h-12 text-base"
-                      />
-                      {form3.formState.errors.firstName && (
-                        <p className="text-destructive text-sm">
-                          {form3.formState.errors.firstName.message}
-                        </p>
-                      )}
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="lastName" className="text-base">
-                        Last Name <span className="text-destructive">*</span>
-                      </Label>
-                      <Input
-                        id="lastName"
-                        placeholder="Kumar"
-                        {...form3.register("lastName")}
-                        data-testid="input-lastname"
-                        className="h-12 text-base"
-                      />
-                      {form3.formState.errors.lastName && (
-                        <p className="text-destructive text-sm">
-                          {form3.formState.errors.lastName.message}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="password" className="text-base">
-                      Password <span className="text-destructive">*</span>
-                    </Label>
-                    <div className="relative">
-                      <Lock className="text-muted-foreground absolute top-3.5 left-3 h-5 w-5" />
-                      <Input
-                        id="password"
-                        type="password"
-                        placeholder="Minimum 8 characters"
-                        className="pl-10 h-12 text-base"
-                        {...form3.register("password")}
-                        data-testid="input-signup-password"
-                      />
-                    </div>
-                    {form3.formState.errors.password && (
-                      <p className="text-destructive text-sm">
-                        {form3.formState.errors.password.message}
+                        {form3.formState.errors.legalEntity.message}
                       </p>
                     )}
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="confirmPassword" className="text-base">
-                      Confirm Password <span className="text-destructive">*</span>
+                    <Label htmlFor="agentReferral" className="text-base">
+                      Agent Referral
                     </Label>
-                    <div className="relative">
-                      <Lock className="text-muted-foreground absolute top-3.5 left-3 h-5 w-5" />
-                      <Input
-                        id="confirmPassword"
-                        type="password"
-                        placeholder="Re-enter password"
-                        className="pl-10 h-12 text-base"
-                        {...form3.register("confirmPassword")}
-                        data-testid="input-confirm-password"
-                      />
-                    </div>
-                    {form3.formState.errors.confirmPassword && (
+                    <Input
+                      id="agentReferral"
+                      placeholder="Referral code"
+                      {...form3.register("agentReferral")}
+                      className="h-12 text-base"
+                    />
+                    {form3.formState.errors.agentReferral && (
                       <p className="text-destructive text-sm">
-                        {form3.formState.errors.confirmPassword.message}
+                        {form3.formState.errors.agentReferral.message}
                       </p>
                     )}
                   </div>
                 </div>
-            </AuthFormCard> 
+              </div>
+
+              {/* Address Information */}
+              <div className="space-y-4 border-t pt-4">
+                <h3 className="text-primary flex items-center gap-2 text-base font-semibold">
+                  <MapPin className="h-5 w-5" />
+                  Organization Address
+                </h3>
+
+                <AddressInputFields
+                  control={form3.control}
+                  streetAddressName="streetAddress"
+                  addressLine2Name="addressLine2"
+                  cityName="city"
+                  stateName="state"
+                  zipCodeName="zipCode"
+                  countryName="country"
+                  latitudeName="latitude"
+                  longitudeName="longitude"
+                  onAddressSelect={handleAddressSelect}
+                  errors={{
+                    streetAddress: form3.formState.errors.streetAddress,
+                    addressLine2: form3.formState.errors.addressLine2,
+                    city: form3.formState.errors.city,
+                    state: form3.formState.errors.state,
+                    zipCode: form3.formState.errors.zipCode,
+                    country: form3.formState.errors.country,
+                  }}
+                  showLocationButton={true}
+                  gridCols="2"
+                />
+              </div>
+
+              {/* Admin Information */}
+              <div className="space-y-4 border-t pt-4">
+                <h3 className="text-primary flex items-center gap-2 text-base font-semibold">
+                  <User className="h-5 w-5" />
+                  Administrator Information
+                </h3>
+
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="firstName" className="text-base">
+                      First Name <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      id="firstName"
+                      placeholder="Rajesh"
+                      {...form3.register("firstName")}
+                      data-testid="input-firstname"
+                      className="h-12 text-base"
+                    />
+                    {form3.formState.errors.firstName && (
+                      <p className="text-destructive text-sm">
+                        {form3.formState.errors.firstName.message}
+                      </p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="lastName" className="text-base">
+                      Last Name <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      id="lastName"
+                      placeholder="Kumar"
+                      {...form3.register("lastName")}
+                      data-testid="input-lastname"
+                      className="h-12 text-base"
+                    />
+                    {form3.formState.errors.lastName && (
+                      <p className="text-destructive text-sm">
+                        {form3.formState.errors.lastName.message}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="password" className="text-base">
+                    Password <span className="text-destructive">*</span>
+                  </Label>
+                  <div className="relative">
+                    <Lock className="text-muted-foreground absolute top-3.5 left-3 h-5 w-5" />
+                    <Input
+                      id="password"
+                      type="password"
+                      placeholder="Minimum 8 characters"
+                      className="h-12 pl-10 text-base"
+                      {...form3.register("password")}
+                      data-testid="input-signup-password"
+                    />
+                  </div>
+                  {form3.formState.errors.password && (
+                    <p className="text-destructive text-sm">
+                      {form3.formState.errors.password.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword" className="text-base">
+                    Confirm Password <span className="text-destructive">*</span>
+                  </Label>
+                  <div className="relative">
+                    <Lock className="text-muted-foreground absolute top-3.5 left-3 h-5 w-5" />
+                    <Input
+                      id="confirmPassword"
+                      type="password"
+                      placeholder="Re-enter password"
+                      className="h-12 pl-10 text-base"
+                      {...form3.register("confirmPassword")}
+                      data-testid="input-confirm-password"
+                    />
+                  </div>
+                  {form3.formState.errors.confirmPassword && (
+                    <p className="text-destructive text-sm">
+                      {form3.formState.errors.confirmPassword.message}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </AuthFormCard>
           </motion.div>
         )}
       </AnimatePresence>

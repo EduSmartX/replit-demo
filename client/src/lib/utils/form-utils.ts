@@ -3,27 +3,14 @@
  * Reusable utilities for form operations across different entities
  */
 
-/**
- * Generic API Response Types
- */
-export interface ApiResponse<T> {
-  success: boolean;
-  message: string;
-  data: T;
-  code: number;
-}
+// Import date utilities
+import { formatDateForInput, parseLocalDate } from "./date-utils";
+// Import types from specialized utils
+import type { ApiResponse, PaginatedApiResponse } from "./api-service-utils";
 
-export interface PaginatedApiResponse<T> {
-  success: boolean;
-  message: string;
-  data: {
-    count: number;
-    next: string | null;
-    previous: string | null;
-    results: T[];
-  };
-  code: number;
-}
+// Re-export for convenience
+export type { ApiResponse, PaginatedApiResponse };
+export { formatDateForInput, parseLocalDate };
 
 /**
  * Form mode type
@@ -83,24 +70,6 @@ export function isFormMode(mode: FormMode, checkMode: FormMode | FormMode[]): bo
 }
 
 /**
- * Format date for input field (YYYY-MM-DD)
- */
-export function formatDateForInput(date: string | Date | undefined): string {
-  if (!date) {return "";}
-  const d = typeof date === "string" ? new Date(date) : date;
-  return d.toISOString().split("T")[0];
-}
-
-/**
- * Parse local date string without timezone conversion
- */
-export function parseLocalDate(dateString: string | undefined): Date | undefined {
-  if (!dateString) {return undefined;}
-  const [year, month, day] = dateString.split("-").map(Number);
-  return new Date(year, month - 1, day); // month is 0-indexed
-}
-
-/**
  * Handle form mutation success with optional callbacks
  */
 export interface MutationSuccessOptions {
@@ -126,12 +95,13 @@ export function handleMutationSuccess(options: MutationSuccessOptions) {
 /**
  * Extract validation errors from API error response
  */
-export function extractValidationErrors(error: any): Record<string, string[]> {
+export function extractValidationErrors(error: unknown): Record<string, string[]> {
   try {
-    const errorText = error?.message || "";
+    const err = error as { message?: string };
+    const errorText = err?.message || "";
     const jsonMatch = errorText.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
-      const errorData = JSON.parse(jsonMatch[0]);
+      const errorData = JSON.parse(jsonMatch[0]) as { errors?: Record<string, string[]> };
       return errorData.errors || {};
     }
   } catch (e) {
@@ -156,8 +126,8 @@ export function formatValidationError(errors: Record<string, string[]>): string 
 /**
  * Clean empty strings from payload
  */
-export function cleanPayload<T extends Record<string, any>>(payload: T): T {
-  const cleaned: any = {};
+export function cleanPayload<T extends Record<string, unknown>>(payload: T): T {
+  const cleaned: Record<string, unknown> = {};
   Object.entries(payload).forEach(([key, value]) => {
     if (value !== "" && value !== null && value !== undefined) {
       cleaned[key] = value;
@@ -169,7 +139,7 @@ export function cleanPayload<T extends Record<string, any>>(payload: T): T {
 /**
  * Convert number fields to integers in payload
  */
-export function convertNumberFields<T extends Record<string, any>>(
+export function convertNumberFields<T extends Record<string, unknown>>(
   payload: T,
   fields: string[]
 ): T {
@@ -178,7 +148,7 @@ export function convertNumberFields<T extends Record<string, any>>(
     if (converted[field] && typeof converted[field] === "string") {
       const num = parseInt(converted[field] as string, 10);
       if (!isNaN(num)) {
-        converted[field] = num as any;
+        (converted as Record<string, unknown>)[field] = num;
       }
     }
   });
@@ -223,30 +193,42 @@ export function createCrudActions<T>(
   return {
     handleCreate: () => {
       setState({ viewMode: "create", selectedItem: null });
-      if (setLocation) {setLocation(`${basePath}/create`);}
+      if (setLocation) {
+        setLocation(`${basePath}/create`);
+      }
     },
     handleView: (item: T) => {
       setState({ viewMode: "view", selectedItem: item });
-      const id = (item as any).public_id || (item as any).id;
-      if (setLocation && id) {setLocation(`${basePath}/${id}`);}
+      const id =
+        (item as Record<string, unknown>).public_id || (item as Record<string, unknown>).id;
+      if (setLocation && id) {
+        setLocation(`${basePath}/${id}`);
+      }
     },
     handleEdit: (item: T) => {
       setState({ viewMode: "edit", selectedItem: item });
-      const id = (item as any).public_id || (item as any).id;
-      if (setLocation && id) {setLocation(`${basePath}/${id}/edit`);}
+      const id =
+        (item as Record<string, unknown>).public_id || (item as Record<string, unknown>).id;
+      if (setLocation && id) {
+        setLocation(`${basePath}/${id}/edit`);
+      }
     },
     handleDelete: (id: string) => {
       deleteAction(id);
     },
     handleCancel: () => {
       setState({ viewMode: "list", selectedItem: null });
-      if (setLocation) {setLocation(basePath);}
+      if (setLocation) {
+        setLocation(basePath);
+      }
     },
     handleSuccess: () => {
       setState({ showSuccess: true });
       setTimeout(() => {
         setState({ showSuccess: false, viewMode: "list", selectedItem: null });
-        if (setLocation) {setLocation(basePath);}
+        if (setLocation) {
+          setLocation(basePath);
+        }
       }, 2000);
     },
   };

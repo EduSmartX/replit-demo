@@ -71,6 +71,29 @@ export function UserProvider({ children }: { children: ReactNode }) {
     setIsInitialized(true);
   }, []);
 
+  // Listen for storage changes in other tabs (cross-tab logout)
+  useEffect(() => {
+    const handleStorageChange = (event: StorageEvent) => {
+      // If accessToken is removed in another tab, logout this tab too
+      if (event.key === "accessToken" && event.newValue === null) {
+        // Clear state in this tab
+        setUser(null);
+        setOrganization(null);
+        setTokens(null);
+
+        // Redirect to login page
+        window.location.href = "/auth";
+      }
+    };
+
+    // Listen for storage events from other tabs
+    window.addEventListener("storage", handleStorageChange);
+
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+    };
+  }, []);
+
   const setAuth = (user: User, organization: Organization, tokens: AuthTokens) => {
     setUser(user);
     setOrganization(organization);
@@ -81,7 +104,33 @@ export function UserProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("refreshToken", tokens.refresh);
   };
 
-  const logout = () => {
+  const logout = async () => {
+    // Call backend logout API to invalidate token
+    try {
+      const accessToken = localStorage.getItem("accessToken");
+      const refreshToken = localStorage.getItem("refreshToken");
+      if (accessToken && refreshToken) {
+        await fetch(
+          `${import.meta.env.VITE_API_BASE_URL || "http://localhost:8000"}/api/auth/logout/`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              access: accessToken,
+              refresh: refreshToken,
+            }),
+          }
+        );
+      }
+    } catch (error) {
+      // Ignore errors, proceed with logout anyway
+      console.error("Logout API call failed:", error);
+    }
+
+    // Clear all state and localStorage
     setUser(null);
     setOrganization(null);
     setTokens(null);
@@ -89,13 +138,17 @@ export function UserProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem("organization");
     localStorage.removeItem("accessToken");
     localStorage.removeItem("refreshToken");
+
+    // Clear history to prevent back navigation
+    window.history.pushState(null, "", "/auth");
+    window.history.replaceState(null, "", "/auth");
   };
 
   // Don't render children until we've checked localStorage
   if (!isInitialized) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-gray-900"></div>
       </div>
     );
   }

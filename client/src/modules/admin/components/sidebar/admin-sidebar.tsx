@@ -21,8 +21,10 @@ import {
   Users,
   X,
   AlertOctagon,
+  ClipboardCheck,
+  UserCog,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ResizableSidebar } from "./resizable-sidebar";
@@ -39,9 +41,23 @@ const adminMenuItems = [
   { id: "subjects", label: "Subjects", icon: BookOpen, section: "admin" },
   { id: "students", label: "Students", icon: Users, section: "admin" },
   { divider: true, label: "Operations" },
-  { id: "exceptional-work", label: "Exceptional Work Policy", icon: AlertOctagon, section: "admin" },
+  {
+    id: "exceptional-work",
+    label: "Exceptional Work Policy",
+    icon: AlertOctagon,
+    section: "admin",
+  },
   { id: "attendance", label: "Attendance", icon: CheckCircle2, section: "admin" },
-  { id: "requests", label: "Leave Requests", icon: Briefcase, section: "admin" },
+  {
+    id: "leave-request-reviews",
+    label: "Leave Request Reviews",
+    icon: ClipboardCheck,
+    section: "admin",
+  },
+  { id: "manage-leave-balances", label: "Manage Leave Balances", icon: FileText, section: "admin" },
+  { id: "leave-requests", label: "My Leave Requests", icon: Briefcase, section: "admin" },
+  { divider: true, label: "Account" },
+  { id: "profile-settings", label: "Profile Settings", icon: UserCog, section: "account" },
 ];
 
 interface AdminSidebarProps {
@@ -51,13 +67,38 @@ interface AdminSidebarProps {
 
 export function AdminSidebar({ activeMenu, onMenuChange }: AdminSidebarProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const navRef = useRef<HTMLElement>(null);
+  const activeItemRef = useRef<HTMLButtonElement>(null);
+
+  // Scroll to active menu item when it changes
+  useEffect(() => {
+    if (activeItemRef.current && navRef.current) {
+      const navElement = navRef.current;
+      const activeElement = activeItemRef.current;
+
+      // Get positions
+      const navTop = navElement.scrollTop;
+      const navBottom = navTop + navElement.clientHeight;
+      const activeTop = activeElement.offsetTop;
+      const activeBottom = activeTop + activeElement.offsetHeight;
+
+      // Check if active item is not fully visible
+      if (activeTop < navTop || activeBottom > navBottom) {
+        // Scroll to center the active item
+        activeElement.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+      }
+    }
+  }, [activeMenu]);
 
   return (
     <>
       <Button
         variant="ghost"
         size="icon"
-        className="fixed top-4 left-4 z-[60] md:hidden text-white hover:bg-white/20"
+        className="fixed top-4 left-4 z-[60] text-white hover:bg-white/20 md:hidden"
         onClick={() => setIsOpen(!isOpen)}
         data-testid="button-mobile-menu"
       >
@@ -86,25 +127,29 @@ export function AdminSidebar({ activeMenu, onMenuChange }: AdminSidebarProps) {
           <>
             <div className="border-b border-blue-200 bg-gradient-to-r from-blue-600 to-teal-600 p-6">
               <div className="flex items-center space-x-2">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white shadow-lg flex-shrink-0">
+                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-white shadow-lg">
                   <Award className="h-6 w-6 text-blue-600" />
                 </div>
                 {width > 250 && (
                   <div className="min-w-0">
-                    <h1 className="text-lg font-bold text-white truncate">School Admin</h1>
-                    <p className="text-xs text-blue-100 truncate">Full Control</p>
+                    <h1 className="truncate text-lg font-bold text-white">School Admin</h1>
+                    <p className="truncate text-xs text-blue-100">Full Control</p>
                   </div>
                 )}
               </div>
             </div>
 
-            <nav className="flex-1 space-y-1 overflow-y-auto p-4" data-testid="sidebar-admin">
+            <nav
+              ref={navRef}
+              className="flex-1 space-y-1 overflow-y-auto p-4"
+              data-testid="sidebar-admin"
+            >
               {adminMenuItems.map((item, index) => {
                 if ("divider" in item && item.divider) {
                   return (
                     <div key={index} className="mt-2 py-4">
                       {width > 250 && (
-                        <p className="mb-3 px-3 text-xs font-semibold tracking-wider text-blue-700 uppercase truncate">
+                        <p className="mb-3 truncate px-3 text-xs font-semibold tracking-wider text-blue-700 uppercase">
                           {item.label}
                         </p>
                       )}
@@ -122,6 +167,7 @@ export function AdminSidebar({ activeMenu, onMenuChange }: AdminSidebarProps) {
                 return (
                   <button
                     key={menuItem.id}
+                    ref={isActive ? activeItemRef : null}
                     onClick={(e) => {
                       e.preventDefault();
                       onMenuChange(menuItem.id);
@@ -142,24 +188,6 @@ export function AdminSidebar({ activeMenu, onMenuChange }: AdminSidebarProps) {
                 );
               })}
             </nav>
-
-            <div className="space-y-2 border-t border-blue-200 bg-gradient-to-r from-green-50 to-blue-50 p-4">
-              {width > 250 ? (
-                <div className="space-y-1 text-sm">
-                  <p className="text-xs font-semibold text-blue-600 truncate">Logged in as</p>
-                  <p className="font-semibold text-blue-900 truncate" data-testid="sidebar-username">
-                    John Doe
-                  </p>
-                  <p className="text-xs text-green-700 truncate">School Admin</p>
-                </div>
-              ) : (
-                <div className="flex justify-center">
-                  <div className="h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-bold">
-                    JD
-                  </div>
-                </div>
-              )}
-            </div>
           </>
         )}
       </ResizableSidebar>

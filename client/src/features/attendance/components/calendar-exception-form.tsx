@@ -25,8 +25,15 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { createCalendarException, fetchCalendarException, updateCalendarException } from "@/lib/api/calendar-exception-api";
-import type { CalendarExceptionCreate, CalendarExceptionUpdate } from "@/lib/api/calendar-exception-types";
+import {
+  createCalendarException,
+  fetchCalendarException,
+  updateCalendarException,
+} from "@/lib/api/calendar-exception-api";
+import type {
+  CalendarExceptionCreate,
+  CalendarExceptionUpdate,
+} from "@/lib/api/calendar-exception-types";
 import { fetchHolidayCalendar, fetchWorkingDayPolicy } from "@/lib/api/holiday-api";
 import { PAGE_SIZES, QUERY_KEYS, STALE_TIMES } from "@/lib/constants";
 import { getShortErrorMessage } from "@/lib/error-utils";
@@ -54,17 +61,20 @@ interface CalendarExceptionFormProps {
   mode?: "create" | "edit" | "view";
 }
 
-export function CalendarExceptionForm({ publicId, mode = "create" }: CalendarExceptionFormProps = {}) {
+export function CalendarExceptionForm({
+  publicId,
+  mode = "create",
+}: CalendarExceptionFormProps = {}) {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const isEditMode = mode === "edit";
   const isViewMode = mode === "view";
   const isCreateMode = mode === "create";
-  
+
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [successMessage, setSuccessMessage] = useState({ title: "", description: "" });
-  
+
   const [exception, setException] = useState<ExceptionFormData>({
     id: crypto.randomUUID(),
     date: new Date(),
@@ -80,10 +90,7 @@ export function CalendarExceptionForm({ publicId, mode = "create" }: CalendarExc
   const classes = classesResponse?.data || [];
 
   // Fetch existing exception for edit/view mode
-  const {
-    data: existingException,
-    isLoading: isLoadingException,
-  } = useQuery({
+  const { data: existingException, isLoading: isLoadingException } = useQuery({
     queryKey: [QUERY_KEYS.CALENDAR_EXCEPTION_DETAILS, publicId || ""],
     queryFn: () => fetchCalendarException(publicId as string),
     enabled: !!publicId && (isEditMode || isViewMode),
@@ -136,11 +143,13 @@ export function CalendarExceptionForm({ publicId, mode = "create" }: CalendarExc
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.CALENDAR_EXCEPTIONS] });
       if (publicId) {
-        queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.CALENDAR_EXCEPTION_DETAILS, publicId] });
+        queryClient.invalidateQueries({
+          queryKey: [QUERY_KEYS.CALENDAR_EXCEPTION_DETAILS, publicId],
+        });
       }
       setSuccessMessage({
         title: isEditMode ? "Exception Updated!" : "Exception Created!",
-        description: isEditMode 
+        description: isEditMode
           ? "The calendar exception has been updated successfully."
           : "The calendar exception has been created successfully.",
       });
@@ -190,14 +199,14 @@ export function CalendarExceptionForm({ publicId, mode = "create" }: CalendarExc
     if (!workingDayPolicy) {
       return false;
     }
-    
+
     const dayOfWeek = date.getDay(); // 0 = Sunday, 6 = Saturday
-    
+
     // Check Sunday
     if (dayOfWeek === 0 && workingDayPolicy.sunday_off) {
       return true;
     }
-    
+
     // Check Saturday
     if (dayOfWeek === 6) {
       if (workingDayPolicy.saturday_off_pattern === "ALL") {
@@ -206,11 +215,11 @@ export function CalendarExceptionForm({ publicId, mode = "create" }: CalendarExc
       if (workingDayPolicy.saturday_off_pattern === "NONE") {
         return false;
       }
-      
+
       // Calculate which Saturday of the month (1st, 2nd, 3rd, 4th, 5th)
       const dayOfMonth = date.getDate();
       const saturdayOfMonth = Math.floor((dayOfMonth - 1) / 7) + 1;
-      
+
       if (workingDayPolicy.saturday_off_pattern === "SECOND_ONLY") {
         return saturdayOfMonth === 2;
       }
@@ -218,7 +227,7 @@ export function CalendarExceptionForm({ publicId, mode = "create" }: CalendarExc
         return saturdayOfMonth === 2 || saturdayOfMonth === 4;
       }
     }
-    
+
     return false;
   };
 
@@ -318,7 +327,7 @@ export function CalendarExceptionForm({ publicId, mode = "create" }: CalendarExc
   // Loading state for edit/view mode
   if ((isEditMode || isViewMode) && isLoadingException) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
+      <div className="flex min-h-[400px] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
       </div>
     );
@@ -327,9 +336,14 @@ export function CalendarExceptionForm({ publicId, mode = "create" }: CalendarExc
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => setLocation("/exceptional-work")} title="Back">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setLocation("/exceptional-work")}
+            title="Back"
+          >
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
@@ -346,8 +360,8 @@ export function CalendarExceptionForm({ publicId, mode = "create" }: CalendarExc
           </div>
         </div>
         {isViewMode && publicId && (
-          <Button 
-            onClick={() => setLocation(`/exceptional-work/${publicId}/edit`)} 
+          <Button
+            onClick={() => setLocation(`/exceptional-work/${publicId}/edit`)}
             className="gap-2 bg-blue-600 hover:bg-blue-700"
           >
             <Edit className="h-4 w-4" />
@@ -358,144 +372,149 @@ export function CalendarExceptionForm({ publicId, mode = "create" }: CalendarExc
 
       {/* Exception Form */}
       <Card className="border-2">
-        <CardContent className="pt-6 space-y-4">
-                {/* Date and Exception Type in Single Row */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Date */}
-                  <div className="space-y-2">
-                    <span className="text-sm font-medium">Date</span>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          disabled={isViewMode}
-                          className={cn(
-                            "w-full justify-start text-left font-normal",
-                            !exception.date && "text-muted-foreground"
-                          )}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {exception.date ? format(exception.date, "PPP") : "Pick a date"}
-                        </Button>
-                      </PopoverTrigger>
-                      {!isViewMode && (
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={exception.date}
-                            onSelect={(date) => date && updateException({ date })}
-                            disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      )}
-                    </Popover>
-                  </div>
-
-                  {/* Exception Type */}
-                  <div className="space-y-2">
-                    <span className="text-sm font-medium">Exception Type</span>
-                    <Select
-                      value={exception.override_type}
-                      onValueChange={(value: "FORCE_WORKING" | "FORCE_HOLIDAY") =>
-                        updateException({ override_type: value })
-                      }
-                      disabled={isViewMode}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="FORCE_WORKING">
-                          <div className="flex items-center gap-2">
-                            <div className="h-2 w-2 rounded-full bg-green-500" />
-                            <span>Force Working - Make holiday a working day</span>
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="FORCE_HOLIDAY">
-                          <div className="flex items-center gap-2">
-                            <div className="h-2 w-2 rounded-full bg-red-500" />
-                            <span>Force Holiday - Give holiday on working day</span>
-                          </div>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                {/* Apply to All Classes */}
-                <div className="flex items-center space-x-3 rounded-md border p-4">
-                  <Checkbox
-                    checked={exception.is_applicable_to_all_classes}
-                    onCheckedChange={(checked) =>
-                      updateException({ is_applicable_to_all_classes: checked as boolean })
-                    }
+        <CardContent className="space-y-4 pt-6">
+          {/* Date and Exception Type in Single Row */}
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            {/* Date */}
+            <div className="space-y-2">
+              <span className="text-sm font-medium">Date</span>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
                     disabled={isViewMode}
-                  />
-                  <div className="space-y-1 leading-none">
-                    <span className="text-sm font-medium">Apply to all classes</span>
-                    <p className="text-sm text-gray-600">
-                      This exception will apply to all classes in the organization
-                    </p>
-                  </div>
-                </div>
-
-                {/* Class Selection */}
-                {!exception.is_applicable_to_all_classes && (
-                  <div className="space-y-2">
-                    <span className="text-sm font-medium">Select Classes</span>
-                    <div className="max-h-60 overflow-y-auto rounded-md border p-4">
-                      {isLoadingClasses && (
-                        <div className="flex items-center justify-center py-8">
-                          <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
-                          <span className="ml-2 text-sm text-gray-600">Loading classes...</span>
-                        </div>
-                      )}
-                      {!isLoadingClasses && classes.length > 0 && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          {classes.map((cls) => (
-                            <div key={cls.public_id} className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded">
-                              <Checkbox
-                                checked={exception.selected_classes.includes(cls.public_id)}
-                                onCheckedChange={() => handleClassToggle(cls.public_id)}
-                                disabled={isViewMode}
-                              />
-                              <label className="text-sm font-medium leading-none cursor-pointer">
-                                {cls.class_master.name} - {cls.name}
-                              </label>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      {!isLoadingClasses && classes.length === 0 && (
-                        <p className="text-sm text-muted-foreground">No classes available</p>
-                      )}
-                    </div>
-                    {exception.selected_classes.length === 0 && (
-                      <p className="text-sm text-red-600">Please select at least one class</p>
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !exception.date && "text-muted-foreground"
                     )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {exception.date ? format(exception.date, "PPP") : "Pick a date"}
+                  </Button>
+                </PopoverTrigger>
+                {!isViewMode && (
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={exception.date}
+                      onSelect={(date) => date && updateException({ date })}
+                      disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                )}
+              </Popover>
+            </div>
+
+            {/* Exception Type */}
+            <div className="space-y-2">
+              <span className="text-sm font-medium">Exception Type</span>
+              <Select
+                value={exception.override_type}
+                onValueChange={(value: "FORCE_WORKING" | "FORCE_HOLIDAY") =>
+                  updateException({ override_type: value })
+                }
+                disabled={isViewMode}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="FORCE_WORKING">
+                    <div className="flex items-center gap-2">
+                      <div className="h-2 w-2 rounded-full bg-green-500" />
+                      <span>Force Working - Make holiday a working day</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="FORCE_HOLIDAY">
+                    <div className="flex items-center gap-2">
+                      <div className="h-2 w-2 rounded-full bg-red-500" />
+                      <span>Force Holiday - Give holiday on working day</span>
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Apply to All Classes */}
+          <div className="flex items-center space-x-3 rounded-md border p-4">
+            <Checkbox
+              checked={exception.is_applicable_to_all_classes}
+              onCheckedChange={(checked) =>
+                updateException({ is_applicable_to_all_classes: checked as boolean })
+              }
+              disabled={isViewMode}
+            />
+            <div className="space-y-1 leading-none">
+              <span className="text-sm font-medium">Apply to all classes</span>
+              <p className="text-sm text-gray-600">
+                This exception will apply to all classes in the organization
+              </p>
+            </div>
+          </div>
+
+          {/* Class Selection */}
+          {!exception.is_applicable_to_all_classes && (
+            <div className="space-y-2">
+              <span className="text-sm font-medium">Select Classes</span>
+              <div className="max-h-60 overflow-y-auto rounded-md border p-4">
+                {isLoadingClasses && (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+                    <span className="ml-2 text-sm text-gray-600">Loading classes...</span>
                   </div>
                 )}
+                {!isLoadingClasses && classes.length > 0 && (
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                    {classes.map((cls) => (
+                      <div
+                        key={cls.public_id}
+                        className="flex items-center space-x-2 rounded p-2 hover:bg-gray-50"
+                      >
+                        <Checkbox
+                          checked={exception.selected_classes.includes(cls.public_id)}
+                          onCheckedChange={() => handleClassToggle(cls.public_id)}
+                          disabled={isViewMode}
+                        />
+                        <label className="cursor-pointer text-sm leading-none font-medium">
+                          {cls.class_master.name} - {cls.name}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {!isLoadingClasses && classes.length === 0 && (
+                  <p className="text-muted-foreground text-sm">No classes available</p>
+                )}
+              </div>
+              {exception.selected_classes.length === 0 && (
+                <p className="text-sm text-red-600">Please select at least one class</p>
+              )}
+            </div>
+          )}
 
-                {/* Reason */}
-                <div className="space-y-2">
-                  <span className="text-sm font-medium">Reason <span className="text-red-500">*</span></span>
-                  <Textarea
-                    value={exception.reason}
-                    onChange={(e) => updateException({ reason: e.target.value })}
-                    placeholder="Enter reason for this exception..."
-                    className="resize-none"
-                    rows={3}
-                    disabled={isViewMode}
-                  />
-                  <p className="text-sm text-gray-600">Provide a clear reason for this exception</p>
-                </div>
-              </CardContent>
-            </Card>
+          {/* Reason */}
+          <div className="space-y-2">
+            <span className="text-sm font-medium">
+              Reason <span className="text-red-500">*</span>
+            </span>
+            <Textarea
+              value={exception.reason}
+              onChange={(e) => updateException({ reason: e.target.value })}
+              placeholder="Enter reason for this exception..."
+              className="resize-none"
+              rows={3}
+              disabled={isViewMode}
+            />
+            <p className="text-sm text-gray-600">Provide a clear reason for this exception</p>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Bottom Action Buttons */}
       {!isViewMode && (
-        <div className="flex items-center justify-end gap-2 pt-4 border-t">
+        <div className="flex flex-wrap items-center justify-end gap-2 border-t pt-4">
           <Button
             variant="outline"
             onClick={() => setLocation("/exceptional-work")}

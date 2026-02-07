@@ -3,7 +3,7 @@
  * Provides user-friendly error messages and error parsing
  */
 
-import type { UseFormSetError, FieldValues, Path } from "react-hook-form";
+import type { FieldValues, Path, UseFormSetError } from "react-hook-form";
 
 // ============================================================================
 // Types
@@ -15,6 +15,30 @@ export interface ParsedError {
   details?: string;
 }
 
+interface ErrorObject {
+  message?: string;
+  errors?: Record<string, unknown>;
+  response?: {
+    errors?: Record<string, unknown>;
+  };
+  has_deleted_duplicate?: boolean | string[];
+  detail?: unknown;
+  non_field_errors?: string[];
+  deleted_record_id?: string;
+}
+
+interface ErrorsObject {
+  [key: string]: unknown; // Index signature for dynamic property access
+  has_deleted_duplicate?: boolean | string[];
+  detail?: Array<{
+    has_deleted_duplicate?: boolean | string[];
+    non_field_errors?: string[];
+    deleted_record_id?: string;
+  }>;
+  non_field_errors?: string[];
+  deleted_record_id?: string;
+}
+
 // ============================================================================
 // Error Parsing Functions
 // ============================================================================
@@ -22,7 +46,7 @@ export interface ParsedError {
 /**
  * Parse API error response into user-friendly message
  */
-export function parseApiError(error: any): ParsedError {
+export function parseApiError(error: unknown): ParsedError {
   const defaultError: ParsedError = {
     title: "Something went wrong",
     message: "An unexpected error occurred. Please try again later.",
@@ -61,27 +85,29 @@ export function parseApiError(error: any): ParsedError {
 /**
  * Parse error object from API response
  */
-function parseErrorObject(errorObj: any): ParsedError {
+function parseErrorObject(errorObj: unknown): ParsedError {
   const result: ParsedError = {
     title: "Error",
     message: "An error occurred. Please try again.",
   };
 
-  if (errorObj.message) {
-    result.message = getUserFriendlyMessage(errorObj.message);
+  const err = errorObj as ErrorObject & { errors?: Record<string, unknown> };
+
+  if (err.message) {
+    result.message = getUserFriendlyMessage(err.message);
   }
 
-  if (errorObj.errors) {
-    const errors = errorObj.errors;
-    
+  if (err.errors) {
+    const errors = err.errors;
+
     if (typeof errors === "object" && !Array.isArray(errors)) {
       const errorFields = Object.keys(errors);
       if (errorFields.length > 0) {
         const firstField = errorFields[0];
         const firstError = errors[firstField];
-        
+
         if (Array.isArray(firstError) && firstError.length > 0) {
-          result.message = `${formatFieldName(firstField)}: ${firstError[0]}`;
+          result.message = `${formatFieldName(firstField)}: ${String(firstError[0])}`;
         } else if (typeof firstError === "string") {
           result.message = getUserFriendlyMessage(firstError);
         } else {
@@ -93,13 +119,24 @@ function parseErrorObject(errorObj: any): ParsedError {
     }
   }
 
-  if (errorObj.detail) {
-    result.message = getUserFriendlyMessage(errorObj.detail);
+  if (
+    typeof errorObj === "object" &&
+    errorObj !== null &&
+    "detail" in errorObj &&
+    errorObj.detail
+  ) {
+    result.message = getUserFriendlyMessage(String(errorObj.detail));
   }
 
-  if (errorObj.code || errorObj.status) {
-    const code = errorObj.code || errorObj.status;
-    result.title = getErrorTitleByCode(code);
+  if (
+    typeof errorObj === "object" &&
+    errorObj !== null &&
+    ("code" in errorObj || "status" in errorObj)
+  ) {
+    const code = ("code" in errorObj && errorObj.code) || ("status" in errorObj && errorObj.status);
+    if (code) {
+      result.title = getErrorTitleByCode(Number(code));
+    }
   }
 
   return result;
@@ -114,17 +151,18 @@ function getUserFriendlyMessage(message: string): string {
   }
 
   const patterns: Record<string, string> = {
-    "NoneType": "Data is missing or unavailable. Please refresh and try again.",
+    NoneType: "Data is missing or unavailable. Please refresh and try again.",
     "object has no attribute": "System configuration error. Please contact support.",
     "Internal server error": "The server encountered an error. Please try again later.",
-    "Network request failed": "Unable to connect to the server. Please check your internet connection.",
+    "Network request failed":
+      "Unable to connect to the server. Please check your internet connection.",
     "Failed to fetch": "Unable to load data. Please check your connection and try again.",
     "Authentication required": "Please log in to continue.",
-    "Unauthorized": "You don't have permission to perform this action.",
-    "Forbidden": "Access denied. Please contact your administrator.",
+    Unauthorized: "You don't have permission to perform this action.",
+    Forbidden: "Access denied. Please contact your administrator.",
     "Not found": "The requested information could not be found.",
-    "Timeout": "The request took too long. Please try again.",
-    "Invalid": "The information provided is not valid. Please check and try again.",
+    Timeout: "The request took too long. Please try again.",
+    Invalid: "The information provided is not valid. Please check and try again.",
   };
 
   for (const [pattern, friendly] of Object.entries(patterns)) {
@@ -171,10 +209,13 @@ function formatFieldName(fieldName: string): string {
 /**
  * Check if error is a network error
  */
-export function isNetworkError(error: any): boolean {
-  if (!error) {return false;}
-  
-  const message = error.message || error.toString();
+export function isNetworkError(error: unknown): boolean {
+  if (!error) {
+    return false;
+  }
+
+  const err = error as ErrorObject;
+  const message = err.message || String(error);
   return (
     message.includes("Network") ||
     message.includes("fetch") ||
@@ -186,13 +227,13 @@ export function isNetworkError(error: any): boolean {
 /**
  * Get a short error message suitable for toasts
  */
-export function getShortErrorMessage(error: any): string {
+export function getShortErrorMessage(error: unknown): string {
   const parsed = parseApiError(error);
-  
+
   if (parsed.message.length > 100) {
-    return `${parsed.message.substring(0, 97)  }...`;
+    return `${parsed.message.substring(0, 97)}...`;
   }
-  
+
   return parsed.message;
 }
 
@@ -200,29 +241,45 @@ export function getShortErrorMessage(error: any): string {
  * Check if error indicates a deleted duplicate record exists
  */
 export function isDeletedDuplicateError(error: unknown): boolean {
-  if (!error || typeof error !== 'object') {return false;}
-  
-  const err = error as any;
-  
-  let errors = err.errors;
-  
-  if (!errors && err.response?.errors) {
-    errors = err.response.errors;
+  if (!error || typeof error !== "object") {
+    return false;
   }
-  
-  if (!errors) {return false;}
-  
-  if (errors.has_deleted_duplicate === true ||
-      errors.has_deleted_duplicate?.[0] === "True") {
+
+  const err = error as ErrorObject;
+
+  let errors = err.errors;
+
+  if (!errors && err.response?.errors) {
+    errors = err.response.errors as ErrorsObject;
+  }
+
+  if (!errors) {
+    return false;
+  }
+
+  const errorsObj = errors as ErrorsObject;
+
+  if (
+    errorsObj.has_deleted_duplicate === true ||
+    (Array.isArray(errorsObj.has_deleted_duplicate) &&
+      errorsObj.has_deleted_duplicate.length > 0 &&
+      errorsObj.has_deleted_duplicate[0] === "True")
+  ) {
     return true;
   }
-  
-  if (Array.isArray(errors.detail) && errors.detail.length > 0) {
-    const firstDetail = errors.detail[0];
-    return firstDetail?.has_deleted_duplicate === true ||
-           firstDetail?.has_deleted_duplicate?.[0] === "True";
+
+  if (Array.isArray(errorsObj.detail) && errorsObj.detail.length > 0) {
+    const firstDetail = errorsObj.detail[0];
+    if (firstDetail && typeof firstDetail === "object") {
+      return (
+        firstDetail.has_deleted_duplicate === true ||
+        (Array.isArray(firstDetail.has_deleted_duplicate) &&
+          firstDetail.has_deleted_duplicate.length > 0 &&
+          firstDetail.has_deleted_duplicate[0] === "True")
+      );
+    }
   }
-  
+
   return false;
 }
 
@@ -230,28 +287,30 @@ export function isDeletedDuplicateError(error: unknown): boolean {
  * Extract user-friendly message from deleted duplicate error
  */
 export function getDeletedDuplicateMessage(error: unknown): string {
-  const err = error as any;
+  const err = error as ErrorObject;
   let errors = err.errors;
-  
+
   if (!errors && err.response?.errors) {
     errors = err.response.errors;
   }
-  
+
   if (!errors) {
     return "A deleted record with the same details already exists.";
   }
-  
-  if (errors.non_field_errors?.[0]) {
-    return errors.non_field_errors[0];
+
+  const errorsObj = errors as ErrorsObject;
+
+  if (errorsObj.non_field_errors?.[0]) {
+    return errorsObj.non_field_errors[0];
   }
-  
-  if (Array.isArray(errors.detail) && errors.detail.length > 0) {
-    const firstDetail = errors.detail[0];
+
+  if (Array.isArray(errorsObj.detail) && errorsObj.detail.length > 0) {
+    const firstDetail = errorsObj.detail[0];
     if (firstDetail?.non_field_errors?.[0]) {
       return firstDetail.non_field_errors[0];
     }
   }
-  
+
   return "A deleted record with the same details already exists.";
 }
 
@@ -259,26 +318,30 @@ export function getDeletedDuplicateMessage(error: unknown): string {
  * Extract deleted record ID from deleted duplicate error
  */
 export function getDeletedRecordId(error: unknown): string | null {
-  const err = error as any;  
+  const err = error as ErrorObject;
   let errors = err.errors;
-    
+
   if (!errors && err.response?.errors) {
     errors = err.response.errors;
   }
-  
-  if (!errors) {return null;}
 
-  if (errors.deleted_record_id) {
-    return errors.deleted_record_id;
+  if (!errors) {
+    return null;
   }
 
-  if (Array.isArray(errors.detail) && errors.detail.length > 0) {
-    const firstDetail = errors.detail[0];
+  const errorsObj = errors as ErrorsObject;
+
+  if (errorsObj.deleted_record_id) {
+    return errorsObj.deleted_record_id;
+  }
+
+  if (Array.isArray(errorsObj.detail) && errorsObj.detail.length > 0) {
+    const firstDetail = errorsObj.detail[0];
     if (firstDetail?.deleted_record_id) {
       return firstDetail.deleted_record_id;
     }
   }
-  
+
   return null;
 }
 
@@ -287,46 +350,48 @@ export function getDeletedRecordId(error: unknown): string | null {
  * Handles validation errors, non-field errors, and general errors
  */
 export function getApiErrorMessage(error: unknown): string {
-  const err = error as any;
+  const err = error as ErrorObject;
   const errors = err.errors || err.response?.errors;
-  
+
   if (!errors) {
     return err.message || "An unexpected error occurred";
   }
 
+  const errorsObj = errors as ErrorsObject & Record<string, unknown>;
+
   // Check for non-field errors
-  if (errors.non_field_errors?.[0]) {
-    return errors.non_field_errors[0];
+  if (errorsObj.non_field_errors?.[0]) {
+    return errorsObj.non_field_errors[0];
   }
-  
-  if (Array.isArray(errors.detail)) {
-    if (errors.detail.length > 0) {
-      const firstDetail = errors.detail[0];
-      
-      if (typeof firstDetail === 'string') {
+
+  if (Array.isArray(errorsObj.detail)) {
+    if (errorsObj.detail.length > 0) {
+      const firstDetail = errorsObj.detail[0];
+
+      if (typeof firstDetail === "string") {
         return firstDetail;
       }
-      
+
       if (firstDetail?.non_field_errors?.[0]) {
         return firstDetail.non_field_errors[0];
       }
     }
   }
-  
-  const errorKeys = Object.keys(errors).filter(key => 
-    key !== 'has_deleted_duplicate' && key !== 'detail'
+
+  const errorKeys = Object.keys(errors).filter(
+    (key) => key !== "has_deleted_duplicate" && key !== "detail"
   );
-  
+
   if (errorKeys.length > 0) {
     const firstKey = errorKeys[0];
-    const fieldError = errors[firstKey];
-    
+    const fieldError = errorsObj[firstKey];
+
     if (Array.isArray(fieldError) && fieldError.length > 0) {
-      const fieldName = firstKey.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-      return `${fieldName}: ${fieldError[0]}`;
+      const fieldName = firstKey.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
+      return `${fieldName}: ${String(fieldError[0])}`;
     }
   }
-  
+
   return err.message || "An unexpected error occurred";
 }
 
@@ -338,7 +403,7 @@ export function setFormFieldErrors<T extends FieldValues>(
   error: unknown,
   setError: UseFormSetError<T>
 ): boolean {
-  const err = error as any;
+  const err = error as ErrorObject;
   const errors = err?.errors || err?.response?.errors;
 
   if (!errors || typeof errors !== "object") {

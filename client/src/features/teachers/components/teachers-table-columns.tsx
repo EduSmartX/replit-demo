@@ -30,13 +30,17 @@ export function getTeacherColumns({
     {
       header: "Teacher Name",
       accessor: (teacher) => (
-        <div className="flex flex-col">
-          <span className="font-medium text-gray-900">{teacher.full_name}</span>
-          <span className="text-sm text-gray-500">{teacher.email}</span>
+        <div className="flex min-w-[200px] flex-col">
+          <span className="truncate font-medium text-gray-900">{teacher.full_name}</span>
+          <span className="truncate text-sm text-gray-500" title={teacher.email}>
+            {teacher.email}
+          </span>
         </div>
       ),
       sortable: true,
       sortKey: "full_name",
+      width: 220,
+      minWidth: 200,
     },
     {
       header: "Phone",
@@ -77,9 +81,7 @@ export function getTeacherColumns({
       header: "Joining Date",
       accessor: (teacher) => (
         <span className="text-sm text-gray-600">
-          {teacher.joining_date
-            ? new Date(teacher.joining_date).toLocaleDateString()
-            : "N/A"}
+          {teacher.joining_date ? new Date(teacher.joining_date).toLocaleDateString() : "N/A"}
         </span>
       ),
       sortable: true,

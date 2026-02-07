@@ -1,0 +1,429 @@
+# React Application Development Standards
+
+## 1. REUSABLE COMPONENTS - MANDATORY USAGE
+
+### 1.1 Success Feedback
+- ✅ **ALWAYS** use `<SuccessDialog>` for success messages (NO toast notifications)
+- Located at: `@/common/components/dialogs/success-dialog`
+- Auto-closes after 2 seconds (configurable with `autoCloseDelay` prop)
+- Example usage:
+  ```tsx
+  <SuccessDialog 
+    open={showSuccess} 
+    title="Success" 
+    description="Operation completed successfully" 
+    onClose={handleClose} 
+  />
+  ```
+
+### 1.2 Error Handling & Validation
+**API Error Parsing:**
+- Use `parseApiError()` from `@/lib/error-parser` for displaying general API error messages
+- Use `handleFormErrors()` from `@/lib/error-utils` for mapping field-specific validation errors to forms
+- Integrate with `react-hook-form`'s `setError()` to show field-level validation errors
+
+**Error Display Strategy:**
+- **Non-field errors** → Display in Alert component above the form
+- **Field-specific errors** → Show inline below the input field (via react-hook-form)
+- **Server/Network errors** → Display in Dialog with retry option or user-friendly message
+- **Critical errors** → Use Error Boundary component
+
+**Example Pattern:**
+```tsx
+catch (error) {
+  const parsedError = parseApiError(error);
+  handleFormErrors(error, form.setError); // Maps field errors automatically
+  
+  // For non-field errors, show in alert
+  if (parsedError.message) {
+    setErrorMessage(parsedError.message);
+  }
+}
+```
+
+### 1.3 Form Components
+- **ALWAYS** use reusable form components from `@/common/components/forms/`
+- Available components: `<FormFields>`, `<AddressInputFields>`, `<SubjectsField>`, `<TeacherField>`, `<SupervisorField>`
+- Wrap all forms with `react-hook-form` for validation and state management
+- Use `<Field>` component wrapper for consistent input styling and error display
+- Define proper TypeScript interfaces for form data using `z.infer<typeof schema>`
+
+### 1.4 Loading States & Spinners
+**Loading Rules - CRITICAL:**
+- **Page-level loading**: Use `<LoadingSpinner message="Loading data..." />` for full-page loading states
+- **Table-level loading**: Use `<DataTable isLoading={true} />` - shows skeleton rows inside table only
+- **Section-level loading**: Use Skeleton components for cards, forms, or specific sections
+- **Button loading**: Use `isLoading` prop on Button component with spinner icon
+- **❌ NEVER** block entire page when loading partial/table data
+
+**Examples:**
+```tsx
+// Page-level
+if (isLoadingPageData) return <LoadingSpinner message="Loading..." />;
+
+// Table-level
+<DataTable data={data} columns={columns} isLoading={isLoadingTable} />
+
+// Button-level
+<Button isLoading={isSubmitting}>Submit</Button>
+```
+
+### 1.5 Data Tables for List Views
+- **MANDATORY**: Use `<DataTable>` from `@/components/ui/data-table` for ALL list/table views
+- Features included: sorting, resizable columns, empty states, loading skeletons
+- Define proper column types: `Column<YourDataType>[]`
+- Provide `getRowKey` function for unique row identification
+- Use `onRowClick` for row interaction when needed
+
+**Example:**
+```tsx
+const columns: Column<Teacher>[] = [
+  { header: "Name", accessor: "full_name", sortable: true },
+  { header: "Email", accessor: "email" },
+  { header: "Actions", accessor: (row) => <Actions row={row} /> }
+];
+
+<DataTable
+  columns={columns}
+  data={teachers}
+  isLoading={isLoading}
+  getRowKey={(row) => row.id}
+  emptyMessage="No teachers found"
+/>
+```
+
+### 1.6 Pagination
+- Built into `<DataTable>` component automatically
+- For server-side pagination: API should return `totalPages`, `currentPage`, `pageSize`
+- For client-side pagination: DataTable handles it internally
+- Use consistent page sizes: 10, 25, 50, 100
+
+### 1.7 Page Wrapper Component
+- **ALWAYS** wrap all pages with `<PageWrapper>` from `@/common/components`
+- Provides: consistent layout, breadcrumbs, page titles, and spacing
+- Maintains application-wide uniqueness and structure
+
+**Example:**
+```tsx
+<PageWrapper 
+  title="Teachers Management" 
+  breadcrumbs={[
+    { label: "Dashboard", href: "/admin" },
+    { label: "Teachers", href: "/admin/teachers" }
+  ]}
+>
+  {/* Page content */}
+</PageWrapper>
+```
+
+### 1.8 CRUD Operation Components
+**Available Reusable Components:**
+- `<DeleteConfirmationDialog>` - For delete confirmations
+- `<ConfirmationDialog>` - For general confirmations
+- `<BulkUploadDialog>` - For bulk CSV/Excel uploads
+- `<DeletedViewToggle>` - Toggle between active and deleted items
+- `<DeletedDuplicateDialog>` - Handle duplicate/restore scenarios
+
+**Custom Hooks:**
+- `useDeleteMutation` - Standardized delete operations
+- `useReactivateMutation` - Standardized reactivate operations
+- `useDeletedView` - Manage deleted item views
+- `useHolidayMutations` - CRUD operations for holidays
+
+## 2. FOLDER STRUCTURE - STRICT ORGANIZATION
+
+### Role-Based Module Structure:
+```
+client/src/
+├── modules/                     # Role-specific UI and pages
+│   ├── admin/                   # Admin dashboard, pages, components
+│   │   ├── components/
+│   │   │   ├── dashboard/
+│   │   │   └── sidebar/
+│   │   └── pages/
+│   ├── teacher/                 # Teacher dashboard, pages, components
+│   └── parent/                  # Parent dashboard, pages, components
+│
+├── features/                    # Business logic features (domain-driven)
+│   ├── teachers/
+│   │   ├── components/
+│   │   │   ├── common/          # Shared across roles
+│   │   │   └── admin/           # Admin-specific
+│   │   └── services/            # API calls
+│   ├── students/
+│   ├── classes/
+│   ├── attendance/
+│   ├── leave/
+│   └── subjects/
+│
+├── common/                      # Application-wide shared resources
+│   ├── components/              # Reusable UI components
+│   │   ├── forms/
+│   │   ├── dialogs/
+│   │   ├── tables/
+│   │   ├── layout/
+│   │   └── filters/
+│   ├── hooks/                   # Custom React hooks
+│   ├── utils/                   # Helper functions
+│   └── types/                   # Shared TypeScript types
+│
+├── core/                        # Core infrastructure
+│   ├── contexts/                # React contexts (auth, theme)
+│   ├── routes/                  # Route definitions
+│   ├── config/                  # App configuration
+│   └── api/                     # Base API client
+│
+└── components/ui/               # shadcn/ui components (do not modify directly)
+```
+
+### File Naming Conventions:
+- **Components**: `kebab-case.tsx` (e.g., `teacher-form.tsx`, `delete-confirmation-dialog.tsx`)
+- **Pages**: `*-page.tsx` (e.g., `teachers-page.tsx`, `dashboard-page.tsx`)
+- **Types**: `types.ts` or `*.types.ts`
+- **Utilities**: `kebab-case.ts` (e.g., `error-utils.ts`, `date-helpers.ts`)
+- **Hooks**: `use-*.ts` (e.g., `use-delete-mutation.ts`)
+- **Constants**: `UPPER_SNAKE_CASE` in `constants.ts` files
+
+## 3. REUSABLE PATTERNS FOR ROLE-WISE OPERATIONS
+
+### Component Sharing Strategy:
+- **Shared business logic** → `features/{feature}/components/common/`
+- **Role-specific UI** → `modules/{role}/components/`
+- **Cross-feature components** → `common/components/`
+
+### Example:
+```
+features/teachers/components/
+  ├── common/
+  │   └── teacher-form.tsx        # Used by both admin and teacher
+  └── admin/
+      └── teachers-list.tsx       # Admin-only view
+
+modules/admin/pages/
+  └── teachers-page.tsx           # Admin page using common form
+```
+
+## 4. CSS & FORM STYLING STANDARDS
+
+### CSS Framework & Utilities:
+- **Primary**: Tailwind CSS utility classes (consistent spacing, responsive design)
+- **Component Library**: shadcn/ui patterns (do not create custom base components)
+- **Theme**: Use CSS variables from `index.css` for colors
+- **Dark Mode**: Support via Tailwind's `dark:` prefix
+
+### Spacing Standards:
+- Gap between elements: `gap-4` (1rem), `gap-6` (1.5rem)
+- Padding for cards/containers: `p-6` (1.5rem)
+- Vertical spacing: `space-y-4`, `space-y-6`
+- Margins: Use sparingly, prefer gap/space utilities
+
+### Form Styling:
+- **Consistent input heights**: Default to `h-10` for inputs and buttons
+- **Error states**: Red border (`border-destructive`) with error message below in red text
+- **Disabled states**: Reduced opacity (`opacity-50`) and cursor not-allowed
+- **Focus states**: Ring with primary color (`focus:ring-2 focus:ring-primary`)
+- **Labels**: Consistent font size (`text-sm`) and weight (`font-medium`)
+
+### Modern Look & Feel:
+- **Cards**: Subtle shadows (`shadow-sm`), hover effects (`hover:shadow-md`), transitions (`transition-all duration-200`)
+- **Rounded corners**: Consistent usage of `rounded-lg` for cards, `rounded-md` for inputs
+- **Color palette**: 
+  - Primary actions: Blue/primary color
+  - Destructive: Red for delete/danger
+  - Success: Green for confirmations
+  - Muted: Gray for secondary text
+- **Proper contrast**: Ensure WCAG AA compliance for text readability
+- **Animations**: Subtle (`transition-all duration-200`, fade-ins for dialogs)
+
+### Responsive Design:
+```tsx
+// Mobile-first approach
+<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+  
+// Stack on mobile, horizontal on desktop
+<div className="flex flex-col md:flex-row gap-4">
+```
+
+## 5. CODE QUALITY & DOCUMENTATION
+
+### Inline Comments - Minimal & Meaningful:
+- ❌ **AVOID**: Obvious comments like `// Set loading to true`
+- ✅ **USE**: Explain complex business logic, non-obvious workarounds, or "why" (not "what")
+- ✅ **JSDoc**: REQUIRED for all exported functions, hooks, and components
+
+**JSDoc Example:**
+```tsx
+/**
+ * Fetches and displays teacher list with filtering and pagination
+ * 
+ * @remarks
+ * Supports soft-delete view toggle and bulk operations
+ * 
+ * @param organizationId - Current organization ID for filtering
+ */
+export function TeachersList({ organizationId }: TeachersListProps) {
+  // ...
+}
+```
+
+### TypeScript Best Practices:
+- ✅ **Strict mode enabled** - No implicit `any`
+- ❌ **NEVER use `any`** - Use `unknown` or proper types
+- ✅ Define interfaces for all props and API responses
+- ✅ Use generics for reusable components: `DataTable<T>`, `Column<T>`
+- ✅ Leverage type inference where possible
+- ✅ Use `z.infer<typeof schema>` for form types with Zod
+
+### Code Organization Within Files:
+```tsx
+// 1. Imports (grouped: React, external libs, internal)
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
+
+// 2. Type definitions
+interface Props { /* ... */ }
+
+// 3. Constants (if local to file)
+const PAGE_SIZE = 25;
+
+// 4. Component definition
+export function MyComponent({ props }: Props) {
+  // Hooks first
+  // Event handlers
+  // Render logic
+}
+
+// 5. Helper functions (consider extracting if reused)
+function helperFunction() { /* ... */ }
+```
+
+### Best Practices:
+- Extract magic numbers/strings to named constants
+- Use React Query for ALL data fetching (leverage caching)
+- Implement proper error boundaries for component isolation
+- Use `useMemo` for expensive computations
+- Use `useCallback` for event handlers passed to child components
+- Avoid nested ternaries (extract to variables or early returns)
+- Keep components focused (Single Responsibility Principle)
+
+## 6. PERFORMANCE OPTIMIZATION
+
+### Data Fetching:
+- Use React Query's caching strategies
+- Implement proper query key hierarchies
+- Use `staleTime` and `cacheTime` appropriately
+- Leverage `refetchOnWindowFocus`, `refetchOnMount` wisely
+
+### Component Optimization:
+- Debounce search inputs (use `useDebouncedValue` or `debounce` utility)
+- Virtualize long lists with `react-window` or `@tanstack/react-virtual`
+- Use `React.memo` for expensive child components that receive stable props
+- Lazy load routes: `const Page = lazy(() => import('./page'))`
+- Code split heavy features and libraries
+
+### Bundle Optimization:
+- Dynamic imports for heavy libraries
+- Tree-shaking enabled (ES modules)
+- Analyze bundle size periodically
+
+## 7. ACCESSIBILITY (A11Y) REQUIREMENTS
+
+### Semantic HTML:
+- Use proper elements: `<button>`, `<nav>`, `<main>`, `<article>`, `<section>`
+- NEVER use `<div>` with `onClick` - use `<button>`
+
+### ARIA & Labels:
+- Provide `aria-label` for icon-only buttons
+- Use `aria-describedby` for error messages
+- Proper form labels with `htmlFor` attributes
+- Screen reader announcements for dynamic content
+
+### Keyboard Navigation:
+- Ensure all interactive elements are focusable
+- Proper tab order
+- Support Escape key for dialogs/modals
+- Focus management (trap focus in modals, restore focus on close)
+
+### Color & Contrast:
+- Don't rely solely on color to convey information
+- Maintain WCAG AA contrast ratios (4.5:1 for text)
+- Test with color blindness simulators
+
+## 8. STATE MANAGEMENT & DATA FLOW
+
+### State Management Strategy:
+- **Local state**: `useState` for component-specific state
+- **Server state**: React Query (useQuery, useMutation)
+- **Global state**: React Context for auth, theme, user preferences
+- **Form state**: react-hook-form
+- **URL state**: React Router params and search params
+
+### API Integration:
+- Centralized API client in `@/core/api/`
+- Consistent error handling across all API calls
+- Type-safe API responses with TypeScript interfaces
+- Use proper HTTP methods (GET, POST, PUT, PATCH, DELETE)
+
+## 9. TESTING STANDARDS (Future)
+
+### Unit Tests:
+- Test utility functions in isolation
+- Test custom hooks with `@testing-library/react-hooks`
+- Target >80% coverage for utilities and hooks
+
+### Integration Tests:
+- Test form submissions end-to-end
+- Test error handling scenarios
+- Use `@testing-library/react` for component testing
+
+### E2E Tests:
+- Critical user flows (auth, CRUD operations)
+- Use Playwright or Cypress
+
+## 10. SECURITY BEST PRACTICES
+
+- Sanitize user inputs before displaying (prevent XSS)
+- Use proper authentication checks with `ProtectedRoute`
+- Don't store sensitive data in localStorage (use httpOnly cookies for tokens)
+- Implement proper CORS policies
+- Validate data on both client and server
+
+## 11. GIT & VERSION CONTROL
+
+### Commit Messages:
+- Format: `type(scope): description`
+- Types: `feat`, `fix`, `refactor`, `style`, `docs`, `test`, `chore`
+- Example: `feat(teachers): add bulk upload functionality`
+
+### Branch Strategy:
+- `main` - Production-ready code
+- `develop` - Integration branch
+- `feature/*` - Feature branches
+- `bugfix/*` - Bug fix branches
+
+### Code Review Checklist:
+- [ ] Follows all standards in this document
+- [ ] TypeScript types properly defined
+- [ ] No console.logs or commented code
+- [ ] Responsive design tested
+- [ ] Error handling implemented
+- [ ] Loading states handled
+- [ ] Accessibility considerations met
+
+---
+
+## ⚠️ CRITICAL REMINDERS
+
+1. **NO TOAST NOTIFICATIONS** - Always use SuccessDialog for success messages
+2. **ERROR FIELD MAPPING** - Use handleFormErrors() to map API errors to form fields
+3. **LOADING SPECIFICITY** - Table loading should NOT block entire page
+4. **TYPE SAFETY** - NO `any` type usage
+5. **REUSABLE FIRST** - Check `@/common/components` before creating new components
+6. **CONSISTENT PATTERNS** - Follow existing patterns in similar features
+7. **ACCESSIBILITY** - Not optional, build it in from the start
+
+---
+
+**Last Updated**: February 7, 2026
+**Document Version**: 2.0

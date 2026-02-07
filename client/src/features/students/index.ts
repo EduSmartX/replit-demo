@@ -2,7 +2,7 @@
  * Students Feature - Main Export
  */
 
-export * from './components';
+export * from "./components";
 
 // Schemas
 export { studentFormSchema, type StudentFormValues } from "./schemas/student-form-schema";
@@ -17,9 +17,10 @@ export {
   validatePhoneNumber,
   validateAge,
   formatStudentFullName,
-  type StudentCreatePayload,
-  type StudentUpdatePayload,
 } from "./helpers/student-form-helpers";
+
+// Types from API
+export type { StudentCreatePayload, StudentUpdatePayload } from "@/lib/api/student-api";
 
 // Hooks
 export {

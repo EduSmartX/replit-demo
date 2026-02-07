@@ -5,13 +5,13 @@ import * as React from "react";
 import { DayPicker, getDefaultClassNames } from "react-day-picker";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import type { DayButton} from "react-day-picker";
+import type { DayButton } from "react-day-picker";
 
 function Calendar({
   className,
   classNames,
   showOutsideDays = false,
-  captionLayout = "buttons",
+  captionLayout = "dropdown",
   buttonVariant: _buttonVariant = "ghost",
   formatters,
   components,
@@ -25,7 +25,7 @@ function Calendar({
     <DayPicker
       showOutsideDays={showOutsideDays}
       className={cn(
-        "bg-gradient-to-br from-white to-gray-50/30 group/calendar p-5 [--cell-size:2.75rem] border border-gray-200/60 rounded-2xl shadow-xl backdrop-blur-sm relative z-[100]",
+        "group/calendar relative z-[100] rounded-2xl border border-gray-200/60 bg-gradient-to-br from-white to-gray-50/30 p-5 shadow-xl backdrop-blur-sm [--cell-size:2.75rem]",
         String.raw`rtl:**:[.rdp-button\_next>svg]:rotate-180`,
         String.raw`rtl:**:[.rdp-button\_previous>svg]:rotate-180`,
         className
@@ -42,10 +42,7 @@ function Calendar({
         root: cn("w-fit", defaultClassNames.root),
         months: cn("relative flex flex-col gap-5", defaultClassNames.months),
         month: cn("flex w-full flex-col gap-4", defaultClassNames.month),
-        nav: cn(
-          "flex items-center justify-between w-full mb-3 gap-2 px-1",
-          defaultClassNames.nav
-        ),
+        nav: cn("flex items-center justify-between w-full mb-3 gap-2 px-1", defaultClassNames.nav),
         button_previous: cn(
           buttonVariants({ variant: "ghost" }),
           "h-9 w-9 select-none p-0 hover:bg-gradient-to-br hover:from-blue-50 hover:to-indigo-50 text-gray-700 rounded-xl transition-all duration-200 hover:scale-105 active:scale-95",
@@ -89,17 +86,20 @@ function Calendar({
           "group/day relative aspect-square h-full w-full select-none p-0 text-center",
           defaultClassNames.day
         ),
-        range_start: cn("bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-md", defaultClassNames.range_start),
+        range_start: cn(
+          "bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-md",
+          defaultClassNames.range_start
+        ),
         range_middle: cn("bg-blue-50 rounded-lg", defaultClassNames.range_middle),
-        range_end: cn("bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-md", defaultClassNames.range_end),
+        range_end: cn(
+          "bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-md",
+          defaultClassNames.range_end
+        ),
         today: cn(
           "bg-gradient-to-br from-amber-50 to-orange-50 text-gray-900 rounded-xl font-bold border border-amber-200/50 data-[selected=true]:from-blue-500 data-[selected=true]:to-indigo-600 data-[selected=true]:text-white data-[selected=true]:border-transparent",
           defaultClassNames.today
         ),
-        outside: cn(
-          "text-gray-300/60 pointer-events-none",
-          defaultClassNames.outside
-        ),
+        outside: cn("text-gray-300/60 pointer-events-none", defaultClassNames.outside),
         disabled: cn("text-gray-300 opacity-40 line-through", defaultClassNames.disabled),
         hidden: cn("invisible", defaultClassNames.hidden),
         ...classNames,
@@ -146,7 +146,9 @@ function CalendarDayButton({
 
   const ref = React.useRef<HTMLButtonElement>(null);
   React.useEffect(() => {
-    if (modifiers.focused) {ref.current?.focus();}
+    if (modifiers.focused) {
+      ref.current?.focus();
+    }
   }, [modifiers.focused]);
 
   return (
@@ -165,13 +167,13 @@ function CalendarDayButton({
       data-range-end={modifiers.range_end}
       data-range-middle={modifiers.range_middle}
       className={cn(
-        "flex aspect-square h-auto w-full min-w-[--cell-size] items-center justify-center text-sm font-medium rounded-xl hover:bg-gradient-to-br hover:from-gray-50 hover:to-gray-100 transition-all duration-200 hover:scale-105 active:scale-95 hover:shadow-sm",
-        "data-[selected-single=true]:bg-gradient-to-br data-[selected-single=true]:from-blue-500 data-[selected-single=true]:to-indigo-600 data-[selected-single=true]:text-white data-[selected-single=true]:hover:from-blue-600 data-[selected-single=true]:hover:to-indigo-700 data-[selected-single=true]:font-bold data-[selected-single=true]:shadow-lg data-[selected-single=true]:scale-105",
-        "data-[range-middle=true]:bg-gradient-to-br data-[range-middle=true]:from-blue-50 data-[range-middle=true]:to-indigo-50 data-[range-middle=true]:text-blue-900 data-[range-middle=true]:font-semibold",
-        "data-[range-start=true]:bg-gradient-to-br data-[range-start=true]:from-blue-500 data-[range-start=true]:to-indigo-600 data-[range-start=true]:text-white data-[range-start=true]:hover:from-blue-600 data-[range-start=true]:hover:to-indigo-700 data-[range-start=true]:font-bold data-[range-start=true]:shadow-lg",
-        "data-[range-end=true]:bg-gradient-to-br data-[range-end=true]:from-blue-500 data-[range-end=true]:to-indigo-600 data-[range-end=true]:text-white data-[range-end=true]:hover:from-blue-600 data-[range-end=true]:hover:to-indigo-700 data-[range-end=true]:font-bold data-[range-end=true]:shadow-lg",
+        "flex aspect-square h-auto w-full min-w-[--cell-size] items-center justify-center rounded-xl text-sm font-medium transition-all duration-200 hover:scale-105 hover:bg-gradient-to-br hover:from-gray-50 hover:to-gray-100 hover:shadow-sm active:scale-95",
+        "data-[selected-single=true]:scale-105 data-[selected-single=true]:bg-gradient-to-br data-[selected-single=true]:from-blue-500 data-[selected-single=true]:to-indigo-600 data-[selected-single=true]:font-bold data-[selected-single=true]:text-white data-[selected-single=true]:shadow-lg data-[selected-single=true]:hover:from-blue-600 data-[selected-single=true]:hover:to-indigo-700",
+        "data-[range-middle=true]:bg-gradient-to-br data-[range-middle=true]:from-blue-50 data-[range-middle=true]:to-indigo-50 data-[range-middle=true]:font-semibold data-[range-middle=true]:text-blue-900",
+        "data-[range-start=true]:bg-gradient-to-br data-[range-start=true]:from-blue-500 data-[range-start=true]:to-indigo-600 data-[range-start=true]:font-bold data-[range-start=true]:text-white data-[range-start=true]:shadow-lg data-[range-start=true]:hover:from-blue-600 data-[range-start=true]:hover:to-indigo-700",
+        "data-[range-end=true]:bg-gradient-to-br data-[range-end=true]:from-blue-500 data-[range-end=true]:to-indigo-600 data-[range-end=true]:font-bold data-[range-end=true]:text-white data-[range-end=true]:shadow-lg data-[range-end=true]:hover:from-blue-600 data-[range-end=true]:hover:to-indigo-700",
         "group-data-[focused=true]/day:ring-2 group-data-[focused=true]/day:ring-blue-400 group-data-[focused=true]/day:ring-offset-2",
-        "disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:scale-100",
+        "disabled:opacity-40 disabled:hover:scale-100 disabled:hover:bg-transparent",
         defaultClassNames.day,
         className
       )}

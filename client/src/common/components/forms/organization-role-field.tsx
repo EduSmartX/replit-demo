@@ -119,7 +119,8 @@ export function OrganizationRoleField<T extends FieldValues>({
               field.onChange(defaultRoleCode);
             }
           }
-        }, [field.value, defaultRoleCode, orgRoles, field]);
+          // eslint-disable-next-line react-hooks/exhaustive-deps
+        }, [field.value, field]);
 
         return (
           <FormItem>
@@ -133,9 +134,7 @@ export function OrganizationRoleField<T extends FieldValues>({
             >
               <FormControl>
                 <SelectTrigger className="disabled:cursor-default disabled:opacity-100">
-                  <SelectValue 
-                    placeholder={isLoading ? "Loading roles..." : placeholder} 
-                  />
+                  <SelectValue placeholder={isLoading ? "Loading roles..." : placeholder} />
                 </SelectTrigger>
               </FormControl>
               <SelectContent className="max-h-[300px] overflow-y-auto">
@@ -146,11 +145,7 @@ export function OrganizationRoleField<T extends FieldValues>({
                 ))}
               </SelectContent>
             </Select>
-            {defaultRoleCode && (
-              <FormDescription>
-                Organization role for this user
-              </FormDescription>
-            )}
+            {defaultRoleCode && <FormDescription>Organization role for this user</FormDescription>}
             <FormMessage />
           </FormItem>
         );

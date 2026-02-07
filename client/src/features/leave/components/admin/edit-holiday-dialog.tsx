@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { useUpdateHoliday } from "@/hooks/use-holiday-mutations";
 import { useToast } from "@/hooks/use-toast";
-import type { CreateHolidayPayload, Holiday } from "@/lib/api/holiday-api";
+import type { CreateHolidayPayload, Holiday, HolidayType } from "@/lib/api/holiday-api";
 import { HolidayFormFields, validateHolidayData } from "./holiday-form-fields";
 
 interface EditHolidayDialogProps {
@@ -46,7 +46,7 @@ export function EditHolidayDialog({ holiday, open, onOpenChange }: EditHolidayDi
       setFormData({
         start_date: holiday.start_date,
         end_date: holiday.end_date,
-        holiday_type: holiday.holiday_type as any,
+        holiday_type: holiday.holiday_type as Exclude<HolidayType, "SUNDAY" | "SATURDAY">,
         description: holiday.description,
       });
     }
@@ -54,7 +54,7 @@ export function EditHolidayDialog({ holiday, open, onOpenChange }: EditHolidayDi
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateHolidayData(formData, toast)) {
       return;
     }
@@ -77,11 +77,13 @@ export function EditHolidayDialog({ holiday, open, onOpenChange }: EditHolidayDi
     });
   };
 
-  const updateField = (field: keyof CreateHolidayPayload, value: any) => {
+  const updateField = (field: keyof CreateHolidayPayload, value: unknown) => {
     setFormData({ ...formData, [field]: value });
   };
 
-  if (!holiday) {return null;}
+  if (!holiday) {
+    return null;
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -91,9 +93,7 @@ export function EditHolidayDialog({ holiday, open, onOpenChange }: EditHolidayDi
             <Calendar className="h-5 w-5" />
             Edit Holiday
           </DialogTitle>
-          <DialogDescription>
-            Update the holiday details below.
-          </DialogDescription>
+          <DialogDescription>Update the holiday details below.</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">

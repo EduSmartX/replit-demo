@@ -103,8 +103,12 @@ export async function fetchCoreClasses(params?: {
 }): Promise<CoreClassesResponse> {
   const queryParams = new URLSearchParams();
 
-  if (params?.page) {queryParams.append("page", params.page.toString());}
-  if (params?.page_size) {queryParams.append("page_size", params.page_size.toString());}
+  if (params?.page) {
+    queryParams.append("page", params.page.toString());
+  }
+  if (params?.page_size) {
+    queryParams.append("page_size", params.page_size.toString());
+  }
 
   const url = `${API_ENDPOINTS.core.coreClasses}${
     queryParams.toString() ? `?${queryParams.toString()}` : ""
@@ -135,13 +139,27 @@ export async function fetchClasses(params?: {
 }): Promise<ClassesResponse> {
   const queryParams = new URLSearchParams();
 
-  if (params?.page) {queryParams.append("page", params.page.toString());}
-  if (params?.page_size) {queryParams.append("page_size", params.page_size.toString());}
-  if (params?.search) {queryParams.append("search", params.search);}
-  if (params?.is_active !== undefined) {queryParams.append("is_active", params.is_active.toString());}
-  if (params?.is_deleted !== undefined) {queryParams.append("is_deleted", params.is_deleted.toString());}
-  if (params?.class_master) {queryParams.append("class_master", params.class_master.toString());}
-  if (params?.class_teacher) {queryParams.append("class_teacher", params.class_teacher);}
+  if (params?.page) {
+    queryParams.append("page", params.page.toString());
+  }
+  if (params?.page_size) {
+    queryParams.append("page_size", params.page_size.toString());
+  }
+  if (params?.search) {
+    queryParams.append("search", params.search);
+  }
+  if (params?.is_active !== undefined) {
+    queryParams.append("is_active", params.is_active.toString());
+  }
+  if (params?.is_deleted !== undefined) {
+    queryParams.append("is_deleted", params.is_deleted.toString());
+  }
+  if (params?.class_master) {
+    queryParams.append("class_master", params.class_master.toString());
+  }
+  if (params?.class_teacher) {
+    queryParams.append("class_teacher", params.class_teacher);
+  }
 
   const url = `${API_ENDPOINTS.classes.list}${
     queryParams.toString() ? `?${queryParams.toString()}` : ""
@@ -162,12 +180,9 @@ export async function fetchClasses(params?: {
  * Fetch a specific class by public ID
  */
 export async function fetchClass(publicId: string): Promise<ClassResponse> {
-  const response = await apiRequest<ClassResponse>(
-    API_ENDPOINTS.classes.detail(publicId),
-    {
-      method: "GET",
-    }
-  );
+  const response = await apiRequest<ClassResponse>(API_ENDPOINTS.classes.detail(publicId), {
+    method: "GET",
+  });
 
   if (!response.success || response.code < 200 || response.code >= 300) {
     throw new Error(response.message || "Failed to fetch class");
@@ -184,50 +199,56 @@ export async function createClass(
   forceCreate: boolean = false
 ): Promise<ClassResponse | ApiResponse<MasterClass[]>> {
   // Build URL with query parameter if forceCreate is true
-  const url = forceCreate 
+  const url = forceCreate
     ? `${API_ENDPOINTS.classes.list}?force_create=true`
     : API_ENDPOINTS.classes.list;
 
-  const response = await apiRequest<ClassResponse | ApiResponse<MasterClass[]>>(
-    url,
-    {
-      method: "POST",
-      body: JSON.stringify(payload),
-    }
-  );
+  const response = await apiRequest<ClassResponse | ApiResponse<MasterClass[]>>(url, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 
   if (!response.success || response.code < 200 || response.code >= 300) {
     // Check if this is a deleted duplicate error
     // For single create: errors.has_deleted_duplicate
     // For bulk create: errors.detail[0].has_deleted_duplicate
     let hasDeletedDuplicate = false;
-    
-    if (response.errors?.has_deleted_duplicate === true ||
-        response.errors?.has_deleted_duplicate?.[0] === "True") {
-      hasDeletedDuplicate = true;
-    }
-    
-    // Check wrapped structure for bulk operations
-    if (Array.isArray(response.errors?.detail) && response.errors.detail.length > 0) {
-      const firstDetail = response.errors.detail[0];
-      if (firstDetail?.has_deleted_duplicate === true ||
-          firstDetail?.has_deleted_duplicate?.[0] === "True") {
+
+    if (response.errors) {
+      const errors = response.errors as Record<string, unknown>;
+      if (
+        errors.has_deleted_duplicate === true ||
+        (Array.isArray(errors.has_deleted_duplicate) && errors.has_deleted_duplicate[0] === "True")
+      ) {
         hasDeletedDuplicate = true;
       }
+
+      // Check wrapped structure for bulk operations
+      if (Array.isArray(errors.detail) && (errors.detail as unknown[]).length > 0) {
+        const firstDetail = (errors.detail as unknown[])[0] as Record<string, unknown>;
+        if (
+          firstDetail?.has_deleted_duplicate === true ||
+          (Array.isArray(firstDetail?.has_deleted_duplicate) &&
+            firstDetail.has_deleted_duplicate[0] === "True")
+        ) {
+          hasDeletedDuplicate = true;
+        }
+      }
     }
-    
+
     // Always attach response object to error for consistent error handling
     let errorMessage = response.message || "Failed to create class";
 
     if (response.errors) {
+      const errors = response.errors as Record<string, unknown>;
       const errorMessages: string[] = [];
-      const errorFields = Object.keys(response.errors);
-      
+      const errorFields = Object.keys(errors);
+
       errorFields.forEach((field) => {
-        const fieldErrors = response.errors[field];
+        const fieldErrors = errors[field];
         if (Array.isArray(fieldErrors)) {
           fieldErrors.forEach((err) => {
-            if (field === 'non_field_errors') {
+            if (field === "non_field_errors") {
               errorMessages.push(err);
             } else {
               errorMessages.push(`${field}: ${err}`);
@@ -235,13 +256,16 @@ export async function createClass(
           });
         }
       });
-      
+
       if (errorMessages.length > 0) {
-        errorMessage = errorMessages.join('; ');
+        errorMessage = errorMessages.join("; ");
       }
     }
 
-    const error = new Error(errorMessage) as Error & { response: unknown; isDeletedDuplicate: boolean };
+    const error = new Error(errorMessage) as Error & {
+      response: unknown;
+      isDeletedDuplicate: boolean;
+    };
     error.response = response;
     error.isDeletedDuplicate = hasDeletedDuplicate;
     throw error;
@@ -257,21 +281,19 @@ export async function updateClass(
   publicId: string,
   payload: ClassUpdatePayload
 ): Promise<ClassResponse> {
-  const response = await apiRequest<ClassResponse>(
-    API_ENDPOINTS.classes.detail(publicId),
-    {
-      method: "PATCH",
-      body: JSON.stringify(payload),
-    }
-  );
+  const response = await apiRequest<ClassResponse>(API_ENDPOINTS.classes.detail(publicId), {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
 
   if (!response.success || response.code < 200 || response.code >= 300) {
     let errorMessage = response.message || "Failed to update class";
 
     if (response.errors) {
-      const errorFields = Object.keys(response.errors);
+      const errors = response.errors as Record<string, unknown>;
+      const errorFields = Object.keys(errors);
       if (errorFields.length > 0) {
-        const firstError = response.errors[errorFields[0]];
+        const firstError = errors[errorFields[0]];
         if (Array.isArray(firstError) && firstError.length > 0) {
           errorMessage = `${errorFields[0]}: ${firstError[0]}`;
         }
@@ -288,12 +310,9 @@ export async function updateClass(
  * Delete a class (soft delete)
  */
 export async function deleteClass(publicId: string): Promise<ApiResponse<null>> {
-  const response = await apiRequest<ApiResponse<null>>(
-    API_ENDPOINTS.classes.detail(publicId),
-    {
-      method: "DELETE",
-    }
-  );
+  const response = await apiRequest<ApiResponse<null>>(API_ENDPOINTS.classes.detail(publicId), {
+    method: "DELETE",
+  });
 
   if (!response.success || response.code < 200 || response.code >= 300) {
     throw new Error(response.message || "Failed to delete class");
@@ -306,12 +325,9 @@ export async function deleteClass(publicId: string): Promise<ApiResponse<null>> 
  * Reactivate a deleted class/section
  */
 export async function reactivateClass(publicId: string): Promise<ApiResponse<null>> {
-  const response = await apiRequest<ApiResponse<null>>(
-    API_ENDPOINTS.classes.activate(publicId),
-    {
-      method: "POST",
-    }
-  );
+  const response = await apiRequest<ApiResponse<null>>(API_ENDPOINTS.classes.activate(publicId), {
+    method: "POST",
+  });
 
   if (!response.success || response.code < 200 || response.code >= 300) {
     throw new Error(response.message || "Failed to reactivate class");

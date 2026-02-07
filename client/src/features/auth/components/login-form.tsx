@@ -60,7 +60,7 @@ export function LoginForm({ onForgotPassword }: LoginFormProps) {
         saveTokens(result.tokens.access, result.tokens.refresh);
       }
 
-      setAuth(result.user as User, result.organization as Organization, result.tokens);
+      setAuth(result.user as unknown as User, result.organization as Organization, result.tokens);
 
       toast({
         title: "Welcome back!",
@@ -79,7 +79,7 @@ export function LoginForm({ onForgotPassword }: LoginFormProps) {
         non_field_errors?: string[];
         errors?: {
           non_field_errors?: string[];
-          [key: string]: any;
+          [key: string]: unknown;
         };
       };
       const errorMessage =

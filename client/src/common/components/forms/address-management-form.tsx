@@ -4,6 +4,12 @@
  * Uses backend API: PATCH /api/users/profile/{user_public_id}/update-address/
  */
 
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Edit, Loader2, MapPin, Navigation, Pencil, Plus, Save } from "lucide-react";
+import { forwardRef, useEffect, useImperativeHandle, useState } from "react";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
 import { useScrollToError } from "@/common/hooks/use-scroll-to-error";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,12 +17,6 @@ import { Form } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { updateUserAddress, type Address } from "@/lib/api/address-api";
 import { parseApiError } from "@/lib/error-parser";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Edit, Loader2, MapPin, Navigation, Pencil, Plus, Save } from "lucide-react";
-import { forwardRef, useEffect, useImperativeHandle, useState } from "react";
-import { useForm } from "react-hook-form";
-import * as z from "zod";
 import { SelectField, TextInputField } from "./form-fields";
 
 const addressFormSchema = z.object({
@@ -85,7 +85,9 @@ export const AddressManagementForm = forwardRef<
 
     // Helper to parse coordinate values
     const parseCoordinate = (value: string | number | null | undefined): number | undefined => {
-      if (value === null || value === undefined) {return undefined;}
+      if (value === null || value === undefined) {
+        return undefined;
+      }
       const num = typeof value === "string" ? parseFloat(value) : value;
       return isNaN(num) ? undefined : num;
     };
@@ -152,18 +154,22 @@ export const AddressManagementForm = forwardRef<
           return form.getValues();
         }
         // Return current address if no changes
-        return currentAddress ? {
-          street_address: currentAddress.street_address,
-          address_line_2: currentAddress.address_line_2,
-          city: currentAddress.city,
-          state: currentAddress.state,
-          zip_code: currentAddress.zip_code || "",
-          country: currentAddress.country,
-          address_type: currentAddress.address_type,
-          is_primary: currentAddress.is_primary,
-          latitude: typeof currentAddress.latitude === 'number' ? currentAddress.latitude : undefined,
-          longitude: typeof currentAddress.longitude === 'number' ? currentAddress.longitude : undefined,
-        } : null;
+        return currentAddress
+          ? {
+              street_address: currentAddress.street_address,
+              address_line_2: currentAddress.address_line_2,
+              city: currentAddress.city,
+              state: currentAddress.state,
+              zip_code: currentAddress.zip_code || "",
+              country: currentAddress.country,
+              address_type: currentAddress.address_type,
+              is_primary: currentAddress.is_primary,
+              latitude:
+                typeof currentAddress.latitude === "number" ? currentAddress.latitude : undefined,
+              longitude:
+                typeof currentAddress.longitude === "number" ? currentAddress.longitude : undefined,
+            }
+          : null;
       },
     }));
 
@@ -498,7 +504,11 @@ export const AddressManagementForm = forwardRef<
                   control={form.control}
                   name="address_line_2"
                   label="Address Line 2"
-                  placeholder={isViewMode ? undefined : "Apartment, suite, unit, building, floor, etc. (optional)"}
+                  placeholder={
+                    isViewMode
+                      ? undefined
+                      : "Apartment, suite, unit, building, floor, etc. (optional)"
+                  }
                   disabled={isViewMode}
                   description={isViewMode ? "Suite, Building, Floor (optional)" : undefined}
                 />

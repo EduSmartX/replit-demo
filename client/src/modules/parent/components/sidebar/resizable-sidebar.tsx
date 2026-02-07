@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
-import type { ReactNode} from "react";
+import type { ReactNode } from "react";
 
 interface ResizableSidebarProps {
   children: (width: number) => ReactNode;
@@ -60,6 +60,7 @@ export function ResizableSidebar({
       document.body.style.cursor = "default";
       document.body.style.userSelect = "auto";
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isResizing]);
 
   return (
@@ -77,36 +78,33 @@ export function ResizableSidebar({
         }}
       >
         {children(sidebarWidth)}
-        
+
         {/* Resize Handle */}
         <div
-          className="absolute top-0 right-0 w-1 h-full cursor-ew-resize hover:bg-blue-400 hover:w-1.5 transition-all group hidden md:block"
+          className="group absolute top-0 right-0 hidden h-full w-1 cursor-ew-resize transition-all hover:w-1.5 hover:bg-blue-400 md:block"
           onMouseDown={startResizing}
           role="button"
           tabIndex={0}
           aria-label="Resize sidebar"
           onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
+            if (e.key === "Enter" || e.key === " ") {
               e.preventDefault();
             }
           }}
         >
-          <div className="absolute top-1/2 right-0 transform translate-x-1/2 -translate-y-1/2 w-3 h-12 bg-blue-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg flex items-center justify-center">
+          <div className="absolute top-1/2 right-0 flex h-12 w-3 translate-x-1/2 -translate-y-1/2 transform items-center justify-center rounded-full bg-blue-500 opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
             <div className="flex flex-col gap-0.5">
-              <div className="w-0.5 h-1 bg-white rounded-full"></div>
-              <div className="w-0.5 h-1 bg-white rounded-full"></div>
-              <div className="w-0.5 h-1 bg-white rounded-full"></div>
+              <div className="h-1 w-0.5 rounded-full bg-white"></div>
+              <div className="h-1 w-0.5 rounded-full bg-white"></div>
+              <div className="h-1 w-0.5 rounded-full bg-white"></div>
             </div>
           </div>
         </div>
       </aside>
-      
+
       {/* Spacer for main content */}
-      <div 
-        className={cn(
-          "flex-shrink-0",
-          "hidden md:block"
-        )}
+      <div
+        className={cn("flex-shrink-0", "hidden md:block")}
         style={{ width: `${sidebarWidth}px` }}
       />
     </>

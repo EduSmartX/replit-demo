@@ -13,12 +13,14 @@ import { useDeletedDuplicateHandler } from "@/common/hooks/use-deleted-duplicate
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { createClass, reactivateClass } from "@/lib/api/class-api";
-import { isDeletedDuplicateError, getDeletedDuplicateMessage, getApiErrorMessage, getDeletedRecordId } from "@/lib/error-utils";
-import type { ClassCreatePayload } from "@/lib/types/class";
+import type { ClassCreatePayload } from "@/lib/api/class-api";
 import {
-  updateClassField,
-  validateClasses,
-} from "../../helpers/class-form-helpers";
+  isDeletedDuplicateError,
+  getDeletedDuplicateMessage,
+  getApiErrorMessage,
+  getDeletedRecordId,
+} from "@/lib/error-utils";
+import { updateClassField, validateClasses } from "../../helpers/class-form-helpers";
 import { useCoreClasses, useTeachers } from "../../hooks/use-class-form";
 import { getDefaultSectionRow, type ClassSectionRow } from "../../schemas/class-section-schema";
 import { ClassSectionRow as ClassSectionRowComponent } from "./class-section-row";
@@ -28,10 +30,7 @@ interface MultiRowClassFormProps {
   onCancel?: () => void;
 }
 
-export function MultiRowClassForm({
-  onSuccess,
-  onCancel,
-}: MultiRowClassFormProps) {
+export function MultiRowClassForm({ onSuccess, onCancel }: MultiRowClassFormProps) {
   const [section, setSection] = useState<ClassSectionRow>(getDefaultSectionRow());
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -51,7 +50,7 @@ export function MultiRowClassForm({
 
   const handleSubmit = async () => {
     const validation = validateClasses([section]);
-    
+
     if (!validation.isValid) {
       toast({
         title: "Validation Error",
@@ -64,7 +63,7 @@ export function MultiRowClassForm({
     setIsSubmitting(true);
 
     const coreClass = coreClasses.find((c) => c.id.toString() === section.core_class_id);
-    
+
     if (!coreClass) {
       toast({
         title: "Validation Error",
@@ -93,21 +92,21 @@ export function MultiRowClassForm({
       });
       setIsSubmitting(false);
       onSuccess?.();
-    } catch (error: any) {
+    } catch (error) {
       setIsSubmitting(false);
-      
+
       if (isDeletedDuplicateError(error)) {
         const message = getDeletedDuplicateMessage(error);
         const deletedRecordId = getDeletedRecordId(error);
         duplicateHandler.openDialog(message, {
           payload,
           sectionName,
-          deletedRecordId
+          deletedRecordId,
         });
       } else {
         // Use utility to extract error message
         const errorMsg = getApiErrorMessage(error);
-        
+
         toast({
           title: "Error Creating Section",
           description: errorMsg,
@@ -128,7 +127,7 @@ export function MultiRowClassForm({
         });
         duplicateHandler.closeDialog();
         onSuccess?.();
-      } catch (error: any) {
+      } catch (error) {
         const errorMsg = getApiErrorMessage(error);
         toast({
           title: "Error Reactivating Section",
@@ -149,7 +148,7 @@ export function MultiRowClassForm({
     // Retry the failed section with force_create=true
     if (duplicateHandler.pendingData) {
       const { payload, sectionName } = duplicateHandler.pendingData;
-      
+
       try {
         await createClass(payload, true); // force_create = true
         queryClient.invalidateQueries({ queryKey: ["classes"] });
@@ -159,10 +158,11 @@ export function MultiRowClassForm({
         });
         duplicateHandler.closeDialog();
         onSuccess?.();
-      } catch (error: any) {
+      } catch (error) {
+        const err = error as Record<string, unknown>;
         toast({
           title: "Error",
-          description: error.message || "Failed to create section",
+          description: typeof err.message === "string" ? err.message : "Failed to create section",
           variant: "destructive",
         });
         duplicateHandler.closeDialog();
@@ -178,11 +178,7 @@ export function MultiRowClassForm({
 
   return (
     <>
-      <PageWrapper
-        title="Add Section"
-        description="Create a new class section"
-        onBack={onCancel}
-      >
+      <PageWrapper title="Add Section" description="Create a new class section" onBack={onCancel}>
         {/* Form */}
         <div className="space-y-4">
           <ClassSectionRowComponent
@@ -192,25 +188,18 @@ export function MultiRowClassForm({
             teachers={teachers}
             canDelete={false}
             onUpdate={(field, value) =>
-              setSection(prev => updateClassField([prev], prev.id, field, value)[0])
+              setSection((prev) => updateClassField([prev], prev.id, field, value)[0])
             }
-            onToggleExpand={() => 
-              setSection(prev => ({ ...prev, isExpanded: !prev.isExpanded }))
-            }
+            onToggleExpand={() => setSection((prev) => ({ ...prev, isExpanded: !prev.isExpanded }))}
             onDelete={() => {}}
           />
 
           {/* Form Actions */}
-          <div className="mt-6 flex justify-end gap-3">
+          <div className="mt-6 flex flex-wrap justify-end gap-3">
             <Button variant="outline" onClick={onCancel} disabled={isLoading} type="button">
               Cancel
             </Button>
-            <Button 
-              onClick={handleSubmit} 
-              disabled={isLoading} 
-              className="gap-2" 
-              type="button"
-            >
+            <Button onClick={handleSubmit} disabled={isLoading} className="gap-2" type="button">
               {isLoading ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />

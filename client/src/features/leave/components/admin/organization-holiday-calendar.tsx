@@ -4,7 +4,18 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { addMonths, endOfMonth, format, isSameDay, isSameMonth, isWithinInterval, parseISO, startOfDay, startOfMonth, subMonths } from "date-fns";
+import {
+  addMonths,
+  endOfMonth,
+  format,
+  isSameDay,
+  isSameMonth,
+  isWithinInterval,
+  parseISO,
+  startOfDay,
+  startOfMonth,
+  subMonths,
+} from "date-fns";
 import {
   AlertCircle,
   Calendar as CalendarIcon,
@@ -51,8 +62,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { useDeleteHoliday } from "@/hooks/use-holiday-mutations";
 import { useToast } from "@/hooks/use-toast";
 import { fetchClasses } from "@/lib/api/class-api";
-import type { Holiday, CreateHolidayPayload } from "@/lib/api/holiday-api";
-import { calculateDuration, fetchHolidayCalendar, fetchWorkingDayPolicy, formatHolidayType, getHolidayTypeColor, isNthWeekdayOfMonth } from "@/lib/api/holiday-api";
+import type { Holiday } from "@/lib/api/holiday-api";
+import {
+  calculateDuration,
+  fetchHolidayCalendar,
+  fetchWorkingDayPolicy,
+  formatHolidayType,
+  getHolidayTypeColor,
+  isNthWeekdayOfMonth,
+} from "@/lib/api/holiday-api";
 import { cn } from "@/lib/utils";
 import {
   filterNonWeekendHolidays,
@@ -60,7 +78,7 @@ import {
   getUpcomingHolidays,
   isHolidayPast,
   isWeekendHoliday,
-  sortHolidaysByDate
+  sortHolidaysByDate,
 } from "@/lib/utils/holiday-utils";
 import { AddHolidaysForm } from "./add-holidays-form";
 import { BulkUploadHolidays } from "./bulk-upload-holidays";
@@ -90,7 +108,7 @@ export function OrganizationHolidayCalendar({ className }: OrganizationHolidayCa
   const { currentYear, currentMonth, fetchFromDate, fetchToDate } = useMemo(() => {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
-        
+
     const monthStart = startOfMonth(currentDate);
     const monthEnd = endOfMonth(currentDate);
 
@@ -101,7 +119,7 @@ export function OrganizationHolidayCalendar({ className }: OrganizationHolidayCa
       fetchToDate: format(monthEnd, "yyyy-MM-dd"),
     };
   }, [currentDate]);
-  
+
   const {
     data: holidayData,
     isLoading,
@@ -118,21 +136,23 @@ export function OrganizationHolidayCalendar({ className }: OrganizationHolidayCa
       }),
     staleTime: 30 * 60 * 1000,
   });
-  
+
   // Weekend generation algorithm: Dynamically compute Sunday/Saturday holidays based on policy
   // (ALL, SECOND_ONLY, SECOND_AND_FOURTH, NONE) without backend storage
   const generatedWeekendHolidays = useMemo(() => {
-    if (!workingDayPolicy) {return [];}
+    if (!workingDayPolicy) {
+      return [];
+    }
 
     const holidays: Holiday[] = [];
     const startDate = parseISO(fetchFromDate);
     const endDate = parseISO(fetchToDate);
-    
+
     let currentDate = new Date(startDate);
-    
+
     while (currentDate <= endDate) {
       const dayOfWeek = currentDate.getDay();
-      
+
       // Check for Sunday
       if (dayOfWeek === 0 && workingDayPolicy.sunday_off) {
         holidays.push({
@@ -143,10 +163,10 @@ export function OrganizationHolidayCalendar({ className }: OrganizationHolidayCa
           description: "Sunday",
         });
       }
-      
+
       if (dayOfWeek === 6) {
         let isSaturdayOff = false;
-        
+
         switch (workingDayPolicy.saturday_off_pattern) {
           case "ALL":
             isSaturdayOff = true;
@@ -161,7 +181,7 @@ export function OrganizationHolidayCalendar({ className }: OrganizationHolidayCa
           default:
             isSaturdayOff = false;
         }
-        
+
         if (isSaturdayOff) {
           holidays.push({
             public_id: `saturday-${format(currentDate, "yyyy-MM-dd")}`,
@@ -172,12 +192,12 @@ export function OrganizationHolidayCalendar({ className }: OrganizationHolidayCa
           });
         }
       }
-      
+
       // Move to next day
       currentDate = new Date(currentDate);
       currentDate.setDate(currentDate.getDate() + 1);
     }
-    
+
     return holidays;
   }, [workingDayPolicy, fetchFromDate, fetchToDate]);
 
@@ -206,7 +226,7 @@ export function OrganizationHolidayCalendar({ className }: OrganizationHolidayCa
   return (
     <div className={cn("space-y-6", className)}>
       {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="mb-3 text-3xl font-bold text-gray-900">Holiday Calendar</h1>
           <p className="text-base text-gray-600">
@@ -221,11 +241,11 @@ export function OrganizationHolidayCalendar({ className }: OrganizationHolidayCa
 
       <Card>
         <CardHeader className="pb-2">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div className="text-lg font-semibold text-foreground">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="text-foreground text-lg font-semibold">
               {format(currentDate, "MMMM yyyy")}
             </div>
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex flex-wrap items-center gap-2">
               {/* View Toggle */}
               <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
                 <TabsList>
@@ -280,7 +300,7 @@ export function OrganizationHolidayCalendar({ className }: OrganizationHolidayCa
           {/* Loading State */}
           {isLoading && (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
             </div>
           )}
 
@@ -316,13 +336,13 @@ function CalendarView({ currentDate, holidays }: CalendarViewProps) {
   const [selectedDateHolidays, setSelectedDateHolidays] = useState<Holiday[]>([]);
   const [isAddingException, setIsAddingException] = useState(false);
   const today = startOfDay(new Date());
-  
+
   const handleDateClick = (date: Date, isCurrentMonth: boolean, dayHolidays: Holiday[]) => {
     if (isCurrentMonth) {
       setSelectedDate(date);
       setSelectedDateHolidays(dayHolidays);
       setIsAddingException(false);
-      
+
       // If date already has holidays (excluding weekends), show exception dialog
       const nonWeekendHolidays = filterNonWeekendHolidays(dayHolidays);
       if (nonWeekendHolidays.length > 0) {
@@ -332,19 +352,19 @@ function CalendarView({ currentDate, holidays }: CalendarViewProps) {
       }
     }
   };
-  
+
   // Get calendar grid data
   const calendarDays = useMemo(() => {
     const start = startOfMonth(currentDate);
     const end = endOfMonth(currentDate);
-    
+
     // Get first day of the month (0 = Sunday, 6 = Saturday)
     const firstDayOfMonth = start.getDay();
-    
+
     // Calculate days to show from previous month
     const daysInMonth = end.getDate();
     const totalCells = Math.ceil((firstDayOfMonth + daysInMonth) / 7) * 7;
-    
+
     const days: Array<{
       date: Date;
       isCurrentMonth: boolean;
@@ -356,10 +376,10 @@ function CalendarView({ currentDate, holidays }: CalendarViewProps) {
       const dayOffset = i - firstDayOfMonth;
       const date = new Date(start);
       date.setDate(date.getDate() + dayOffset);
-      
+
       const isCurrentMonth = isSameMonth(date, currentDate);
       const isToday = isSameDay(date, today);
-      
+
       // Find holidays for this date
       const dayHolidays = holidays.filter((holiday) => {
         const holidayStart = parseISO(holiday.start_date);
@@ -393,7 +413,7 @@ function CalendarView({ currentDate, holidays }: CalendarViewProps) {
     <div className="space-y-3">
       {/* Legend */}
       {holidayTypes.length > 0 && (
-        <div className="flex flex-wrap items-center gap-3 px-3 py-2 bg-muted/50 rounded-lg">
+        <div className="bg-muted/50 flex flex-wrap items-center gap-3 rounded-lg px-3 py-2">
           <div className="text-xs font-semibold">Legend:</div>
           {holidayTypes.map((type) => {
             const colors = getHolidayTypeColor(type);
@@ -408,13 +428,13 @@ function CalendarView({ currentDate, holidays }: CalendarViewProps) {
       )}
 
       {/* Calendar Grid */}
-      <div className="border rounded-lg overflow-hidden">
+      <div className="overflow-hidden rounded-lg border">
         {/* Weekday Headers */}
-        <div className="grid grid-cols-7 bg-muted/30">
+        <div className="bg-muted/30 grid grid-cols-7">
           {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
             <div
               key={day}
-              className="py-1 px-1 text-center text-[10px] font-semibold text-muted-foreground border-b"
+              className="text-muted-foreground border-b px-1 py-1 text-center text-[10px] font-semibold"
             >
               {day}
             </div>
@@ -426,7 +446,7 @@ function CalendarView({ currentDate, holidays }: CalendarViewProps) {
           {calendarDays.map((day, index) => {
             const primaryHoliday = day.holidays[0];
             const colors = primaryHoliday ? getHolidayTypeColor(primaryHoliday.holiday_type) : null;
-            
+
             let titleText = "";
             if (day.isCurrentMonth) {
               if (day.holidays.length > 0) {
@@ -442,9 +462,10 @@ function CalendarView({ currentDate, holidays }: CalendarViewProps) {
                 role="button"
                 tabIndex={day.isCurrentMonth ? 0 : -1}
                 className={cn(
-                  "min-h-[60px] p-1.5 border-b border-r cursor-pointer transition-colors hover:bg-muted/50",
-                  !day.isCurrentMonth && "bg-muted/20 text-muted-foreground cursor-default hover:bg-muted/20",
-                  day.isToday && "bg-blue-50 border-blue-300",
+                  "hover:bg-muted/50 min-h-[60px] cursor-pointer border-r border-b p-1.5 transition-colors",
+                  !day.isCurrentMonth &&
+                    "bg-muted/20 text-muted-foreground hover:bg-muted/20 cursor-default",
+                  day.isToday && "border-indigo-300 bg-blue-50",
                   colors && day.isCurrentMonth && colors.bg
                 )}
                 onClick={() => handleDateClick(day.date, day.isCurrentMonth, day.holidays)}
@@ -458,8 +479,8 @@ function CalendarView({ currentDate, holidays }: CalendarViewProps) {
               >
                 <div
                   className={cn(
-                    "text-xs font-medium mb-0.5",
-                    day.isToday && "text-blue-600 font-bold"
+                    "mb-0.5 text-xs font-medium",
+                    day.isToday && "font-bold text-indigo-600"
                   )}
                 >
                   {format(day.date, "d")}
@@ -476,7 +497,7 @@ function CalendarView({ currentDate, holidays }: CalendarViewProps) {
                         <div
                           key={holiday.public_id}
                           className={cn(
-                            "text-[10px] px-1 py-0.5 rounded truncate leading-tight",
+                            "truncate rounded px-1 py-0.5 text-[10px] leading-tight",
                             holidayColors.text,
                             holidayColors.border,
                             "border"
@@ -488,7 +509,7 @@ function CalendarView({ currentDate, holidays }: CalendarViewProps) {
                       );
                     })}
                     {filterNonWeekendHolidays(day.holidays).length > 1 && (
-                      <div className="text-[9px] text-muted-foreground">
+                      <div className="text-muted-foreground text-[9px]">
                         +{filterNonWeekendHolidays(day.holidays).length - 1} more
                       </div>
                     )}
@@ -503,7 +524,7 @@ function CalendarView({ currentDate, holidays }: CalendarViewProps) {
       {/* Upcoming Holidays */}
       {upcomingHolidays.length > 0 && (
         <Card>
-          <CardHeader className="pb-2 pt-3">
+          <CardHeader className="pt-3 pb-2">
             <CardTitle className="text-base">Upcoming Holidays</CardTitle>
           </CardHeader>
           <CardContent className="pt-3">
@@ -514,21 +535,25 @@ function CalendarView({ currentDate, holidays }: CalendarViewProps) {
                 return (
                   <div
                     key={holiday.public_id}
-                    className="flex items-center justify-between p-2 rounded-lg border"
+                    className="flex items-center justify-between rounded-lg border p-2"
                   >
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
                         <div className={cn("h-2 w-2 rounded-full", colors.badge)} />
                         <span className="text-sm font-medium">{holiday.description}</span>
                       </div>
-                      <div className="text-xs text-muted-foreground mt-0.5">
+                      <div className="text-muted-foreground mt-0.5 text-xs">
                         {format(parseISO(holiday.start_date), "MMM dd, yyyy")}
                         {duration > 1 && ` - ${format(parseISO(holiday.end_date), "MMM dd, yyyy")}`}
                       </div>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <Badge variant="secondary" className="text-xs px-1.5 py-0">{duration} {duration === 1 ? "Day" : "Days"}</Badge>
-                      <Badge className={cn(colors.badge, "text-xs px-1.5 py-0")}>{formatHolidayType(holiday.holiday_type)}</Badge>
+                      <Badge variant="secondary" className="px-1.5 py-0 text-xs">
+                        {duration} {duration === 1 ? "Day" : "Days"}
+                      </Badge>
+                      <Badge className={cn(colors.badge, "px-1.5 py-0 text-xs")}>
+                        {formatHolidayType(holiday.holiday_type)}
+                      </Badge>
                     </div>
                   </div>
                 );
@@ -539,8 +564,8 @@ function CalendarView({ currentDate, holidays }: CalendarViewProps) {
       )}
 
       {/* Add Holiday Dialog */}
-      <AddHolidaysForm 
-        open={showAddDialog} 
+      <AddHolidaysForm
+        open={showAddDialog}
         onOpenChange={setShowAddDialog}
         defaultDate={selectedDate ? format(selectedDate, "yyyy-MM-dd") : undefined}
         isException={isAddingException}
@@ -574,19 +599,19 @@ interface ExceptionPolicyDialogProps {
   onAddException: () => void;
 }
 
-function ExceptionPolicyDialog({ 
-  open, 
-  onOpenChange, 
-  date, 
+function ExceptionPolicyDialog({
+  open,
+  onOpenChange,
+  date,
   holidays,
-  onAddException 
+  onAddException,
 }: ExceptionPolicyDialogProps) {
   const [editingHoliday, setEditingHoliday] = useState<Holiday | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [holidayToDelete, setHolidayToDelete] = useState<Holiday | null>(null);
   const [showExceptionForm, setShowExceptionForm] = useState(false);
-  
+
   const deleteMutation = useDeleteHoliday();
 
   const handleEdit = (holiday: Holiday) => {
@@ -610,7 +635,7 @@ function ExceptionPolicyDialog({
       setHolidayToDelete(null);
       // Close exception dialog if no more holidays
       const remainingHolidays = filterNonWeekendHolidays(holidays).filter(
-        h => h.public_id !== holidayToDelete.public_id
+        (h) => h.public_id !== holidayToDelete.public_id
       );
       if (remainingHolidays.length === 0) {
         onOpenChange(false);
@@ -626,11 +651,12 @@ function ExceptionPolicyDialog({
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <CalendarIcon className="h-5 w-5 text-blue-600" />
+              <CalendarIcon className="h-5 w-5 text-indigo-600" />
               Manage Holidays - {date ? format(date, "MMMM dd, yyyy") : ""}
             </DialogTitle>
             <DialogDescription>
-              This date has existing holidays. You can edit or delete them, add more holidays, or create an exception policy (Force Working/Holiday).
+              This date has existing holidays. You can edit or delete them, add more holidays, or
+              create an exception policy (Force Working/Holiday).
             </DialogDescription>
           </DialogHeader>
 
@@ -638,21 +664,22 @@ function ExceptionPolicyDialog({
             {nonWeekendHolidays.map((holiday) => {
               const colors = getHolidayTypeColor(holiday.holiday_type);
               const duration = calculateDuration(holiday.start_date, holiday.end_date);
-              
+
               return (
                 <Card key={holiday.public_id} className="border">
                   <CardContent className="pt-4">
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
+                        <div className="mb-1 flex items-center gap-2">
                           <div className={cn("h-2.5 w-2.5 rounded-full", colors.badge)} />
-                          <span className="font-semibold text-sm">{holiday.description}</span>
+                          <span className="text-sm font-semibold">{holiday.description}</span>
                         </div>
-                        <div className="text-xs text-muted-foreground">
+                        <div className="text-muted-foreground text-xs">
                           {format(parseISO(holiday.start_date), "MMM dd, yyyy")}
-                          {duration > 1 && ` - ${format(parseISO(holiday.end_date), "MMM dd, yyyy")}`}
+                          {duration > 1 &&
+                            ` - ${format(parseISO(holiday.end_date), "MMM dd, yyyy")}`}
                         </div>
-                        <div className="flex items-center gap-2 mt-1">
+                        <div className="mt-1 flex items-center gap-2">
                           <Badge variant="secondary" className="text-xs">
                             {duration} {duration === 1 ? "Day" : "Days"}
                           </Badge>
@@ -675,7 +702,7 @@ function ExceptionPolicyDialog({
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-destructive hover:text-destructive"
+                          className="text-destructive hover:text-destructive h-8 w-8"
                           onClick={() => handleDelete(holiday)}
                           disabled={deleteMutation.isPending}
                           title="Delete holiday"
@@ -690,22 +717,15 @@ function ExceptionPolicyDialog({
             })}
           </div>
 
-          <DialogFooter className="flex-col sm:flex-row gap-2">
+          <DialogFooter className="flex-col gap-2 sm:flex-row">
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Close
             </Button>
-            <Button 
-              onClick={onAddException}
-              className="gap-2"
-            >
+            <Button onClick={onAddException} className="gap-2">
               <Plus className="h-4 w-4" />
               Add Another Holiday
             </Button>
-            <Button 
-              onClick={handleCreateException}
-              variant="secondary"
-              className="gap-2"
-            >
+            <Button onClick={handleCreateException} variant="secondary" className="gap-2">
               <CalendarIcon className="h-4 w-4" />
               Create Exception Policy
             </Button>
@@ -757,8 +777,10 @@ interface ExceptionFormDialogProps {
 function ExceptionFormDialog({ open, onOpenChange, date, onSuccess }: ExceptionFormDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
-  const [overrideType, setOverrideType] = useState<"FORCE_WORKING" | "FORCE_HOLIDAY">("FORCE_WORKING");
+
+  const [overrideType, setOverrideType] = useState<"FORCE_WORKING" | "FORCE_HOLIDAY">(
+    "FORCE_WORKING"
+  );
   const [isApplicableToAll, setIsApplicableToAll] = useState(false);
   const [selectedClasses, setSelectedClasses] = useState<string[]>([]);
   const [reason, setReason] = useState("");
@@ -772,13 +794,21 @@ function ExceptionFormDialog({ open, onOpenChange, date, onSuccess }: ExceptionF
   const classes = classesResponse?.data || [];
 
   const createMutation = useMutation({
-    mutationFn: async (data: CreateHolidayPayload) => {
+    mutationFn: async (data: {
+      date: string;
+      override_type: "FORCE_WORKING" | "FORCE_HOLIDAY";
+      is_applicable_to_all_classes: boolean;
+      classes: string[];
+      reason: string;
+    }) => {
       const response = await fetch("/api/calendar-exceptions/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
-      if (!response.ok) {throw new Error("Failed to create exception");}
+      if (!response.ok) {
+        throw new Error("Failed to create exception");
+      }
       return response.json();
     },
     onSuccess: () => {
@@ -837,19 +867,17 @@ function ExceptionFormDialog({ open, onOpenChange, date, onSuccess }: ExceptionF
   };
 
   const handleClassToggle = (classId: string) => {
-    setSelectedClasses(prev =>
-      prev.includes(classId)
-        ? prev.filter(id => id !== classId)
-        : [...prev, classId]
+    setSelectedClasses((prev) =>
+      prev.includes(classId) ? prev.filter((id) => id !== classId) : [...prev, classId]
     );
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <CalendarIcon className="h-5 w-5 text-blue-600" />
+            <CalendarIcon className="h-5 w-5 text-indigo-600" />
             Create Exception Policy - {date ? format(date, "MMMM dd, yyyy") : ""}
           </DialogTitle>
           <DialogDescription>
@@ -893,7 +921,7 @@ function ExceptionFormDialog({ open, onOpenChange, date, onSuccess }: ExceptionF
             />
             <div className="space-y-1 leading-none">
               <span className="text-sm font-medium">Apply to all classes</span>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 This exception will apply to all classes in the organization
               </p>
             </div>
@@ -905,21 +933,21 @@ function ExceptionFormDialog({ open, onOpenChange, date, onSuccess }: ExceptionF
               <span className="text-sm font-medium">Select Classes</span>
               <div className="max-h-40 overflow-y-auto rounded-md border p-4">
                 {classes.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                     {classes.map((cls) => (
                       <div key={cls.public_id} className="flex items-center space-x-2">
                         <Checkbox
                           checked={selectedClasses.includes(cls.public_id)}
                           onCheckedChange={() => handleClassToggle(cls.public_id)}
                         />
-                        <label className="text-sm font-medium leading-none cursor-pointer">
+                        <label className="cursor-pointer text-sm leading-none font-medium">
                           {cls.class_master.name} - {cls.name}
                         </label>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground">No classes available</p>
+                  <p className="text-muted-foreground text-sm">No classes available</p>
                 )}
               </div>
             </div>
@@ -935,12 +963,16 @@ function ExceptionFormDialog({ open, onOpenChange, date, onSuccess }: ExceptionF
               rows={3}
               maxLength={500}
             />
-            <p className="text-xs text-muted-foreground">{reason.length}/500 characters</p>
+            <p className="text-muted-foreground text-xs">{reason.length}/500 characters</p>
           </div>
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={createMutation.isPending}>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={createMutation.isPending}
+          >
             Cancel
           </Button>
           <Button onClick={handleSubmit} disabled={createMutation.isPending}>
@@ -994,7 +1026,7 @@ function TableView({ holidays, allHolidays: _allHolidays }: TableViewProps) {
 
   if (holidays.length === 0) {
     return (
-      <div className="text-center py-12 text-muted-foreground">
+      <div className="text-muted-foreground py-12 text-center">
         No holidays found for the selected period.
       </div>
     );
@@ -1002,7 +1034,7 @@ function TableView({ holidays, allHolidays: _allHolidays }: TableViewProps) {
 
   return (
     <>
-      <div className="rounded-lg border overflow-hidden">
+      <div className="overflow-hidden rounded-lg border">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/50">
@@ -1010,7 +1042,7 @@ function TableView({ holidays, allHolidays: _allHolidays }: TableViewProps) {
               <TableHead className="text-center font-semibold">Description</TableHead>
               <TableHead className="text-center font-semibold">Duration</TableHead>
               <TableHead className="text-center font-semibold">Type</TableHead>
-              <TableHead className="text-center font-semibold w-[100px]">Actions</TableHead>
+              <TableHead className="w-[100px] text-center font-semibold">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -1022,13 +1054,13 @@ function TableView({ holidays, allHolidays: _allHolidays }: TableViewProps) {
 
               return (
                 <TableRow key={holiday.public_id} className={cn(isPast && "opacity-50")}>
-                  <TableCell className="font-medium text-center">
+                  <TableCell className="text-center font-medium">
                     <div>
                       {format(parseISO(holiday.start_date), "MMM dd, yyyy")}
                       {duration > 1 && (
                         <>
                           <br />
-                          <span className="text-sm text-muted-foreground">
+                          <span className="text-muted-foreground text-sm">
                             to {format(parseISO(holiday.end_date), "MMM dd, yyyy")}
                           </span>
                         </>
@@ -1037,7 +1069,7 @@ function TableView({ holidays, allHolidays: _allHolidays }: TableViewProps) {
                   </TableCell>
                   <TableCell className="text-center">
                     <div className="flex items-center justify-center gap-2">
-                      <div className={cn("h-2 w-2 rounded-full flex-shrink-0", colors.badge)} />
+                      <div className={cn("h-2 w-2 flex-shrink-0 rounded-full", colors.badge)} />
                       <span>{holiday.description}</span>
                     </div>
                   </TableCell>
@@ -1047,7 +1079,9 @@ function TableView({ holidays, allHolidays: _allHolidays }: TableViewProps) {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-center">
-                    <Badge className={colors.badge}>{formatHolidayType(holiday.holiday_type)}</Badge>
+                    <Badge className={colors.badge}>
+                      {formatHolidayType(holiday.holiday_type)}
+                    </Badge>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center justify-center gap-1">
@@ -1064,7 +1098,7 @@ function TableView({ holidays, allHolidays: _allHolidays }: TableViewProps) {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 text-destructive hover:text-destructive"
+                        className="text-destructive hover:text-destructive h-8 w-8"
                         onClick={() => handleDelete(holiday)}
                         disabled={isWeekend || deleteMutation.isPending}
                         title={isWeekend ? "Cannot delete weekend holidays" : "Delete holiday"}

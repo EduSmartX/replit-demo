@@ -36,30 +36,22 @@ export function PolicySummaryCard({
     <Card className="shadow-lg">
       <CardHeader>
         <CardTitle className="text-green-900">Leave Policy Summary</CardTitle>
-        <CardDescription>
-          Preview of your leave allocation configuration
-        </CardDescription>
+        <CardDescription>Preview of your leave allocation configuration</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div>
           <p className="text-sm font-medium text-gray-500">Leave Type:</p>
-          <p className="text-base font-semibold text-gray-900">
-            {leaveTypeName || "Not selected"}
-          </p>
+          <p className="text-base font-semibold text-gray-900">{leaveTypeName || "Not selected"}</p>
         </div>
 
         <div>
           <p className="text-sm font-medium text-gray-500">Total Days:</p>
-          <p className="text-base font-semibold text-gray-900">
-            {totalDays || "0"}
-          </p>
+          <p className="text-base font-semibold text-gray-900">{totalDays || "0"}</p>
         </div>
 
         <div>
           <p className="text-sm font-medium text-gray-500">Carry Forward:</p>
-          <p className="text-base font-semibold text-gray-900">
-            {carryForwardDays || "0"} days
-          </p>
+          <p className="text-base font-semibold text-gray-900">{carryForwardDays || "0"} days</p>
         </div>
 
         <div>
@@ -71,16 +63,11 @@ export function PolicySummaryCard({
         </div>
 
         <div>
-          <p className="text-sm font-medium text-gray-500 mb-2">
-            Applicable Roles:
-          </p>
+          <p className="mb-2 text-sm font-medium text-gray-500">Applicable Roles:</p>
           {selectedRoles.length > 0 ? (
             <div className="space-y-1">
               {selectedRoles.map((role) => (
-                <div
-                  key={role.id}
-                  className="flex items-center gap-2 text-sm text-gray-700"
-                >
+                <div key={role.id} className="flex items-center gap-2 text-sm text-gray-700">
                   <CheckCircle2 className="h-4 w-4 text-green-600" />
                   {role.name}
                 </div>
@@ -92,12 +79,9 @@ export function PolicySummaryCard({
         </div>
 
         {/* Action Buttons */}
-        <div className="flex gap-3 pt-4 border-t">
+        <div className="flex gap-3 border-t pt-4">
           {isViewMode && onEdit && (
-            <Button
-              onClick={onEdit}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
+            <Button onClick={onEdit} className="bg-indigo-600 hover:bg-indigo-700">
               <Edit className="mr-2 h-4 w-4" />
               Edit Policy
             </Button>
@@ -106,20 +90,13 @@ export function PolicySummaryCard({
             <Button
               onClick={onSubmit}
               disabled={isSubmitting}
-              className="bg-blue-600 hover:bg-blue-700"
+              className="bg-indigo-600 hover:bg-indigo-700"
             >
-              {isSubmitting && (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              )}
+              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {mode === "edit" ? "Update Policy" : "Generate Policy"}
             </Button>
           )}
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onCancel}
-            disabled={isSubmitting}
-          >
+          <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
             {isViewMode ? "Back to List" : "Cancel"}
           </Button>
         </div>

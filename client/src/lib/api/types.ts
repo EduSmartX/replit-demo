@@ -30,7 +30,7 @@ export interface ApiResponse<T> {
   message: string;
   data: T;
   code: number;
-  errors?: any;
+  errors?: unknown;
 }
 
 /**
@@ -42,7 +42,7 @@ export interface ApiListResponse<T> {
   data: T[];
   pagination: Pagination;
   code: number;
-  errors?: any;
+  errors?: unknown;
 }
 
 /**
@@ -51,7 +51,7 @@ export interface ApiListResponse<T> {
 export interface ApiErrorResponse {
   success: false;
   message: string;
-  errors: any;
+  errors: unknown;
   code: number;
   data?: null;
 }

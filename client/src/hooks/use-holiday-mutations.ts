@@ -36,22 +36,26 @@ export function useCreateHoliday(options?: UseMutationOptions) {
       });
       options?.onSuccess?.();
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       const errorData = parseBackendValidationError(error);
-      
+
       if (errorData?.errors) {
-        const errorMessages = Object.entries(errorData.errors)
-          .flatMap(([_field, messages]) => messages);
-        
+        const errorMessages = Object.entries(errorData.errors).flatMap(
+          ([_field, messages]) => messages
+        );
+
         toast({
           title: "Validation Error",
           description: errorMessages.join("\n• "),
           variant: "destructive",
         });
       } else {
+        const err = error as Record<string, unknown>;
         toast({
           title: "Error",
-          description: error?.message || "Failed to create holiday",
+          description:
+            (typeof err?.message === "string" ? err.message : undefined) ||
+            "Failed to create holiday",
           variant: "destructive",
         });
       }
@@ -74,27 +78,30 @@ export function useCreateHolidaysBulk(options?: UseMutationOptions) {
       toast({
         title: "Success",
         description:
-          options?.successMessage ||
-          `${count} holiday${count > 1 ? "s" : ""} created successfully`,
+          options?.successMessage || `${count} holiday${count > 1 ? "s" : ""} created successfully`,
       });
       options?.onSuccess?.();
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       const errorData = parseBackendValidationError(error);
-      
+
       if (errorData?.errors) {
-        const errorMessages = Object.entries(errorData.errors)
-          .flatMap(([_field, messages]) => messages);
-        
+        const errorMessages = Object.entries(errorData.errors).flatMap(
+          ([_field, messages]) => messages
+        );
+
         toast({
           title: "Validation Error",
           description: errorMessages.join("\n• "),
           variant: "destructive",
         });
       } else {
+        const err = error as Record<string, unknown>;
         toast({
           title: "Error",
-          description: error?.message || "Failed to create holidays",
+          description:
+            (typeof err?.message === "string" ? err.message : undefined) ||
+            "Failed to create holidays",
           variant: "destructive",
         });
       }
@@ -120,22 +127,26 @@ export function useUpdateHoliday(options?: UseMutationOptions) {
       });
       options?.onSuccess?.();
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       const errorData = parseBackendValidationError(error);
-      
+
       if (errorData?.errors) {
-        const errorMessages = Object.entries(errorData.errors)
-          .flatMap(([_field, messages]) => messages);
-        
+        const errorMessages = Object.entries(errorData.errors).flatMap(
+          ([_field, messages]) => messages
+        );
+
         toast({
           title: "Validation Error",
           description: errorMessages.join("\n• "),
           variant: "destructive",
         });
       } else {
+        const err = error as Record<string, unknown>;
         toast({
           title: "Error",
-          description: error?.message || "Failed to update holiday",
+          description:
+            (typeof err?.message === "string" ? err.message : undefined) ||
+            "Failed to update holiday",
           variant: "destructive",
         });
       }
@@ -160,22 +171,26 @@ export function useDeleteHoliday(options?: UseMutationOptions) {
       });
       options?.onSuccess?.();
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       const errorData = parseBackendValidationError(error);
-      
+
       if (errorData?.errors) {
-        const errorMessages = Object.entries(errorData.errors)
-          .flatMap(([_field, messages]) => messages);
-        
+        const errorMessages = Object.entries(errorData.errors).flatMap(
+          ([_field, messages]) => messages
+        );
+
         toast({
           title: "Validation Error",
           description: errorMessages.join("\n• "),
           variant: "destructive",
         });
       } else {
+        const err = error as Record<string, unknown>;
         toast({
           title: "Error",
-          description: error?.message || "Failed to delete holiday",
+          description:
+            (typeof err?.message === "string" ? err.message : undefined) ||
+            "Failed to delete holiday",
           variant: "destructive",
         });
       }

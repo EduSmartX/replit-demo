@@ -34,6 +34,7 @@ export const API_ENDPOINTS = {
   users: {
     list: `${API_BASE_URL}/api/users/`,
     detail: (id: string) => `${API_BASE_URL}/api/users/${id}/`,
+    manageableUsers: `${API_BASE_URL}/api/users/profile/manageable-users/`,
   },
   core: {
     leaveTypes: `${API_BASE_URL}/api/core/leave-types/`,
@@ -52,13 +53,18 @@ export const API_ENDPOINTS = {
     allocations: `${API_BASE_URL}/api/leave/leave-allocations/`,
     allocationDetail: (publicId: string) =>
       `${API_BASE_URL}/api/leave/leave-allocations/${publicId}/`,
+    balances: `${API_BASE_URL}/api/leave/leave-balances/`,
+    requests: `${API_BASE_URL}/api/leave/leave-requests/`,
+    reviews: `${API_BASE_URL}/api/leave/leave-request-reviews/`,
   },
   attendance: {
     holidayCalendar: `${API_BASE_URL}/api/attendance/admin/holiday-calendar/`,
     workingDayPolicy: `${API_BASE_URL}/api/attendance/admin/working-day-policy/`,
     calendarException: `${API_BASE_URL}/api/attendance/calendar-exception/`,
-    calendarExceptionDetail: (publicId: string) => `${API_BASE_URL}/api/attendance/calendar-exception/${publicId}/`,
+    calendarExceptionDetail: (publicId: string) =>
+      `${API_BASE_URL}/api/attendance/calendar-exception/${publicId}/`,
     calendarExceptionBulkCreate: `${API_BASE_URL}/api/attendance/calendar-exception/bulk_create_exceptions/`,
+    myAttendance: `${API_BASE_URL}/api/attendance/my-attendance/`,
   },
   teacher: {
     list: `${API_BASE_URL}/api/teacher/admin/`,
@@ -75,9 +81,9 @@ export const API_ENDPOINTS = {
   students: {
     list: `${API_BASE_URL}/api/students/`,
     classLevel: (classId: string) => `${API_BASE_URL}/api/students/classes/${classId}/students/`,
-    classDetail: (classId: string, publicId: string) => 
+    classDetail: (classId: string, publicId: string) =>
       `${API_BASE_URL}/api/students/classes/${classId}/students/${publicId}/`,
-    activate: (classId: string, publicId: string) => 
+    activate: (classId: string, publicId: string) =>
       `${API_BASE_URL}/api/students/classes/${classId}/students/${publicId}/activate/`,
     bulkUpload: `${API_BASE_URL}/api/students/bulk-operations/bulk_upload/`,
     downloadTemplate: `${API_BASE_URL}/api/students/bulk-operations/download_template/`,
@@ -131,9 +137,15 @@ export interface ApiRequestOptions extends RequestInit {
 /**
  * Make an authenticated API request to Django backend
  */
-export async function apiRequest<T = unknown>(url: string, options: ApiRequestOptions = {}): Promise<T> {
+export async function apiRequest<T = unknown>(
+  url: string,
+  options: ApiRequestOptions = {}
+): Promise<T> {
   const { skipAuth, ...fetchOptions } = options;
   const accessToken = getAccessToken();
+
+  // Prepend base URL if the URL is relative (doesn't start with http)
+  const fullUrl = url.startsWith("http") ? url : `${API_BASE_URL}${url}`;
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -146,7 +158,7 @@ export async function apiRequest<T = unknown>(url: string, options: ApiRequestOp
   }
 
   try {
-    const response = await fetch(url, {
+    const response = await fetch(fullUrl, {
       ...fetchOptions,
       headers,
     });
@@ -157,7 +169,7 @@ export async function apiRequest<T = unknown>(url: string, options: ApiRequestOp
       if (refreshed) {
         // Retry the original request with new token
         headers["Authorization"] = `Bearer ${getAccessToken()}`;
-        const retryResponse = await fetch(url, {
+        const retryResponse = await fetch(fullUrl, {
           ...fetchOptions,
           headers,
         });
@@ -192,7 +204,7 @@ export async function apiRequest<T = unknown>(url: string, options: ApiRequestOp
     if (contentType && contentType.includes("application/json")) {
       responseData = await response.json();
     } else {
-      const text = await response.text();      
+      const text = await response.text();
       try {
         responseData = JSON.parse(text);
       } catch {
@@ -201,10 +213,10 @@ export async function apiRequest<T = unknown>(url: string, options: ApiRequestOp
     }
 
     // If response is not ok, throw the parsed response data
-    if (!response.ok) {      
+    if (!response.ok) {
       if (responseData && typeof responseData === "object") {
         throw responseData;
-      }      
+      }
       throw {
         success: false,
         message: responseData || response.statusText || "Request failed",
@@ -220,7 +232,7 @@ export async function apiRequest<T = unknown>(url: string, options: ApiRequestOp
     if (error && typeof error === "object" && "code" in error) {
       throw error;
     }
-    
+
     throw {
       success: false,
       message: error instanceof Error ? error.message : "Network error occurred",

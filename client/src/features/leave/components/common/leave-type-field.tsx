@@ -14,20 +14,20 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { type LeaveType } from "@/lib/api/leave-api";
-import type { Control } from "react-hook-form";
+import type { Control, FieldValues } from "react-hook-form";
 
 interface LeaveTypeFieldProps {
-  control: Control<any>;
+  control: Control<FieldValues>;
   leaveTypes: LeaveType[];
   mode: "create" | "view" | "edit";
   initialLeaveTypeName?: string;
 }
 
-export function LeaveTypeField({ 
-  control, 
-  leaveTypes, 
+export function LeaveTypeField({
+  control,
+  leaveTypes,
   mode,
-  initialLeaveTypeName 
+  initialLeaveTypeName,
 }: LeaveTypeFieldProps) {
   const isReadOnly = mode === "view" || mode === "edit";
 
@@ -39,7 +39,7 @@ export function LeaveTypeField({
         <FormItem>
           <FormLabel>Leave Type *</FormLabel>
           {isReadOnly ? (
-            <div className="rounded-md border border-input bg-gray-50 px-3 py-2 text-sm">
+            <div className="border-input rounded-md border bg-gray-50 px-3 py-2 text-sm">
               {initialLeaveTypeName || "Not selected"}
             </div>
           ) : (
@@ -62,8 +62,8 @@ export function LeaveTypeField({
             </Select>
           )}
           <FormDescription>
-            {mode === "edit" 
-              ? "Leave type cannot be changed after creation" 
+            {mode === "edit"
+              ? "Leave type cannot be changed after creation"
               : "Choose the type of leave for this allocation"}
           </FormDescription>
           <FormMessage />

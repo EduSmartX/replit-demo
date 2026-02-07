@@ -15,7 +15,6 @@ import {
 import { HOLIDAY_TYPE_OPTIONS } from "@/lib/api/holiday-api";
 import type { CreateHolidayPayload } from "@/lib/api/holiday-api";
 
-
 interface HolidayFormFieldsProps {
   formData: CreateHolidayPayload;
   onUpdate: (field: keyof CreateHolidayPayload, value: string | Date | null) => void;
@@ -51,8 +50,8 @@ export function HolidayFormFields({
           id="end_date"
           type="date"
           value={formData.end_date || ""}
-          onChange={(e) => onUpdate("end_date", e.target.value || undefined)}
-          min={formData.start_date}
+          onChange={(e) => onUpdate("end_date", e.target.value || null)}
+          min={formData.start_date || undefined}
           placeholder="Same as start"
           className={compact ? "text-sm" : ""}
         />
@@ -123,8 +122,8 @@ export function HolidayFormRow({ formData, onUpdate }: HolidayFormRowProps) {
         <Input
           type="date"
           value={formData.end_date || ""}
-          onChange={(e) => onUpdate("end_date", e.target.value || undefined)}
-          min={formData.start_date}
+          onChange={(e) => onUpdate("end_date", e.target.value || null)}
+          min={formData.start_date || undefined}
           placeholder="Same as start"
         />
       </div>
@@ -200,5 +199,3 @@ export function validateHolidayData(
 
   return true;
 }
-
-

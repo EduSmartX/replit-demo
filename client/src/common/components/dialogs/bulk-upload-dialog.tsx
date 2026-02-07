@@ -27,7 +27,7 @@ import { useToast } from "@/hooks/use-toast";
 export interface BulkUploadError {
   row: number;
   error: string;
-  data: Record<string, any>;
+  data?: Record<string, unknown> | null;
 }
 
 // Generic result type for bulk uploads
@@ -123,10 +123,11 @@ export function BulkUploadDialog({
         title: "Success",
         description: "Template downloaded successfully",
       });
-    } catch (error: any) {
+    } catch (error) {
+      const err = error as Error;
       toast({
         title: "Error",
-        description: error?.message || "Failed to download template",
+        description: err?.message || "Failed to download template",
         variant: "destructive",
       });
     } finally {
@@ -145,41 +146,48 @@ export function BulkUploadDialog({
 
   // Allow re-selecting the same file
   const handleFileInputClick = (event: React.MouseEvent<HTMLInputElement>) => {
-    event.currentTarget.value = '';
+    event.currentTarget.value = "";
   };
-  
-  const transformErrors = (errors: any): BulkUploadError[] => {
-    if (!errors) {return [];}
-        
-    if (typeof errors === 'object' && !Array.isArray(errors)) {
-      return Object.entries(errors).map(([rowKey, errorData]: [string, any]) => {        
+
+  const transformErrors = (errors: unknown): BulkUploadError[] => {
+    if (!errors) {
+      return [];
+    }
+
+    if (typeof errors === "object" && !Array.isArray(errors)) {
+      return Object.entries(errors).map(([rowKey, errorData]: [string, unknown]) => {
         const rowMatch = rowKey.match(/Row (\d+)/i);
         const rowNumber = rowMatch ? parseInt(rowMatch[1], 10) : 0;
-                
-        let errorMessage = 'Validation error';
-        if (typeof errorData === 'object') {
-          const firstKey = Object.keys(errorData)[0];
-          errorMessage = errorData[firstKey] || errorMessage;
-        } else if (typeof errorData === 'string') {
+
+        let errorMessage = "Validation error";
+        let data: Record<string, unknown> | null = null;
+        if (typeof errorData === "object" && errorData !== null) {
+          data = errorData as Record<string, unknown>;
+          const firstKey = Object.keys(data)[0];
+          errorMessage =
+            typeof data[firstKey] === "string" ? (data[firstKey] as string) : errorMessage;
+        } else if (typeof errorData === "string") {
           errorMessage = errorData;
         }
-        
+
         return {
           row: rowNumber,
           error: errorMessage,
-          data: typeof errorData === 'object' ? errorData : {},
+          data,
         };
       });
     }
-    
+
     // Handle array format
     if (Array.isArray(errors)) {
-      if (errors.length === 0) {return [];}
-      
+      if (errors.length === 0) {
+        return [];
+      }
+
       return errors.map((error) => {
         // Handle new backend format: { row_number, errors: {...} } or { row, errors: {...} }
         const rowNum = error.row_number ?? error.row;
-        if (rowNum !== undefined && error.errors && typeof error.errors === 'object') {
+        if (rowNum !== undefined && error.errors && typeof error.errors === "object") {
           // For file-level errors (row: 0), extract the file error message
           if (rowNum === 0 && error.errors.file) {
             return {
@@ -191,10 +199,11 @@ export function BulkUploadDialog({
           // Extract first error message from errors object
           const errorKeys = Object.keys(error.errors);
           const firstErrorKey = errorKeys[0];
-          const errorMessage = errorKeys.length > 1 
-            ? `${errorKeys.length} validation errors`
-            : error.errors[firstErrorKey] || 'Validation error';
-          
+          const errorMessage =
+            errorKeys.length > 1
+              ? `${errorKeys.length} validation errors`
+              : error.errors[firstErrorKey] || "Validation error";
+
           return {
             row: rowNum,
             error: errorMessage,
@@ -204,12 +213,12 @@ export function BulkUploadDialog({
         // Handle old format: { row, error, data }
         return {
           row: error.row || 0,
-          error: error.error || 'Unknown error',
+          error: error.error || "Unknown error",
           data: error.data || {},
         };
       });
     }
-    
+
     return [];
   };
 
@@ -229,53 +238,56 @@ export function BulkUploadDialog({
     try {
       const response = await uploadFile(selectedFile);
       const result = response.data;
-      
+
       if (result.successful_count !== undefined && result.created_count === undefined) {
         result.created_count = result.successful_count;
       }
-            
+
       if (result.total_rows === undefined) {
         result.total_rows = (result.created_count || 0) + (result.failed_count || 0);
       }
-            
+
       if (result.errors) {
         result.errors = transformErrors(result.errors);
       } else if (result.errors === null) {
         result.errors = [];
       }
-      
+
       setUploadResult(result);
 
       // Invalidate cache
       invalidateQueryKeys.forEach((key) => {
-        queryClient.invalidateQueries({ 
+        queryClient.invalidateQueries({
           queryKey: [key],
           exact: false,
         });
       });
 
       // Show success/partial success toast
+      const createdCount = result.created_count ?? 0;
+      const failedCount = result.failed_count ?? 0;
       const message =
-        result.failed_count === 0
-          ? `${result.created_count} record${result.created_count > 1 ? "s" : ""} uploaded successfully`
-          : `Created: ${result.created_count}, Failed: ${result.failed_count}`;
+        failedCount === 0
+          ? `${createdCount} record${createdCount > 1 ? "s" : ""} uploaded successfully`
+          : `Created: ${createdCount}, Failed: ${failedCount}`;
 
       toast({
-        title: result.failed_count === 0 ? "Success" : "Partial Success",
+        title: failedCount === 0 ? "Success" : "Partial Success",
         description: message,
-        variant: result.failed_count > 0 ? "destructive" : undefined,
+        variant: failedCount > 0 ? "destructive" : undefined,
       });
-    } catch (error: any) {
-      const result = error?.data;
-      if (result) {        
+    } catch (error) {
+      const err = error as { data?: BulkUploadResult };
+      const result = err?.data;
+      if (result) {
         if (result.successful_count !== undefined && result.created_count === undefined) {
           result.created_count = result.successful_count;
         }
-                
+
         if (result.total_rows === undefined) {
           result.total_rows = (result.created_count || 0) + (result.failed_count || 0);
         }
-            
+
         if (result.errors) {
           result.errors = transformErrors(result.errors);
         } else if (result.errors === null) {
@@ -283,9 +295,10 @@ export function BulkUploadDialog({
         }
         setUploadResult(result);
       } else {
+        const err = error as Record<string, unknown>;
         toast({
           title: "Error",
-          description: error?.message || "Failed to upload file",
+          description: typeof err?.message === "string" ? err.message : "Failed to upload file",
           variant: "destructive",
         });
       }
@@ -425,18 +438,20 @@ export function BulkUploadDialog({
                       )}
                       <div className="flex-1 space-y-1">
                         <p className="text-destructive text-sm font-medium">{error.error}</p>
-                        {error.data && typeof error.data === 'object' && Object.keys(error.data).length > 0 && (
-                          <div className="text-muted-foreground space-y-0.5 text-xs">
-                            {Object.entries(error.data).map(([key, value]) => (
-                              <div key={key}>
-                                <span className="font-medium capitalize">
-                                  {key.replace(/_/g, " ")}:
-                                </span>{" "}
-                                {String(value)}
-                              </div>
-                            ))}
-                          </div>
-                        )}
+                        {error.data &&
+                          typeof error.data === "object" &&
+                          Object.keys(error.data).length > 0 && (
+                            <div className="text-muted-foreground space-y-0.5 text-xs">
+                              {Object.entries(error.data).map(([key, value]) => (
+                                <div key={key}>
+                                  <span className="font-medium capitalize">
+                                    {key.replace(/_/g, " ")}:
+                                  </span>{" "}
+                                  {String(value)}
+                                </div>
+                              ))}
+                            </div>
+                          )}
                       </div>
                     </div>
                   </div>

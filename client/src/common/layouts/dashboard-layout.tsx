@@ -3,10 +3,18 @@
  * Provides the common layout structure (sidebar + topbar) for all dashboard pages
  */
 
-import { Building2, LogOut } from "lucide-react";
+import { Building2, LogOut, Settings, User as UserIcon, ChevronDown } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useUser } from "@/core/contexts";
 import { useToast } from "@/hooks/use-toast";
 import { AdminSidebar } from "@/modules/admin";
@@ -27,17 +35,22 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   // Get active menu from URL path
   const getActiveMenuFromPath = () => {
     const path = location.replace("/", "");
-    
+
+    // Handle settings routes
+    if (path.startsWith("settings/profile")) {
+      return "profile-settings";
+    }
+
     // Handle student detail pages: /classes/:classId/students/:studentId
     if (path.includes("/students/") || path === "students") {
       return "students";
     }
-    
+
     // Handle teacher detail pages: /teachers/:id
     if (path.startsWith("teachers")) {
       return "teachers";
     }
-    
+
     // Handle other detail pages - extract first segment
     return path === "dashboard" || path === "" ? "overview" : path.split("/")[0];
   };
@@ -51,14 +64,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       const timer1 = setTimeout(() => {
         window.scrollTo({
           top: scrollPositionRef.current,
-          behavior: 'instant' as ScrollBehavior
+          behavior: "instant" as ScrollBehavior,
         });
       }, 0);
-      
+
       const timer2 = setTimeout(() => {
         window.scrollTo({
           top: scrollPositionRef.current,
-          behavior: 'instant' as ScrollBehavior
+          behavior: "instant" as ScrollBehavior,
         });
         shouldRestoreScroll.current = false;
       }, 100);
@@ -74,9 +87,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     // Store current scroll position
     scrollPositionRef.current = window.scrollY;
     shouldRestoreScroll.current = true;
-    
+
     if (menuId === "overview") {
       setLocation("/dashboard");
+    } else if (menuId === "profile-settings") {
+      setLocation("/settings/profile");
     } else {
       setLocation(`/${menuId}`);
     }
@@ -141,16 +156,37 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             <p className="text-sm font-medium text-white">{user.full_name}</p>
             <p className="text-xs text-white/70 capitalize">{user.role}</p>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleLogout}
-            className="rounded-full text-white hover:bg-white/20"
-            data-testid="button-logout-top"
-            title="Logout"
-          >
-            <LogOut className="h-5 w-5" />
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-1 rounded-full text-white hover:bg-white/20"
+                title="User Menu"
+              >
+                <UserIcon className="h-5 w-5" />
+                <ChevronDown className="h-3 w-3" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>
+                <div>
+                  <p className="text-sm font-medium">{user.full_name}</p>
+                  <p className="text-muted-foreground text-xs">{user.email}</p>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setLocation("/settings/profile")}>
+                <Settings className="mr-2 h-4 w-4" />
+                Profile Settings
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleLogout} data-testid="button-logout-top">
+                <LogOut className="mr-2 h-4 w-4" />
+                Logout
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
@@ -168,9 +204,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* Main Content */}
       <main className="flex flex-1 flex-col overflow-x-hidden">
         {/* Scrollable Content Area */}
-        <div className="mt-16 flex-1 min-h-screen pb-8 px-4 md:px-8">
-          {children}
-        </div>
+        <div className="mt-16 min-h-screen flex-1 px-4 pb-8 md:px-8">{children}</div>
       </main>
     </div>
   );

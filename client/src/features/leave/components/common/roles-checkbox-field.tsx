@@ -1,17 +1,11 @@
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-} from "@/components/ui/form";
+import { FormControl, FormDescription, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { type OrganizationRole } from "@/lib/api/leave-api";
 import { SYSTEM_NAME } from "@/lib/constants";
-import type { Control } from "react-hook-form";
+import type { Control, FieldValues } from "react-hook-form";
 
 interface RolesCheckboxFieldProps {
-  control: Control<any>;
+  control: Control<FieldValues>;
   roles: OrganizationRole[];
 }
 
@@ -24,45 +18,34 @@ export function RolesCheckboxField({ control, roles }: RolesCheckboxFieldProps) 
         <FormItem className="space-y-3">
           <div className="mb-4">
             <FormLabel className="text-base">Applicable Roles *</FormLabel>
-            <FormDescription>
-              Select the roles that this leave policy applies to
-            </FormDescription>
-            <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <FormDescription>Select the roles that this leave policy applies to</FormDescription>
+            <div className="mt-2 rounded-lg border border-blue-200 bg-blue-50 p-3">
               <p className="text-sm text-blue-800">
-                <span className="font-semibold">Note:</span> These are {SYSTEM_NAME} system-defined roles. Select the roles applicable for your organization. These roles will be assigned to staff members and teachers when you add them to the system.
+                <span className="font-semibold">Note:</span> These are {SYSTEM_NAME} system-defined
+                roles. Select the roles applicable for your organization. These roles will be
+                assigned to staff members and teachers when you add them to the system.
               </p>
             </div>
           </div>
           <FormControl>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 border border-gray-300 rounded-lg p-4 max-h-64 overflow-y-auto bg-white">
+            <div className="grid max-h-64 grid-cols-1 gap-3 overflow-y-auto rounded-lg border border-gray-300 bg-white p-4 md:grid-cols-2">
               {roles.map((role) => (
-                <div
-                  key={role.id}
-                  className="flex flex-row items-start space-x-3"
-                >
+                <div key={role.id} className="flex flex-row items-start space-x-3">
                   <Checkbox
                     checked={field.value?.includes(role.id)}
                     onCheckedChange={(checked) => {
                       return checked
                         ? field.onChange([...field.value, role.id])
-                        : field.onChange(
-                            field.value?.filter(
-                              (value) => value !== role.id
-                            )
-                          );
+                        : field.onChange(field.value?.filter((value: number) => value !== role.id));
                     }}
                   />
-                  <label className="text-sm font-normal cursor-pointer">
-                    {role.name}
-                  </label>
+                  <label className="cursor-pointer text-sm font-normal">{role.name}</label>
                 </div>
               ))}
             </div>
           </FormControl>
           {fieldState.error && (
-            <p className="text-base font-semibold text-red-500 mt-2">
-              {fieldState.error.message}
-            </p>
+            <p className="mt-2 text-base font-semibold text-red-500">{fieldState.error.message}</p>
           )}
         </FormItem>
       )}

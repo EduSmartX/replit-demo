@@ -15,48 +15,47 @@ import { useDeletedDuplicateHandler } from "@/common/hooks/use-deleted-duplicate
 import { useScrollToError } from "@/common/hooks/use-scroll-to-error";
 import { Button } from "@/components/ui/button";
 import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogHeader,
-    DialogTitle,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog";
 import {
-    Form,
-    FormControl,
-    FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
 } from "@/components/ui/form";
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { api, API_ENDPOINTS } from "@/lib/api";
 import { fetchClasses } from "@/lib/api/class-api";
 import {
-    createSubject,
-    updateSubject,
-    reactivateSubject,
-    type CoreSubject,
-    type Subject,
-    type SubjectCreatePayload
+  createSubject,
+  updateSubject,
+  reactivateSubject,
+  type CoreSubject,
+  type Subject,
+  type SubjectCreatePayload,
 } from "@/lib/api/subject-api";
 import { fetchTeachers } from "@/lib/api/teacher-api";
 import { SUCCESS_MESSAGES } from "@/lib/constants";
 import {
-    isDeletedDuplicateError,
-    getDeletedDuplicateMessage,
-    getDeletedRecordId,
-    getApiErrorMessage,
+  isDeletedDuplicateError,
+  getDeletedDuplicateMessage,
+  getDeletedRecordId,
+  getApiErrorMessage,
 } from "@/lib/error-utils";
-
 
 const subjectFormSchema = z.object({
   class_id: z.string().min(1, "Class is required"),
@@ -82,12 +81,12 @@ export function SubjectFormDialog({ open, onClose, subject }: SubjectFormDialogP
     payload: SubjectCreatePayload;
     deletedRecordId: string | null;
   }>();
-  
+
   const { data: classesData, isLoading: loadingClasses } = useQuery({
     queryKey: ["classes"],
     queryFn: () => fetchClasses(),
   });
-  
+
   const { data: coreSubjectsData, isLoading: loadingSubjects } = useQuery({
     queryKey: ["core", "subjects"],
     queryFn: async () => {
@@ -95,15 +94,20 @@ export function SubjectFormDialog({ open, onClose, subject }: SubjectFormDialogP
       return response;
     },
   });
-  
+
   const { data: teachersData, isLoading: loadingTeachers } = useQuery({
     queryKey: ["teachers"],
     queryFn: () => fetchTeachers(),
   });
 
   const createMutation = useMutation({
-    mutationFn: ({ payload, forceCreate }: { payload: SubjectCreatePayload; forceCreate?: boolean }) =>
-      createSubject(payload, forceCreate),
+    mutationFn: ({
+      payload,
+      forceCreate,
+    }: {
+      payload: SubjectCreatePayload;
+      forceCreate?: boolean;
+    }) => createSubject(payload, forceCreate),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["subjects"] });
       sonnerToast.success(SUCCESS_MESSAGES.SUBJECT_ASSIGNED);
@@ -158,8 +162,8 @@ export function SubjectFormDialog({ open, onClose, subject }: SubjectFormDialogP
 
   const classes = classesData?.data || [];
   // Handle both direct array and wrapped response
-  const coreSubjects = Array.isArray(coreSubjectsData) 
-    ? coreSubjectsData 
+  const coreSubjects = Array.isArray(coreSubjectsData)
+    ? coreSubjectsData
     : (coreSubjectsData as unknown as { data?: CoreSubject[] })?.data || [];
   const teachers = teachersData?.data || [];
 
@@ -182,14 +186,14 @@ export function SubjectFormDialog({ open, onClose, subject }: SubjectFormDialogP
     if (subject && open) {
       // subject_info now includes the numeric id directly
       const subjectId = subject.subject_info?.id?.toString() || "";
-      
+
       const formData = {
         class_id: subject.class_info.public_id,
         subject_id: subjectId,
         teacher_id: subject.teacher_info.public_id,
         description: subject.description || "",
       };
-      
+
       form.reset(formData);
     } else if (!subject && open) {
       form.reset({
@@ -232,7 +236,8 @@ export function SubjectFormDialog({ open, onClose, subject }: SubjectFormDialogP
     }
   };
 
-  const isLoading = createMutation.isPending || updateMutation.isPending || reactivateMutation.isPending;
+  const isLoading =
+    createMutation.isPending || updateMutation.isPending || reactivateMutation.isPending;
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -358,17 +363,12 @@ export function SubjectFormDialog({ open, onClose, subject }: SubjectFormDialogP
             />
 
             {/* Form Actions */}
-            <div className="flex justify-end gap-2 pt-4">
+            <div className="flex flex-wrap justify-end gap-2 pt-4">
               <Button type="button" variant="outline" onClick={onClose}>
                 Cancel
               </Button>
-              <Button
-                type="submit"
-                disabled={isLoading}
-              >
-                {isLoading && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                )}
+              <Button type="submit" disabled={isLoading}>
+                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {isEditMode ? "Update" : "Assign"}
               </Button>
             </div>

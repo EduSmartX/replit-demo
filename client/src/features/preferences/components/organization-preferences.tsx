@@ -36,10 +36,8 @@ export function OrganizationPreferences() {
 
   // Update preferences mutation
   const updateMutation = useMutation({
-    mutationFn: async (updates: { public_id: string; value: string | string[] }[]) => {      
-      const promises = updates.map((update) =>
-        updatePreference(update.public_id, update.value)
-      );
+    mutationFn: async (updates: { public_id: string; value: string | string[] }[]) => {
+      const promises = updates.map((update) => updatePreference(update.public_id, update.value));
       return Promise.all(promises);
     },
     onSuccess: () => {
@@ -50,7 +48,7 @@ export function OrganizationPreferences() {
       });
       setShowSuccessDialog(true);
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       const errorMessage = getShortErrorMessage(error);
       console.error("Failed to update preferences:", errorMessage);
     },
@@ -63,7 +61,7 @@ export function OrganizationPreferences() {
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
-        <Loader2 className="h-12 w-12 animate-spin text-blue-600 mb-4" />
+        <Loader2 className="mb-4 h-12 w-12 animate-spin text-blue-600" />
         <p className="text-gray-600">Loading preferences...</p>
       </div>
     );
@@ -71,9 +69,9 @@ export function OrganizationPreferences() {
 
   if (isError) {
     const parsedError = parseApiError(error);
-    
+
     return (
-      <div className="max-w-2xl mx-auto mt-8 space-y-4">
+      <div className="mx-auto mt-8 max-w-2xl space-y-4">
         <Alert variant="destructive">
           <AlertCircle className="h-5 w-5" />
           <AlertTitle className="text-lg font-semibold">{parsedError.title}</AlertTitle>
@@ -81,23 +79,17 @@ export function OrganizationPreferences() {
             <p className="text-base">{parsedError.message}</p>
             {parsedError.details && (
               <details className="mt-3">
-                <summary className="cursor-pointer text-sm font-medium">
-                  Technical Details
-                </summary>
-                <pre className="mt-2 text-xs bg-red-50 p-2 rounded overflow-auto">
+                <summary className="cursor-pointer text-sm font-medium">Technical Details</summary>
+                <pre className="mt-2 overflow-auto rounded bg-red-50 p-2 text-xs">
                   {parsedError.details}
                 </pre>
               </details>
             )}
           </AlertDescription>
         </Alert>
-        
+
         <div className="flex justify-center">
-          <Button
-            onClick={() => refetch()}
-            variant="outline"
-            className="gap-2"
-          >
+          <Button onClick={() => refetch()} variant="outline" className="gap-2">
             <RefreshCw className="h-4 w-4" />
             Try Again
           </Button>
@@ -108,12 +100,10 @@ export function OrganizationPreferences() {
 
   if (!preferencesData?.data || preferencesData.data.length === 0) {
     return (
-      <div className="text-center py-20">
-        <Settings className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-        <h3 className="text-xl font-semibold text-gray-700 mb-2">No Preferences Found</h3>
-        <p className="text-gray-500">
-          There are no organization preferences configured yet.
-        </p>
+      <div className="py-20 text-center">
+        <Settings className="mx-auto mb-4 h-16 w-16 text-gray-400" />
+        <h3 className="mb-2 text-xl font-semibold text-gray-700">No Preferences Found</h3>
+        <p className="text-gray-500">There are no organization preferences configured yet.</p>
       </div>
     );
   }
@@ -122,9 +112,7 @@ export function OrganizationPreferences() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="mb-3 text-3xl font-bold text-gray-900">
-          Organization Preferences
-        </h1>
+        <h1 className="mb-3 text-3xl font-bold text-gray-900">Organization Preferences</h1>
         <p className="text-base text-gray-600">
           Configure your organization&apos;s settings and preferences
         </p>

@@ -27,12 +27,12 @@ interface TeachersListProps {
   onReactivate?: (teacher: Teacher) => void;
 }
 
-export function TeachersList({ 
+export function TeachersList({
   onCreateNew,
-  onView, 
-  onEdit, 
+  onView,
+  onEdit,
   onDelete,
-  onReactivate
+  onReactivate,
 }: TeachersListProps) {
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [page, setPage] = useState(1);
@@ -61,7 +61,7 @@ export function TeachersList({
         page,
         page_size: pageSize,
         search: filters.search,
-        is_deleted: showDeleted
+        is_deleted: showDeleted,
       }),
     refetchOnMount: "always",
     refetchOnWindowFocus: true,
@@ -71,12 +71,12 @@ export function TeachersList({
   const totalCount = teachersData?.pagination?.count || 0;
   const totalPages = Math.ceil(totalCount / pageSize);
 
-  const columns = showDeleted 
-    ? getTeacherColumns({ 
-        onView, 
-        onEdit: () => {}, 
+  const columns = showDeleted
+    ? getTeacherColumns({
+        onView,
+        onEdit: () => {},
         onDelete: onReactivate || (() => {}),
-        isDeletedView: true 
+        isDeletedView: true,
       })
     : getTeacherColumns({ onView, onEdit, onDelete });
 
@@ -113,8 +113,8 @@ export function TeachersList({
       <Card className="mx-auto max-w-7xl">
         <CardContent className="flex flex-col items-center justify-center py-12">
           <div className="text-center">
-            <h3 className="text-lg font-semibold text-red-600 mb-2">Error Loading Teachers</h3>
-            <p className="text-gray-600 mb-4">Failed to fetch teachers. Please try again.</p>
+            <h3 className="mb-2 text-lg font-semibold text-red-600">Error Loading Teachers</h3>
+            <p className="mb-4 text-gray-600">Failed to fetch teachers. Please try again.</p>
             <Button onClick={() => refetch()}>Retry</Button>
           </div>
         </CardContent>
@@ -124,16 +124,14 @@ export function TeachersList({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="mb-3 text-3xl font-bold text-gray-900">
             {getListTitle("Teachers", showDeleted)}
           </h1>
-          <p className="text-base text-gray-600">
-            {getListDescription("Teachers", showDeleted)}
-          </p>
+          <p className="text-base text-gray-600">{getListDescription("Teachers", showDeleted)}</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-3">
           <DeletedViewToggle
             showDeleted={showDeleted}
             onToggle={toggleDeletedView}
@@ -160,23 +158,25 @@ export function TeachersList({
 
       <Card>
         <CardHeader>
-          <CardTitle>
-            {getCardTitle("Teachers", totalCount, showDeleted)}
-          </CardTitle>
+          <CardTitle>{getCardTitle("Teachers", totalCount, showDeleted)}</CardTitle>
           <CardDescription>
             {getCardDescription("Teachers", Object.keys(filters).length > 0, showDeleted)}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <DataTable 
-            columns={columns} 
-            data={teachers} 
+          <DataTable
+            columns={columns}
+            data={teachers}
             isLoading={isLoading}
             emptyMessage={getEmptyMessage("Teachers", Object.keys(filters).length > 0, showDeleted)}
-            emptyAction={!showDeleted && Object.keys(filters).length === 0 && teachers.length === 0 ? {
-              label: "Add First Teacher",
-              onClick: onCreateNew
-            } : undefined}
+            emptyAction={
+              !showDeleted && Object.keys(filters).length === 0 && teachers.length === 0
+                ? {
+                    label: "Add First Teacher",
+                    onClick: onCreateNew,
+                  }
+                : undefined
+            }
             getRowKey={(teacher) => teacher.public_id}
           />
 

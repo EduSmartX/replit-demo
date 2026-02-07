@@ -1,11 +1,8 @@
 import { memo } from "react";
 import { type Control } from "react-hook-form";
-import {
-  GenderField,
-  OrganizationRoleField,
-  TextInputField,
-} from "@/common/components/forms";
+import { GenderField, OrganizationRoleField, TextInputField } from "@/common/components/forms";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ORGANIZATION_ROLE_CODES } from "@/lib/constants";
 import type { TeacherFormValues } from "../schemas/teacher-form-schema";
 
 interface MinimalTeacherFieldsProps {
@@ -18,7 +15,7 @@ export const MinimalTeacherFields = memo<MinimalTeacherFieldsProps>(({ control }
       <CardHeader>
         <CardTitle>Basic Information (Required Fields Only)</CardTitle>
       </CardHeader>
-      <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <TextInputField
           control={control}
           name="employee_id"
@@ -49,7 +46,12 @@ export const MinimalTeacherFields = memo<MinimalTeacherFieldsProps>(({ control }
           required
         />
         <GenderField control={control} name="gender" required />
-        <OrganizationRoleField control={control} name="organization_role" />
+        <OrganizationRoleField
+          control={control}
+          name="organization_role"
+          defaultRoleCode={ORGANIZATION_ROLE_CODES.TEACHER}
+          required
+        />
       </CardContent>
     </Card>
   );

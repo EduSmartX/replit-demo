@@ -39,7 +39,7 @@ export function TeacherSidebar({ activeMenu, onMenuChange }: TeacherSidebarProps
       <Button
         variant="ghost"
         size="icon"
-        className="fixed top-4 left-4 z-[60] md:hidden text-white hover:bg-white/20"
+        className="fixed top-4 left-4 z-[60] text-white hover:bg-white/20 md:hidden"
         onClick={() => setIsOpen(!isOpen)}
         data-testid="button-mobile-menu"
       >
@@ -68,13 +68,13 @@ export function TeacherSidebar({ activeMenu, onMenuChange }: TeacherSidebarProps
           <>
             <div className="border-b border-purple-200 bg-gradient-to-r from-purple-600 to-pink-600 p-6">
               <div className="flex items-center space-x-2">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white shadow-lg flex-shrink-0">
+                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-white shadow-lg">
                   <GraduationCap className="h-6 w-6 text-purple-600" />
                 </div>
                 {width > 250 && (
                   <div className="min-w-0">
-                    <h1 className="text-lg font-bold text-white truncate">Teacher Portal</h1>
-                    <p className="text-xs text-purple-100 truncate">Manage Classes</p>
+                    <h1 className="truncate text-lg font-bold text-white">Teacher Portal</h1>
+                    <p className="truncate text-xs text-purple-100">Manage Classes</p>
                   </div>
                 )}
               </div>
@@ -86,7 +86,7 @@ export function TeacherSidebar({ activeMenu, onMenuChange }: TeacherSidebarProps
                   return (
                     <div key={index} className="mt-2 py-4">
                       {width > 250 && (
-                        <p className="mb-3 px-3 text-xs font-semibold tracking-wider text-purple-700 uppercase truncate">
+                        <p className="mb-3 truncate px-3 text-xs font-semibold tracking-wider text-purple-700 uppercase">
                           {item.label}
                         </p>
                       )}
@@ -124,24 +124,6 @@ export function TeacherSidebar({ activeMenu, onMenuChange }: TeacherSidebarProps
                 );
               })}
             </nav>
-
-            <div className="space-y-2 border-t border-purple-200 bg-gradient-to-r from-pink-50 to-purple-50 p-4">
-              {width > 250 ? (
-                <div className="space-y-1 text-sm">
-                  <p className="text-xs font-semibold text-purple-600 truncate">Logged in as</p>
-                  <p className="font-semibold text-purple-900 truncate" data-testid="sidebar-username">
-                    Sarah Johnson
-                  </p>
-                  <p className="text-xs text-pink-700 truncate">Mathematics Teacher</p>
-                </div>
-              ) : (
-                <div className="flex justify-center">
-                  <div className="h-8 w-8 rounded-full bg-purple-600 flex items-center justify-center text-white text-sm font-bold">
-                    SJ
-                  </div>
-                </div>
-              )}
-            </div>
           </>
         )}
       </ResizableSidebar>

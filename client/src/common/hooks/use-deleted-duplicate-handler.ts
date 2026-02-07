@@ -5,7 +5,7 @@
 
 import { useState } from "react";
 
-export function useDeletedDuplicateHandler<T = any>() {
+export function useDeletedDuplicateHandler<T = unknown>() {
   const [isOpen, setIsOpen] = useState(false);
   const [message, setMessage] = useState("");
   const [pendingData, setPendingData] = useState<T | null>(null);

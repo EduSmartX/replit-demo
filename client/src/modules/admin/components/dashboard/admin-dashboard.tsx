@@ -131,7 +131,15 @@ export function DashboardContent() {
               </CardHeader>
               <CardContent>
                 <div
-                  className={`bg-gradient-to-r text-2xl font-bold ${stat.color === "text-blue-600" ? "from-blue-600 to-teal-600" : stat.color === "text-green-600" ? "from-green-600 to-emerald-600" : "from-teal-600 to-green-600"} bg-clip-text text-transparent`}
+                  className={`bg-gradient-to-r text-2xl font-bold ${(() => {
+                    if (stat.color === "text-blue-600") {
+                      return "from-blue-600 to-teal-600";
+                    }
+                    if (stat.color === "text-green-600") {
+                      return "from-green-600 to-emerald-600";
+                    }
+                    return "from-teal-600 to-green-600";
+                  })()} bg-clip-text text-transparent`}
                 >
                   {stat.value}
                 </div>

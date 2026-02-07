@@ -8,6 +8,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
 import { useState } from "react";
 import { DeletedViewToggle } from "@/common/components";
+import { SuccessDialog } from "@/common/components/dialogs";
 import { ResourceFilter, type FilterField } from "@/common/components/filters";
 import {
   getCardDescription,
@@ -34,7 +35,13 @@ import { useDeleteMutation } from "@/hooks/use-delete-mutation";
 import { useDeletedView } from "@/hooks/use-deleted-view";
 import { api, API_ENDPOINTS } from "@/lib/api";
 import { fetchClasses } from "@/lib/api/class-api";
-import { deleteSubject, getSubjects, reactivateSubject, type Subject, type CoreSubject } from "@/lib/api/subject-api";
+import {
+  deleteSubject,
+  getSubjects,
+  reactivateSubject,
+  type Subject,
+  type CoreSubject,
+} from "@/lib/api/subject-api";
 import { fetchTeachers } from "@/lib/api/teacher-api";
 import { BulkUploadSubjects } from "./bulk-upload-subjects";
 import { getSubjectColumns } from "./subjects-table-columns";
@@ -48,14 +55,11 @@ export function SubjectsList({ onCreateNew, onEdit: onEditProp }: SubjectsListPr
   const _queryClient = useQueryClient();
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [deleteSubjectId, setDeleteSubjectId] = useState<string | null>(null);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  const {
-    showDeleted,
-    toggleDeletedView,
-    handleReactivate,
-  } = useDeletedView({
+  const { showDeleted, toggleDeletedView, handleReactivate } = useDeletedView({
     resourceName: "Subject",
     queryKey: ["subjects"],
     reactivateFn: reactivateSubject,
@@ -107,6 +111,9 @@ export function SubjectsList({ onCreateNew, onEdit: onEditProp }: SubjectsListPr
     deleteFn: deleteSubject,
     queryKeys: ["subjects"],
     refetchQueries: false,
+    onSuccessCallback: () => {
+      setShowSuccessDialog(true);
+    },
   });
 
   // Get subjects ordered by class (API should return them ordered)
@@ -158,9 +165,11 @@ export function SubjectsList({ onCreateNew, onEdit: onEditProp }: SubjectsListPr
 
   // Prepare filter fields
   const classes = classesData?.data || [];
-  const coreSubjects = Array.isArray(coreSubjectsData) 
-    ? coreSubjectsData 
-    : (coreSubjectsData as any)?.data || [];
+  const coreSubjects: CoreSubject[] = Array.isArray(coreSubjectsData)
+    ? coreSubjectsData
+    : ((coreSubjectsData as Record<string, unknown> | undefined)?.data as
+        | CoreSubject[]
+        | undefined) || [];
   const teachers = teachersData?.data || [];
 
   const filterFields: FilterField[] = [
@@ -215,75 +224,68 @@ export function SubjectsList({ onCreateNew, onEdit: onEditProp }: SubjectsListPr
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <h1 className="mb-3 text-3xl font-bold text-gray-900">
-                {getListTitle("Subjects", showDeleted)}
-              </h1>
-              <p className="text-base text-gray-600">
-                {getListDescription("Subjects", showDeleted)}
-              </p>
-            </div>
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h1 className="mb-3 text-3xl font-bold text-gray-900">
+            {getListTitle("Subjects", showDeleted)}
+          </h1>
+          <p className="text-base text-gray-600">{getListDescription("Subjects", showDeleted)}</p>
+        </div>
 
-            <div className="flex flex-wrap gap-3">
-              <DeletedViewToggle
-                showDeleted={showDeleted}
-                onToggle={toggleDeletedView}
-              />
+        <div className="flex flex-wrap gap-3">
+          <DeletedViewToggle showDeleted={showDeleted} onToggle={toggleDeletedView} />
 
-              {!showDeleted && (
-                <>
-                  <BulkUploadSubjects />
-                  <Button
-                    onClick={handleCreateClick}
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-                    Assign Subject
-                  </Button>
-                </>
-              )}
-            </div>
-          </div>
+          {!showDeleted && (
+            <>
+              <BulkUploadSubjects />
+              <Button onClick={handleCreateClick}>
+                <Plus className="mr-2 h-4 w-4" />
+                Assign Subject
+              </Button>
+            </>
+          )}
+        </div>
+      </div>
 
-          {/* Filters */}
-          <ResourceFilter
-            fields={filterFields}
-            onFilter={handleFilter}
-            onReset={handleResetFilters}
-            defaultValues={filters}
+      {/* Filters */}
+      <ResourceFilter
+        fields={filterFields}
+        onFilter={handleFilter}
+        onReset={handleResetFilters}
+        defaultValues={filters}
+      />
+
+      {/* Subject List Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>{getCardTitle("Subjects", totalRecords, showDeleted)}</CardTitle>
+          <CardDescription>
+            {getCardDescription("subjects", Object.keys(filters).length > 0, showDeleted)}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <DataTable
+            columns={columns}
+            data={subjects}
+            isLoading={isLoading}
+            emptyMessage={getEmptyMessage("subjects", Object.keys(filters).length > 0, showDeleted)}
+            getRowKey={(row) => row.public_id}
           />
 
-          {/* Subject List Table */}
-          <Card>
-            <CardHeader>
-              <CardTitle>{getCardTitle("Subjects", totalRecords, showDeleted)}</CardTitle>
-              <CardDescription>
-                {getCardDescription("subjects", Object.keys(filters).length > 0, showDeleted)}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <DataTable 
-                columns={columns} 
-                data={subjects} 
-                isLoading={isLoading}
-                emptyMessage={getEmptyMessage("subjects", Object.keys(filters).length > 0, showDeleted)}
-                getRowKey={(row) => row.public_id}
+          {totalRecords > 0 && (
+            <div className="mt-4">
+              <TablePagination
+                currentPage={page}
+                totalPages={totalPages}
+                totalRecords={totalRecords}
+                pageSize={pageSize}
+                onPageChange={handlePageChange}
+                onPageSizeChange={handlePageSizeChange}
               />
-
-              {totalRecords > 0 && (
-                <div className="mt-4">
-                  <TablePagination
-                    currentPage={page}
-                    totalPages={totalPages}
-                    totalRecords={totalRecords}
-                    pageSize={pageSize}
-                    onPageChange={handlePageChange}
-                    onPageSizeChange={handlePageSizeChange}
-                  />
-                </div>
-              )}
-            </CardContent>
-          </Card>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Delete Confirmation */}
       <AlertDialog open={!!deleteSubjectId} onOpenChange={() => setDeleteSubjectId(null)}>
@@ -302,6 +304,14 @@ export function SubjectsList({ onCreateNew, onEdit: onEditProp }: SubjectsListPr
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Success Dialog */}
+      <SuccessDialog
+        open={showSuccessDialog}
+        onClose={() => setShowSuccessDialog(false)}
+        title="Subject Deleted Successfully"
+        description="The subject assignment has been deleted successfully."
+      />
     </div>
   );
 }

@@ -13,7 +13,7 @@ interface GetStudentColumnsOptions {
   onView?: (student: Student) => void;
   onEdit?: (student: Student) => void;
   onDelete?: (student: Student) => void;
-  onReactivate?: (publicId: string) => void;
+  onReactivate?: (student: Student) => void;
 }
 
 export function getStudentColumns({
@@ -27,7 +27,9 @@ export function getStudentColumns({
       header: "Class",
       accessor: (student) => (
         <div>
-          <p className="font-medium text-gray-900">{student.class_info.class_master_name} ( {student.class_info.name} )</p>          
+          <p className="font-medium text-gray-900">
+            {student.class_info.class_master_name} ( {student.class_info.name} )
+          </p>
         </div>
       ),
       sortable: true,
@@ -46,9 +48,7 @@ export function getStudentColumns({
     },
     {
       header: "Roll Number",
-      accessor: (student) => (
-        <p className="text-sm text-gray-900">{student.roll_number}</p>
-      ),
+      accessor: (student) => <p className="text-sm text-gray-900">{student.roll_number}</p>,
       sortable: true,
       sortKey: "roll_number",
     },
@@ -78,12 +78,12 @@ export function getStudentColumns({
               size="sm"
               onClick={(e) => {
                 e.stopPropagation();
-                onReactivate(student.public_id);
+                onReactivate(student);
               }}
               className="h-8 px-3 text-blue-600 hover:bg-blue-50 hover:text-blue-700"
               title="Reactivate"
             >
-              <RotateCcw className="h-4 w-4 mr-1" />
+              <RotateCcw className="mr-1 h-4 w-4" />
               Reactivate
             </Button>
           ) : (
@@ -131,4 +131,3 @@ export function getStudentColumns({
     },
   ];
 }
-

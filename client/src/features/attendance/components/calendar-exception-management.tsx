@@ -6,13 +6,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import {
-  AlertCircle,
-  Calendar as CalendarIcon,
-  Loader2,
-  Plus,
-  X,
-} from "lucide-react";
+import { AlertCircle, Calendar as CalendarIcon, Loader2, Plus, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { ConfirmationDialog } from "@/common/components/dialogs";
@@ -47,9 +41,7 @@ interface CalendarExceptionManagementProps {
   className?: string;
 }
 
-export function CalendarExceptionManagement({
-  className,
-}: CalendarExceptionManagementProps) {
+export function CalendarExceptionManagement({ className }: CalendarExceptionManagementProps) {
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
   const [deletingException, setDeletingException] = useState<CalendarException | null>(null);
@@ -191,15 +183,11 @@ export function CalendarExceptionManagement({
         </SelectContent>
       </Select>
       {tempSelectedClasses.length > 0 && (
-        <div className="flex flex-wrap gap-2 mt-2">
+        <div className="mt-2 flex flex-wrap gap-2">
           {tempSelectedClasses.map((classId) => {
             const cls = classes.find((c) => c.public_id === classId);
             return cls ? (
-              <Badge
-                key={classId}
-                variant="secondary"
-                className="gap-1 pr-1"
-              >
+              <Badge key={classId} variant="secondary" className="gap-1 pr-1">
                 {cls.name}
                 <Button
                   variant="ghost"
@@ -259,7 +247,7 @@ export function CalendarExceptionManagement({
     const parsedError = parseApiError(error);
 
     return (
-      <div className="max-w-4xl mx-auto mt-8">
+      <div className="mx-auto mt-8 max-w-4xl">
         <Alert variant="destructive">
           <AlertCircle className="h-5 w-5" />
           <AlertTitle className="text-lg font-semibold">{parsedError.title}</AlertTitle>
@@ -267,10 +255,8 @@ export function CalendarExceptionManagement({
             <p className="text-base">{parsedError.message}</p>
             {parsedError.details && (
               <details className="mt-3">
-                <summary className="cursor-pointer text-sm font-medium">
-                  Technical Details
-                </summary>
-                <pre className="mt-2 text-xs bg-red-50 p-2 rounded overflow-auto">
+                <summary className="cursor-pointer text-sm font-medium">Technical Details</summary>
+                <pre className="mt-2 overflow-auto rounded bg-red-50 p-2 text-xs">
                   {parsedError.details}
                 </pre>
               </details>
@@ -284,19 +270,14 @@ export function CalendarExceptionManagement({
   return (
     <div className={cn("space-y-6", className)}>
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="mb-3 text-3xl font-bold text-gray-900">
-            Exceptional Work Policy
-          </h1>
+          <h1 className="mb-3 text-3xl font-bold text-gray-900">Exceptional Work Policy</h1>
           <p className="text-base text-gray-600">
             Manage working day exceptions for specific dates and classes
           </p>
         </div>
-        <Button
-          onClick={() => setLocation("/exceptional-work/new")}
-          className="gap-2"
-        >
+        <Button onClick={() => setLocation("/exceptional-work/new")} className="gap-2">
           <Plus className="h-4 w-4" />
           Add Exception
         </Button>
@@ -313,8 +294,8 @@ export function CalendarExceptionManagement({
         <CardContent className="space-y-2 text-sm text-blue-800">
           <p>
             <strong>Force Working:</strong> Override holidays to make specific dates working days
-            for classes. Useful when you need to conduct school on a holiday for specific classes
-            or all classes.
+            for classes. Useful when you need to conduct school on a holiday for specific classes or
+            all classes.
           </p>
           <p>
             <strong>Force Holiday:</strong> Override working days to give holidays for specific
@@ -337,7 +318,7 @@ export function CalendarExceptionManagement({
 
       {/* Exceptions Table */}
       <Card className="border-0 shadow-lg">
-        <CardHeader className="bg-gradient-to-r from-blue-50 to-green-50 border-b">
+        <CardHeader className="border-b bg-gradient-to-r from-blue-50 to-green-50">
           <CardTitle>Calendar Exceptions</CardTitle>
           <CardDescription>
             {totalCount > 0
@@ -346,9 +327,9 @@ export function CalendarExceptionManagement({
           </CardDescription>
         </CardHeader>
         <CardContent className="p-6">
-          {isLoading ? (
+          {isLoading && !exceptionsData ? (
             <div className="flex flex-col items-center justify-center py-12">
-              <Loader2 className="h-12 w-12 animate-spin text-blue-600 mb-4" />
+              <Loader2 className="mb-4 h-12 w-12 animate-spin text-blue-600" />
               <p className="text-gray-600">Loading calendar exceptions...</p>
             </div>
           ) : (
@@ -356,7 +337,7 @@ export function CalendarExceptionManagement({
               <DataTable
                 columns={columns}
                 data={exceptions}
-                isLoading={false}
+                isLoading={isLoading}
                 emptyMessage="No exceptions configured yet"
                 emptyAction={{
                   label: "Add Your First Exception",

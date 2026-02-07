@@ -515,7 +515,7 @@ function SidebarMenuButton({
         side="right"
         align="center"
         hidden={state !== "collapsed" || isMobile}
-        {...finalTooltip}
+        {...(finalTooltip as Record<string, unknown>)}
       />
     </Tooltip>
   );
